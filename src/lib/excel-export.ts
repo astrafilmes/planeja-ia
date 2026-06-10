@@ -120,7 +120,7 @@ export async function exportarRelatorioContratoExcel(contracts: ContractGroupedD
 
   for (const contract of contracts) {
     let baseName = safeText(contract.header.numero_contrato) || 'Contrato';
-    baseName = baseName.replace(/[\\/*?:\[\]]/g, '_').substring(0, 31);
+    baseName = baseName.replace(/[\\/*?:[\]]/g, '_').substring(0, 31);
     let sheetName = baseName;
     let counter = 1;
     
@@ -339,7 +339,7 @@ export async function exportarPautaConsolidadaExcel(
   const moedaFmt = '"R$" #,##0.00';
 
   for (const proc of processes) {
-    const safeName = (proc.processo_id || proc.contrato_numero || 'Processo').toString().replace(/[\\/*?:\[\]]/g, '_').substring(0, 31);
+    const safeName = (proc.processo_id || proc.contrato_numero || 'Processo').toString().replace(/[\\/*?:[\]]/g, '_').substring(0, 31);
     const ws = workbook.addWorksheet(safeName, {
       pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 }
     });
