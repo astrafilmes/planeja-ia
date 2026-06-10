@@ -205,6 +205,17 @@ function Page() {
           (dotMap[d.item_id] ??= []).push(d);
         }
       }
+      // CPFs sensíveis: só admin/gestor recebem; falha silenciosa para outros papéis
+      let secretariaWithCpf: any = secretaria.data;
+      if (secretariaWithCpf?.id) {
+        const { data: cpfs } = await supabase.rpc("get_secretarias_cpfs");
+        const match = (cpfs ?? []).find((c: any) => c.id === secretariaWithCpf.id);
+        secretariaWithCpf = {
+          ...secretariaWithCpf,
+          m2a_gestor_cpf: match?.m2a_gestor_cpf ?? null,
+          m2a_fiscal_cpf: match?.m2a_fiscal_cpf ?? null,
+        };
+      }
       return {
         contrato: c,
         itens: itensList.map((i: any) => ({
@@ -214,7 +225,7 @@ function Page() {
         atores: atores.data ?? [],
         documentos: docs.data ?? [],
         processo: processo.data,
-        secretaria: secretaria.data,
+        secretaria: secretariaWithCpf,
         m2aAtas: m2aAtas.data ?? [],
       };
     },
