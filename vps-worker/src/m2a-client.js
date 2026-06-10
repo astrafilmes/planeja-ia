@@ -184,10 +184,21 @@ class M2aClient {
       Accept: "text/html,application/json,*/*",
       ...(opts.headers || {}),
     };
-    const cfg = { method, url: path, headers };
+    const cfg = {
+      method,
+      url: path,
+      headers,
+      responseType: "text",
+      transformResponse: [(data) => data],
+    };
     if (opts.body !== undefined) cfg.data = opts.body;
     const res = await this.http.request(cfg);
-    const text = typeof res.data === "string" ? res.data : "";
+    const text =
+      typeof res.data === "string"
+        ? res.data
+        : res.data == null
+          ? ""
+          : JSON.stringify(res.data);
     const finalUrl = res.request?.res?.responseUrl || "";
     return { status: res.status, html: text, finalUrl, raw: res };
   }
