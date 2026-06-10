@@ -77,7 +77,8 @@ manter o tráfego restrito por firewall **e** assinar com HMAC (já feito).
 | `M2A_BASE_URL`         | URL do tenant (`https://prefxxx.m2atecnologia.com.br`)     |
 | `M2A_USERNAME`         | Usuário da conta de serviço                                |
 | `M2A_PASSWORD`         | Senha                                                      |
-| `M2A_LOGIN_PATH`       | Caminho do form de login. Default `/login/`                |
+| `M2A_LOGIN_PATH`       | Caminho do form de login. Default `/usuario/login/`        |
+| `M2A_LOGIN_PROFILE`    | Perfil do login M2A. Default `1` (Setor público)           |
 | `SHARED_SECRET`        | Token compartilhado com a edge function (`openssl rand -hex 32`) |
 | `PORT`                 | Porta HTTP do worker. Default `8080`                       |
 | `M2A_MAX_CONCURRENCY`  | Requests simultâneos no M2A. Default `2`                   |
@@ -114,7 +115,7 @@ pm2 restart planeja-m2a-worker      # ou: docker compose up -d --build
 
 ## 8. Troubleshooting
 
-- **`M2A_LOGIN_FAILED`**: usuário/senha errados, ou o portal exige CAPTCHA.
+- **`M2A_LOGIN_FAILED`**: usuário/senha errados, perfil sem permissão, ou CAPTCHA.
   Veja `pm2 logs planeja-m2a-worker`.
 - **`401 bad_signature`** vindo da edge function: `SHARED_SECRET` divergente
   entre a VPS e o Lovable Cloud.
