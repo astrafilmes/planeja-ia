@@ -395,12 +395,12 @@ export async function exportarPautaConsolidadaExcel(
       cell2.value = cfg.sub;
 
       cell1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: cfg.row1Color } };
-      cell1.font = { bold: true, color: { argb: 'FF000000' } };
+      cell1.font = { bold: false, size: 9, color: { argb: 'FF000000' } };
       cell1.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
       cell1.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
 
       cell2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: cfg.row2Color } };
-      cell2.font = { bold: true, color: { argb: 'FF000000' } };
+      cell2.font = { bold: false, size: 9, color: { argb: 'FF000000' } };
       // Da coluna 8 em diante, texto da linha 2 rotacionado em 90 graus
       cell2.alignment = cfg.index >= 8
         ? { horizontal: 'center', vertical: 'middle', textRotation: 90, wrapText: false }
