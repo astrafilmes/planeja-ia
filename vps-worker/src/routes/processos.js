@@ -460,8 +460,8 @@ export async function processosRoutes(app) {
     const id = String(req.params.id || "").trim();
     if (!id) return reply.code(400).send({ error: "id obrigatório" });
     try {
-      const $ = await fetchDoc(`/licitacao_ata_contrato/tabela/${id}/`);
-      return { processo_id: id, atas: extractAtasFromDoc($) };
+      const atas = await fetchAtasDoProcesso(id);
+      return { processo_id: id, atas };
     } catch (err) {
       const status = err.status && err.status >= 400 ? err.status : 500;
       return reply.code(status).send({ error: String(err?.message ?? err) });
