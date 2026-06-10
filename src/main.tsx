@@ -9,9 +9,9 @@ const queryClient = new QueryClient();
 
 const router = createRouter({
   routeTree,
-  context: {
-    queryClient,
-  },
+  context: { queryClient },
+  defaultPreload: "intent",
+  scrollRestoration: true,
 });
 
 declare module "@tanstack/react-router" {
@@ -23,10 +23,11 @@ declare module "@tanstack/react-router" {
 const rootElement = document.getElementById("root")!;
 
 if (!rootElement.innerHTML) {
-  const root = ReactDOM.createRoot(rootElement);
-  root.render(
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>,
+  ReactDOM.createRoot(rootElement).render(
+    <React.StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>
+    </React.StrictMode>,
   );
 }
