@@ -240,82 +240,105 @@ interface PautaColDef {
   macro: string;
   sub: string;
   width: number;
-  color: string;
+  row1Color: string;
+  row2Color: string;
   isGroupTotal?: boolean;
   isGeneralTotal?: boolean;
-  sumCols?: number[]; 
+  sumCols?: number[];
   isCurrency?: boolean;
 }
 
+// Cores GovTech (ARGB - prefixo FF)
+const C_BASE = 'FFD9D9D9';
+const C_ADM = 'FFFFFF00';
+const C_CGM = 'FFFFC000';
+const C_CUT = 'FF66FFFF';
+const C_DES = 'FF00B050';
+const C_EJL = 'FFE6B8B7';
+const C_FPS = 'FFC4D79B';
+const C_GAB = 'FFCC66FF';
+const C_INF = 'FF009999';
+const C_SMA = 'FF92D050';
+const C_SME = 'FF66CCFF';
+const C_SME_A = 'FF538DD5';
+const C_SME_B = 'FFB7DEE8';
+const C_SMS = 'FFCCFF33';
+const C_SMS_GREEN = 'FF00B050';
+const C_SMS_ORANGE = 'FFFFC000';
+const C_SMS_LIME = 'FF92D050';
+const C_SPS = 'FFC4BD97';
+const C_SPS_A = 'FFDDD9C4';
+const C_SPS_B = 'FFD9D9D9';
+
 const PAUTA_COLUMNS_CONFIG: PautaColDef[] = [
   // BASE (1..7)
-  { index: 1, macro: '', sub: 'EMPRESA', width: 25, color: 'FFD9E1F2' },
-  { index: 2, macro: '', sub: 'ITEM', width: 8, color: 'FFD9E1F2' },
-  { index: 3, macro: '', sub: 'LOTE', width: 8, color: 'FFD9E1F2' },
-  { index: 4, macro: '', sub: 'Nº', width: 8, color: 'FFD9E1F2' },
-  { index: 5, macro: '', sub: 'ITEM', width: 8, color: 'FFD9E1F2' },
-  { index: 6, macro: '', sub: 'DESCRIÇÃO', width: 50, color: 'FFD9E1F2' },
-  { index: 7, macro: '', sub: 'UNIDADE', width: 10, color: 'FFD9E1F2' },
-  // ADM (8..10)
-  { index: 8, macro: 'ADM', sub: 'SECRET', width: 10, color: 'FFC6E0B4' },
-  { index: 9, macro: 'ADM', sub: 'G. M.', width: 10, color: 'FFC6E0B4' },
-  { index: 10, macro: 'ADM', sub: 'TOTAL', width: 10, color: 'FFC6E0B4', isGroupTotal: true, sumCols: [8, 9] },
-  // CGM (11..12)
-  { index: 11, macro: 'CGM', sub: 'SECRET', width: 10, color: 'FFFFE699' },
-  { index: 12, macro: 'CGM', sub: 'TOTAL', width: 10, color: 'FFFFE699', isGroupTotal: true, sumCols: [11] },
-  // CUT (13..14)
-  { index: 13, macro: 'CUT', sub: 'SECRET', width: 10, color: 'FFF8CBAD' },
-  { index: 14, macro: 'CUT', sub: 'TOTAL', width: 10, color: 'FFF8CBAD', isGroupTotal: true, sumCols: [13] },
-  // DES (15..16)
-  { index: 15, macro: 'DES', sub: 'SECRET', width: 10, color: 'FFBDD7EE' },
-  { index: 16, macro: 'DES', sub: 'TOTAL', width: 10, color: 'FFBDD7EE', isGroupTotal: true, sumCols: [15] },
-  // EJL (17..18)
-  { index: 17, macro: 'EJL', sub: 'SECRET', width: 10, color: 'FFE2EFDA' },
-  { index: 18, macro: 'EJL', sub: 'TOTAL', width: 10, color: 'FFE2EFDA', isGroupTotal: true, sumCols: [17] },
-  // FPS (19..20)
-  { index: 19, macro: 'FPS', sub: 'FUNDO', width: 10, color: 'FFD9D9D9' },
-  { index: 20, macro: 'FPS', sub: 'TOTAL', width: 10, color: 'FFD9D9D9', isGroupTotal: true, sumCols: [19] },
-  // GAB (21..22)
-  { index: 21, macro: 'GAB', sub: 'SECRET', width: 10, color: 'FFFFD966' },
-  { index: 22, macro: 'GAB', sub: 'TOTAL', width: 10, color: 'FFFFD966', isGroupTotal: true, sumCols: [21] },
-  // INF (23..24)
-  { index: 23, macro: 'INF', sub: 'SECRET', width: 10, color: 'FFF4B084' },
-  { index: 24, macro: 'INF', sub: 'TOTAL', width: 10, color: 'FFF4B084', isGroupTotal: true, sumCols: [23] },
-  // SMA (25..26)
-  { index: 25, macro: 'SMA', sub: 'SECRET', width: 10, color: 'FFA9D08E' },
-  { index: 26, macro: 'SMA', sub: 'TOTAL', width: 10, color: 'FFA9D08E', isGroupTotal: true, sumCols: [25] },
+  { index: 1, macro: '', sub: 'EMPRESA',   width: 12, row1Color: C_BASE, row2Color: C_BASE },
+  { index: 2, macro: '', sub: 'ITEM',      width: 5,  row1Color: C_BASE, row2Color: C_BASE },
+  { index: 3, macro: '', sub: 'LOTE',      width: 5,  row1Color: C_BASE, row2Color: C_BASE },
+  { index: 4, macro: '', sub: 'Nº',        width: 5,  row1Color: C_BASE, row2Color: C_BASE },
+  { index: 5, macro: '', sub: 'ITEM',      width: 40, row1Color: C_BASE, row2Color: C_BASE },
+  { index: 6, macro: '', sub: 'DESCRIÇÃO', width: 40, row1Color: C_BASE, row2Color: C_BASE },
+  { index: 7, macro: '', sub: 'UNIDADE',   width: 15, row1Color: C_BASE, row2Color: C_BASE },
+  // ADM
+  { index: 8,  macro: 'ADM', sub: 'SECRET', width: 5, row1Color: C_ADM, row2Color: C_ADM },
+  { index: 9,  macro: 'ADM', sub: 'G. M.',  width: 5, row1Color: C_ADM, row2Color: C_ADM },
+  { index: 10, macro: 'ADM', sub: 'TOTAL',  width: 5, row1Color: C_ADM, row2Color: C_ADM, isGroupTotal: true, sumCols: [8, 9] },
+  // CGM
+  { index: 11, macro: 'CGM', sub: 'SECRET', width: 5, row1Color: C_CGM, row2Color: C_CGM },
+  { index: 12, macro: 'CGM', sub: 'TOTAL',  width: 5, row1Color: C_CGM, row2Color: C_CGM, isGroupTotal: true, sumCols: [11] },
+  // CUT
+  { index: 13, macro: 'CUT', sub: 'SECRET', width: 5, row1Color: C_CUT, row2Color: C_CUT },
+  { index: 14, macro: 'CUT', sub: 'TOTAL',  width: 5, row1Color: C_CUT, row2Color: C_CUT, isGroupTotal: true, sumCols: [13] },
+  // DES
+  { index: 15, macro: 'DES', sub: 'SECRET', width: 5, row1Color: C_DES, row2Color: C_DES },
+  { index: 16, macro: 'DES', sub: 'TOTAL',  width: 5, row1Color: C_DES, row2Color: C_DES, isGroupTotal: true, sumCols: [15] },
+  // EJL
+  { index: 17, macro: 'EJL', sub: 'SECRET', width: 5, row1Color: C_EJL, row2Color: C_EJL },
+  { index: 18, macro: 'EJL', sub: 'TOTAL',  width: 5, row1Color: C_EJL, row2Color: C_EJL, isGroupTotal: true, sumCols: [17] },
+  // FPS
+  { index: 19, macro: 'FPS', sub: 'FUNDO', width: 5, row1Color: C_FPS, row2Color: C_FPS },
+  { index: 20, macro: 'FPS', sub: 'TOTAL', width: 5, row1Color: C_FPS, row2Color: C_FPS, isGroupTotal: true, sumCols: [19] },
+  // GAB
+  { index: 21, macro: 'GAB', sub: 'SECRET', width: 5, row1Color: C_GAB, row2Color: C_GAB },
+  { index: 22, macro: 'GAB', sub: 'TOTAL',  width: 5, row1Color: C_GAB, row2Color: C_GAB, isGroupTotal: true, sumCols: [21] },
+  // INF
+  { index: 23, macro: 'INF', sub: 'SECRET', width: 5, row1Color: C_INF, row2Color: C_INF },
+  { index: 24, macro: 'INF', sub: 'TOTAL',  width: 5, row1Color: C_INF, row2Color: C_INF, isGroupTotal: true, sumCols: [23] },
+  // SMA
+  { index: 25, macro: 'SMA', sub: 'SECRET', width: 5, row1Color: C_SMA, row2Color: C_SMA },
+  { index: 26, macro: 'SMA', sub: 'TOTAL',  width: 5, row1Color: C_SMA, row2Color: C_SMA, isGroupTotal: true, sumCols: [25] },
   // SME (27..32)
-  { index: 27, macro: 'SME', sub: 'SEC', width: 10, color: 'FF9BC2E6' },
-  { index: 28, macro: 'SME', sub: 'SEC EDU', width: 10, color: 'FF9BC2E6' },
-  { index: 29, macro: 'SME', sub: 'FF', width: 10, color: 'FF9BC2E6' },
-  { index: 30, macro: 'SME', sub: 'FI', width: 10, color: 'FF9BC2E6' },
-  { index: 31, macro: 'SME', sub: 'FUNDEB', width: 10, color: 'FF9BC2E6' },
-  { index: 32, macro: 'SME', sub: 'TOTAL', width: 10, color: 'FF9BC2E6', isGroupTotal: true, sumCols: [27, 28, 29, 30, 31] },
+  { index: 27, macro: 'SME', sub: 'SEC',     width: 5, row1Color: C_SME, row2Color: C_SME_A },
+  { index: 28, macro: 'SME', sub: 'SEC EDU', width: 5, row1Color: C_SME, row2Color: C_SME_A },
+  { index: 29, macro: 'SME', sub: 'FF',      width: 5, row1Color: C_SME, row2Color: C_SME_B },
+  { index: 30, macro: 'SME', sub: 'FI',      width: 5, row1Color: C_SME, row2Color: C_SME_B },
+  { index: 31, macro: 'SME', sub: 'FUNDEB',  width: 5, row1Color: C_SME, row2Color: C_SME },
+  { index: 32, macro: 'SME', sub: 'TOTAL',   width: 5, row1Color: C_SME, row2Color: C_SME, isGroupTotal: true, sumCols: [27, 28, 29, 30, 31] },
   // SMS (33..42)
-  { index: 33, macro: 'SMS', sub: 'SEC', width: 10, color: 'FFFCE4D6' },
-  { index: 34, macro: 'SMS', sub: 'SAÚDE', width: 10, color: 'FFFCE4D6' },
-  { index: 35, macro: 'SMS', sub: 'HOSP', width: 10, color: 'FFFCE4D6' },
-  { index: 36, macro: 'SMS', sub: 'HOSPITAL', width: 10, color: 'FFFCE4D6' },
-  { index: 37, macro: 'SMS', sub: 'MAC', width: 10, color: 'FFFCE4D6' },
-  { index: 38, macro: 'SMS', sub: 'CAF', width: 10, color: 'FFFCE4D6' },
-  { index: 39, macro: 'SMS', sub: 'ATB', width: 10, color: 'FFFCE4D6' },
-  { index: 40, macro: 'SMS', sub: 'VIGIL.', width: 10, color: 'FFFCE4D6' },
-  { index: 41, macro: 'SMS', sub: 'FMS', width: 10, color: 'FFFCE4D6' },
-  { index: 42, macro: 'SMS', sub: 'TOTAL', width: 10, color: 'FFFCE4D6', isGroupTotal: true, sumCols: [33, 34, 35, 36, 37, 38, 39, 40, 41] },
+  { index: 33, macro: 'SMS', sub: 'SEC',      width: 5, row1Color: C_SMS, row2Color: C_SMS_GREEN },
+  { index: 34, macro: 'SMS', sub: 'SAÚDE',    width: 5, row1Color: C_SMS, row2Color: C_SMS_GREEN },
+  { index: 35, macro: 'SMS', sub: 'HOSP',     width: 5, row1Color: C_SMS, row2Color: C_SMS_ORANGE },
+  { index: 36, macro: 'SMS', sub: 'HOSPITAL', width: 5, row1Color: C_SMS, row2Color: C_SMS_ORANGE },
+  { index: 37, macro: 'SMS', sub: 'MAC',      width: 5, row1Color: C_SMS, row2Color: C_SMS_LIME },
+  { index: 38, macro: 'SMS', sub: 'CAF',      width: 5, row1Color: C_SMS, row2Color: C_SMS_LIME },
+  { index: 39, macro: 'SMS', sub: 'ATB',      width: 5, row1Color: C_SMS, row2Color: C_SMS_LIME },
+  { index: 40, macro: 'SMS', sub: 'VIGIL.',   width: 5, row1Color: C_SMS, row2Color: C_SMS_LIME },
+  { index: 41, macro: 'SMS', sub: 'FMS',      width: 5, row1Color: C_SMS, row2Color: C_SMS },
+  { index: 42, macro: 'SMS', sub: 'TOTAL',    width: 5, row1Color: C_SMS, row2Color: C_SMS, isGroupTotal: true, sumCols: [33, 34, 35, 36, 37, 38, 39, 40, 41] },
   // SPS (43..51)
-  { index: 43, macro: 'SPS', sub: 'SECRET', width: 10, color: 'FFCCC0DA' },
-  { index: 44, macro: 'SPS', sub: 'PROTECAO', width: 10, color: 'FFCCC0DA' },
-  { index: 45, macro: 'SPS', sub: 'IGD/PBF', width: 10, color: 'FFCCC0DA' },
-  { index: 46, macro: 'SPS', sub: 'CRAS SCFV', width: 10, color: 'FFCCC0DA' },
-  { index: 47, macro: 'SPS', sub: 'CREAS', width: 10, color: 'FFCCC0DA' },
-  { index: 48, macro: 'SPS', sub: 'CRIANÇA FELIZ', width: 10, color: 'FFCCC0DA' },
-  { index: 49, macro: 'SPS', sub: 'PROCAD', width: 10, color: 'FFCCC0DA' },
-  { index: 50, macro: 'SPS', sub: 'FUNDO', width: 10, color: 'FFCCC0DA' },
-  { index: 51, macro: 'SPS', sub: 'TOTAL', width: 10, color: 'FFCCC0DA', isGroupTotal: true, sumCols: [43, 44, 45, 46, 47, 48, 49, 50] },
+  { index: 43, macro: 'SPS', sub: 'SECRET',         width: 5, row1Color: C_SPS, row2Color: C_SPS_A },
+  { index: 44, macro: 'SPS', sub: 'PROTECAO',       width: 5, row1Color: C_SPS, row2Color: C_SPS_A },
+  { index: 45, macro: 'SPS', sub: 'IGD/PBF',        width: 5, row1Color: C_SPS, row2Color: C_SPS_B },
+  { index: 46, macro: 'SPS', sub: 'CRAS SCFV',      width: 5, row1Color: C_SPS, row2Color: C_SPS_B },
+  { index: 47, macro: 'SPS', sub: 'CREAS',          width: 5, row1Color: C_SPS, row2Color: C_SPS_B },
+  { index: 48, macro: 'SPS', sub: 'CRIANÇA FELIZ',  width: 5, row1Color: C_SPS, row2Color: C_SPS_B },
+  { index: 49, macro: 'SPS', sub: 'PROCAD',         width: 5, row1Color: C_SPS, row2Color: C_SPS_B },
+  { index: 50, macro: 'SPS', sub: 'FUNDO',          width: 5, row1Color: C_SPS, row2Color: C_SPS_B },
+  { index: 51, macro: 'SPS', sub: 'TOTAL',          width: 5, row1Color: C_SPS, row2Color: C_SPS, isGroupTotal: true, sumCols: [43, 44, 45, 46, 47, 48, 49, 50] },
   // TOTAIS FINAIS (52..54)
-  { index: 52, macro: '', sub: 'TOTAL', width: 15, color: 'FFB4C6E7', isGeneralTotal: true },
-  { index: 53, macro: '', sub: 'VALOR UNIT', width: 15, color: 'FFB4C6E7', isCurrency: true },
-  { index: 54, macro: '', sub: 'VALOR TOTAL', width: 18, color: 'FFB4C6E7', isCurrency: true }
+  { index: 52, macro: '', sub: 'TOTAL',        width: 15, row1Color: C_BASE, row2Color: C_BASE, isGeneralTotal: true },
+  { index: 53, macro: '', sub: 'VALOR UNIT',   width: 15, row1Color: C_BASE, row2Color: C_BASE, isCurrency: true },
+  { index: 54, macro: '', sub: 'VALOR TOTAL',  width: 15, row1Color: C_BASE, row2Color: C_BASE, isCurrency: true }
 ];
 
 const colLetter = (n: number) => {
