@@ -238,6 +238,12 @@ export type Database = {
           id: string
           job_id: string
           lote: string | null
+          m2a_ata_id: string | null
+          m2a_ata_numero: string | null
+          m2a_fornecedor_nome: string | null
+          m2a_item_id: string | null
+          m2a_match_score: number
+          m2a_match_status: string
           numero_item: string | null
           observacoes: string | null
           ordem_item: number | null
@@ -255,6 +261,12 @@ export type Database = {
           id?: string
           job_id: string
           lote?: string | null
+          m2a_ata_id?: string | null
+          m2a_ata_numero?: string | null
+          m2a_fornecedor_nome?: string | null
+          m2a_item_id?: string | null
+          m2a_match_score?: number
+          m2a_match_status?: string
           numero_item?: string | null
           observacoes?: string | null
           ordem_item?: number | null
@@ -272,6 +284,12 @@ export type Database = {
           id?: string
           job_id?: string
           lote?: string | null
+          m2a_ata_id?: string | null
+          m2a_ata_numero?: string | null
+          m2a_fornecedor_nome?: string | null
+          m2a_item_id?: string | null
+          m2a_match_score?: number
+          m2a_match_status?: string
           numero_item?: string | null
           observacoes?: string | null
           ordem_item?: number | null
@@ -292,7 +310,11 @@ export type Database = {
           error_message: string | null
           id: string
           linha_cabecalho: number | null
+          m2a_processo_id: string | null
+          m2a_sync_at: string | null
+          m2a_url: string | null
           original_filename: string
+          processo_id: string | null
           status: string
           total_contratos_previstos: number
           total_itens: number
@@ -309,7 +331,11 @@ export type Database = {
           error_message?: string | null
           id?: string
           linha_cabecalho?: number | null
+          m2a_processo_id?: string | null
+          m2a_sync_at?: string | null
+          m2a_url?: string | null
           original_filename: string
+          processo_id?: string | null
           status?: string
           total_contratos_previstos?: number
           total_itens?: number
@@ -326,7 +352,11 @@ export type Database = {
           error_message?: string | null
           id?: string
           linha_cabecalho?: number | null
+          m2a_processo_id?: string | null
+          m2a_sync_at?: string | null
+          m2a_url?: string | null
           original_filename?: string
+          processo_id?: string | null
           status?: string
           total_contratos_previstos?: number
           total_itens?: number
@@ -334,7 +364,15 @@ export type Database = {
           updated_at?: string
           upload_file_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "contrato_import_jobs_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "processos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       contrato_item_dotacoes: {
         Row: {
@@ -430,15 +468,19 @@ export type Database = {
           data: string | null
           data_criacao_legada: string | null
           data_texto_legado: string | null
+          deleted_at: string | null
           dotacao: string | null
           enviado_m2a_em: string | null
           fiscal: string
+          fornecedor_nome: string | null
           id: string
           import_job_id: string | null
           legacy_id: number | null
           link_contrato: string
           m2a_ata_id: string | null
+          m2a_ata_numero: string | null
           m2a_contrato_id: string | null
+          m2a_documentos_gerados: Json
           numero_contrato: string
           objeto: string
           preposto: string
@@ -458,15 +500,19 @@ export type Database = {
           data?: string | null
           data_criacao_legada?: string | null
           data_texto_legado?: string | null
+          deleted_at?: string | null
           dotacao?: string | null
           enviado_m2a_em?: string | null
           fiscal: string
+          fornecedor_nome?: string | null
           id?: string
           import_job_id?: string | null
           legacy_id?: number | null
           link_contrato: string
           m2a_ata_id?: string | null
+          m2a_ata_numero?: string | null
           m2a_contrato_id?: string | null
+          m2a_documentos_gerados?: Json
           numero_contrato: string
           objeto: string
           preposto: string
@@ -486,15 +532,19 @@ export type Database = {
           data?: string | null
           data_criacao_legada?: string | null
           data_texto_legado?: string | null
+          deleted_at?: string | null
           dotacao?: string | null
           enviado_m2a_em?: string | null
           fiscal?: string
+          fornecedor_nome?: string | null
           id?: string
           import_job_id?: string | null
           legacy_id?: number | null
           link_contrato?: string
           m2a_ata_id?: string | null
+          m2a_ata_numero?: string | null
           m2a_contrato_id?: string | null
+          m2a_documentos_gerados?: Json
           numero_contrato?: string
           objeto?: string
           preposto?: string
@@ -531,6 +581,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      fornecedores_prepostos: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          fornecedor_cnpj: string | null
+          fornecedor_nome: string
+          fornecedor_nome_norm: string
+          id: string
+          preposto_nome: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          fornecedor_cnpj?: string | null
+          fornecedor_nome: string
+          fornecedor_nome_norm: string
+          id?: string
+          preposto_nome: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          fornecedor_cnpj?: string | null
+          fornecedor_nome?: string
+          fornecedor_nome_norm?: string
+          id?: string
+          preposto_nome?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       irp_job_secretarias: {
         Row: {
@@ -860,6 +943,50 @@ export type Database = {
         }
         Relationships: []
       }
+      m2a_envio_preferencias: {
+        Row: {
+          created_at: string
+          data_padrao: string | null
+          fiscal_id: string
+          gestor_id: string
+          id: string
+          secretaria_id: string | null
+          unidade_gestora_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data_padrao?: string | null
+          fiscal_id: string
+          gestor_id: string
+          id?: string
+          secretaria_id?: string | null
+          unidade_gestora_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data_padrao?: string | null
+          fiscal_id?: string
+          gestor_id?: string
+          id?: string
+          secretaria_id?: string | null
+          unidade_gestora_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "m2a_envio_preferencias_secretaria_id_fkey"
+            columns: ["secretaria_id"]
+            isOneToOne: false
+            referencedRelation: "secretarias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       m2a_itens: {
         Row: {
           created_at: string
@@ -896,6 +1023,102 @@ export type Database = {
         }
         Relationships: []
       }
+      m2a_servidor_unidade: {
+        Row: {
+          created_at: string
+          servidor_id: string
+          unidade_id: string
+        }
+        Insert: {
+          created_at?: string
+          servidor_id: string
+          unidade_id: string
+        }
+        Update: {
+          created_at?: string
+          servidor_id?: string
+          unidade_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "m2a_servidor_unidade_servidor_id_fkey"
+            columns: ["servidor_id"]
+            isOneToOne: false
+            referencedRelation: "m2a_servidores"
+            referencedColumns: ["id_local"]
+          },
+          {
+            foreignKeyName: "m2a_servidor_unidade_unidade_id_fkey"
+            columns: ["unidade_id"]
+            isOneToOne: false
+            referencedRelation: "m2a_unidades_gestoras"
+            referencedColumns: ["id_local"]
+          },
+        ]
+      }
+      m2a_servidores: {
+        Row: {
+          ativo: boolean
+          cargo: Database["public"]["Enums"]["m2a_servidor_cargo"]
+          cpf: string | null
+          created_at: string
+          id_local: string
+          m2a_id: string
+          nome: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          cargo: Database["public"]["Enums"]["m2a_servidor_cargo"]
+          cpf?: string | null
+          created_at?: string
+          id_local?: string
+          m2a_id: string
+          nome: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          cargo?: Database["public"]["Enums"]["m2a_servidor_cargo"]
+          cpf?: string | null
+          created_at?: string
+          id_local?: string
+          m2a_id?: string
+          nome?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      m2a_unidades_gestoras: {
+        Row: {
+          ativa: boolean
+          created_at: string
+          id_local: string
+          m2a_id: string
+          nome: string
+          sigla: string | null
+          updated_at: string
+        }
+        Insert: {
+          ativa?: boolean
+          created_at?: string
+          id_local?: string
+          m2a_id: string
+          nome: string
+          sigla?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ativa?: boolean
+          created_at?: string
+          id_local?: string
+          m2a_id?: string
+          nome?: string
+          sigla?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       numeracao: {
         Row: {
           contador: number
@@ -920,6 +1143,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           data_abertura: string | null
+          deleted_at: string | null
           id: string
           m2a_processo_id: string | null
           m2a_sync_at: string | null
@@ -937,6 +1161,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           data_abertura?: string | null
+          deleted_at?: string | null
           id?: string
           m2a_processo_id?: string | null
           m2a_sync_at?: string | null
@@ -954,6 +1179,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           data_abertura?: string | null
+          deleted_at?: string | null
           id?: string
           m2a_processo_id?: string | null
           m2a_sync_at?: string | null
@@ -1016,9 +1242,12 @@ export type Database = {
           created_at: string
           id: string
           m2a_dot_id: string | null
+          m2a_dot_orgao_id: string | null
           m2a_dotacao_default: string | null
+          m2a_fiscal_codigo: string | null
           m2a_fiscal_cpf: string | null
           m2a_fiscal_nome: string | null
+          m2a_gestor_codigo: string | null
           m2a_gestor_cpf: string | null
           m2a_gestor_nome: string | null
           m2a_orgao_id: string | null
@@ -1035,9 +1264,12 @@ export type Database = {
           created_at?: string
           id?: string
           m2a_dot_id?: string | null
+          m2a_dot_orgao_id?: string | null
           m2a_dotacao_default?: string | null
+          m2a_fiscal_codigo?: string | null
           m2a_fiscal_cpf?: string | null
           m2a_fiscal_nome?: string | null
+          m2a_gestor_codigo?: string | null
           m2a_gestor_cpf?: string | null
           m2a_gestor_nome?: string | null
           m2a_orgao_id?: string | null
@@ -1054,9 +1286,12 @@ export type Database = {
           created_at?: string
           id?: string
           m2a_dot_id?: string | null
+          m2a_dot_orgao_id?: string | null
           m2a_dotacao_default?: string | null
+          m2a_fiscal_codigo?: string | null
           m2a_fiscal_cpf?: string | null
           m2a_fiscal_nome?: string | null
+          m2a_gestor_codigo?: string | null
           m2a_gestor_cpf?: string | null
           m2a_gestor_nome?: string | null
           m2a_orgao_id?: string | null
@@ -1096,6 +1331,79 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_contract_report_data: {
+        Args: { p_contract_id: string }
+        Returns: {
+          contract_id: string
+          created_at: string
+          dotacao: string
+          fiscal: string
+          fornecedor_nome: string
+          item_descricao: string
+          item_especificacao: string
+          item_id: string
+          item_lote: string
+          item_numero: string
+          item_ordem: number
+          item_quantidade: number
+          item_unidade: string
+          item_valor_total: number
+          item_valor_unitario: number
+          m2a_ata_numero: string
+          numero_contrato: string
+          objeto: string
+          preposto: string
+          processo_id: string
+          secretaria_nome: string
+          secretaria_sigla: string
+        }[]
+      }
+      get_multiple_contracts_report_data: {
+        Args: { p_contract_ids: string[] }
+        Returns: {
+          contract_id: string
+          created_at: string
+          dotacao: string
+          fiscal: string
+          fornecedor_nome: string
+          item_descricao: string
+          item_especificacao: string
+          item_id: string
+          item_lote: string
+          item_numero: string
+          item_ordem: number
+          item_quantidade: number
+          item_unidade: string
+          item_valor_total: number
+          item_valor_unitario: number
+          m2a_ata_numero: string
+          numero_contrato: string
+          objeto: string
+          preposto: string
+          processo_id: string
+          secretaria_nome: string
+          secretaria_sigla: string
+        }[]
+      }
+      get_pauta_consolidada_data: {
+        Args: { p_processo_id: string }
+        Returns: {
+          contrato_numero: string
+          descricao: string
+          empresa: string
+          item_codigo: string
+          item_id: string
+          lote: string
+          numero_item: string
+          processo_id: string
+          quantidade: number
+          secretaria_sigla: string
+          subcategoria: string
+          unidade: string
+          valor_total: number
+          valor_unitario: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1104,13 +1412,31 @@ export type Database = {
         Returns: boolean
       }
       next_contrato_number: { Args: { p_sec_num: number }; Returns: number }
+      next_contrato_number_for_base: {
+        Args: { p_numero_base: string; p_sec_num: number; p_sec_sigla: string }
+        Returns: number
+      }
       next_contrato_numbers_batch: {
         Args: { p_qtd: number; p_sec_num: number }
         Returns: number
       }
+      next_contrato_numbers_batch_for_base: {
+        Args: {
+          p_numero_base: string
+          p_qtd: number
+          p_sec_num: number
+          p_sec_sigla: string
+        }
+        Returns: number
+      }
+      restore_soft_deleted_process: {
+        Args: { p_processo_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "gestor" | "operador" | "consulta"
+      m2a_servidor_cargo: "FISCAL" | "GESTOR" | "PREPOSTO"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1239,6 +1565,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "gestor", "operador", "consulta"],
+      m2a_servidor_cargo: ["FISCAL", "GESTOR", "PREPOSTO"],
     },
   },
 } as const
