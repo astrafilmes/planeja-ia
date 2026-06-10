@@ -66,7 +66,7 @@ export async function persistM2ASnapshot(
 
 export function syncM2AProcessoOnce(
   m2aProcessoUrl: string,
-  timeoutMs = 120_000,
+  timeoutMs = 600_000, // 10 min: importações em lote podem demorar
 ): Promise<M2aSyncPayload> {
   return new Promise((resolve, reject) => {
     const requestId = createM2aProcessoSyncRequestId();
