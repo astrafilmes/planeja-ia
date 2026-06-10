@@ -1305,6 +1305,45 @@ export type Database = {
         }
         Relationships: []
       }
+      trusted_devices: {
+        Row: {
+          created_at: string
+          device_label: string | null
+          expires_at: string
+          id: string
+          last_ip: unknown
+          last_used_at: string | null
+          revoked_at: string | null
+          token_hash: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_label?: string | null
+          expires_at?: string
+          id?: string
+          last_ip?: unknown
+          last_used_at?: string | null
+          revoked_at?: string | null
+          token_hash: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_label?: string | null
+          expires_at?: string
+          id?: string
+          last_ip?: unknown
+          last_used_at?: string | null
+          revoked_at?: string | null
+          token_hash?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1331,6 +1370,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      consume_trusted_device: {
+        Args: { p_token_hash: string }
+        Returns: string
+      }
+      dedupe_m2a_itens: { Args: { p_processo_id: string }; Returns: number }
       get_contract_report_data: {
         Args: { p_contract_id: string }
         Returns: {
@@ -1396,6 +1440,28 @@ export type Database = {
           item_codigo: string
           item_id: string
           lote: string
+          numero_item: string
+          processo_id: string
+          quantidade: number
+          secretaria_sigla: string
+          subcategoria: string
+          unidade: string
+          valor_total: number
+          valor_unitario: number
+        }[]
+      }
+      get_pauta_consolidada_full: {
+        Args: { p_contrato_ids?: string[]; p_processo_id: string }
+        Returns: {
+          contrato_id: string
+          contrato_numero: string
+          descricao: string
+          empresa: string
+          especificacao: string
+          item_codigo: string
+          item_id: string
+          lote: string
+          no_contrato: boolean
           numero_item: string
           processo_id: string
           quantidade: number
