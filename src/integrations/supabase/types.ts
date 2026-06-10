@@ -746,6 +746,78 @@ export type Database = {
           },
         ]
       }
+      m2a_atas: {
+        Row: {
+          created_at: string
+          fornecedor_cnpj: string | null
+          fornecedor_nome: string | null
+          id: string
+          m2a_ata_id: string
+          numero_ata: string
+          processo_id: string
+          synced_at: string
+        }
+        Insert: {
+          created_at?: string
+          fornecedor_cnpj?: string | null
+          fornecedor_nome?: string | null
+          id?: string
+          m2a_ata_id: string
+          numero_ata: string
+          processo_id: string
+          synced_at?: string
+        }
+        Update: {
+          created_at?: string
+          fornecedor_cnpj?: string | null
+          fornecedor_nome?: string | null
+          id?: string
+          m2a_ata_id?: string
+          numero_ata?: string
+          processo_id?: string
+          synced_at?: string
+        }
+        Relationships: []
+      }
+      m2a_contratos_snapshot: {
+        Row: {
+          ano: number | null
+          created_at: string
+          id: string
+          m2a_ata_id: string | null
+          m2a_contrato_id: string
+          numero_contrato: string
+          processo_id: string
+          raw: Json | null
+          sequencia: number | null
+          sigla_secretaria: string | null
+        }
+        Insert: {
+          ano?: number | null
+          created_at?: string
+          id?: string
+          m2a_ata_id?: string | null
+          m2a_contrato_id: string
+          numero_contrato: string
+          processo_id: string
+          raw?: Json | null
+          sequencia?: number | null
+          sigla_secretaria?: string | null
+        }
+        Update: {
+          ano?: number | null
+          created_at?: string
+          id?: string
+          m2a_ata_id?: string | null
+          m2a_contrato_id?: string
+          numero_contrato?: string
+          processo_id?: string
+          raw?: Json | null
+          sequencia?: number | null
+          sigla_secretaria?: string | null
+        }
+        Relationships: []
+      }
       m2a_envio_logs: {
         Row: {
           contrato_id: string
@@ -788,6 +860,42 @@ export type Database = {
         }
         Relationships: []
       }
+      m2a_itens: {
+        Row: {
+          created_at: string
+          descricao: string | null
+          id: string
+          m2a_ata_id: string
+          m2a_item_id: string
+          numero_item: string | null
+          processo_id: string
+          unidade: string | null
+          valor_unitario: number
+        }
+        Insert: {
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          m2a_ata_id: string
+          m2a_item_id: string
+          numero_item?: string | null
+          processo_id: string
+          unidade?: string | null
+          valor_unitario?: number
+        }
+        Update: {
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          m2a_ata_id?: string
+          m2a_item_id?: string
+          numero_item?: string | null
+          processo_id?: string
+          unidade?: string | null
+          valor_unitario?: number
+        }
+        Relationships: []
+      }
       numeracao: {
         Row: {
           contador: number
@@ -814,6 +922,7 @@ export type Database = {
           data_abertura: string | null
           id: string
           m2a_processo_id: string | null
+          m2a_sync_at: string | null
           m2a_url: string | null
           modalidade: string | null
           numero_processo: string | null
@@ -830,6 +939,7 @@ export type Database = {
           data_abertura?: string | null
           id?: string
           m2a_processo_id?: string | null
+          m2a_sync_at?: string | null
           m2a_url?: string | null
           modalidade?: string | null
           numero_processo?: string | null
@@ -846,6 +956,7 @@ export type Database = {
           data_abertura?: string | null
           id?: string
           m2a_processo_id?: string | null
+          m2a_sync_at?: string | null
           m2a_url?: string | null
           modalidade?: string | null
           numero_processo?: string | null
@@ -991,6 +1102,11 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      next_contrato_number: { Args: { p_sec_num: number }; Returns: number }
+      next_contrato_numbers_batch: {
+        Args: { p_qtd: number; p_sec_num: number }
+        Returns: number
       }
     }
     Enums: {
