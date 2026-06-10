@@ -105,6 +105,153 @@ export type Database = {
           },
         ]
       }
+      contrato_import_dotacoes: {
+        Row: {
+          created_at: string
+          dotacao: string
+          id: string
+          ignorado: boolean
+          item_id: string
+          job_id: string
+          quantidade: number
+          ref_coluna: number
+          secretaria_sigla: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          dotacao: string
+          id?: string
+          ignorado?: boolean
+          item_id: string
+          job_id: string
+          quantidade?: number
+          ref_coluna: number
+          secretaria_sigla: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          dotacao?: string
+          id?: string
+          ignorado?: boolean
+          item_id?: string
+          job_id?: string
+          quantidade?: number
+          ref_coluna?: number
+          secretaria_sigla?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      contrato_import_itens: {
+        Row: {
+          created_at: string
+          descricao: string
+          empresa: string | null
+          especificacao: string | null
+          excluido: boolean
+          id: string
+          job_id: string
+          lote: string | null
+          numero_item: string | null
+          observacoes: string | null
+          ordem_item: number | null
+          source_row: number
+          unidade: string | null
+          updated_at: string
+          valor_unitario: number
+        }
+        Insert: {
+          created_at?: string
+          descricao: string
+          empresa?: string | null
+          especificacao?: string | null
+          excluido?: boolean
+          id?: string
+          job_id: string
+          lote?: string | null
+          numero_item?: string | null
+          observacoes?: string | null
+          ordem_item?: number | null
+          source_row: number
+          unidade?: string | null
+          updated_at?: string
+          valor_unitario?: number
+        }
+        Update: {
+          created_at?: string
+          descricao?: string
+          empresa?: string | null
+          especificacao?: string | null
+          excluido?: boolean
+          id?: string
+          job_id?: string
+          lote?: string | null
+          numero_item?: string | null
+          observacoes?: string | null
+          ordem_item?: number | null
+          source_row?: number
+          unidade?: string | null
+          updated_at?: string
+          valor_unitario?: number
+        }
+        Relationships: []
+      }
+      contrato_import_jobs: {
+        Row: {
+          authorized_at: string | null
+          authorized_by: string | null
+          created_at: string
+          created_by: string | null
+          empresa: string | null
+          error_message: string | null
+          id: string
+          linha_cabecalho: number | null
+          original_filename: string
+          status: string
+          total_contratos_previstos: number
+          total_itens: number
+          total_valor: number
+          updated_at: string
+          upload_file_id: string | null
+        }
+        Insert: {
+          authorized_at?: string | null
+          authorized_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          empresa?: string | null
+          error_message?: string | null
+          id?: string
+          linha_cabecalho?: number | null
+          original_filename: string
+          status?: string
+          total_contratos_previstos?: number
+          total_itens?: number
+          total_valor?: number
+          updated_at?: string
+          upload_file_id?: string | null
+        }
+        Update: {
+          authorized_at?: string | null
+          authorized_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          empresa?: string | null
+          error_message?: string | null
+          id?: string
+          linha_cabecalho?: number | null
+          original_filename?: string
+          status?: string
+          total_contratos_previstos?: number
+          total_itens?: number
+          total_valor?: number
+          updated_at?: string
+          upload_file_id?: string | null
+        }
+        Relationships: []
+      }
       contratos: {
         Row: {
           created_at: string
@@ -112,8 +259,10 @@ export type Database = {
           data: string | null
           data_criacao_legada: string | null
           data_texto_legado: string | null
+          dotacao: string | null
           fiscal: string
           id: string
+          import_job_id: string | null
           legacy_id: number | null
           link_contrato: string
           numero_contrato: string
@@ -133,8 +282,10 @@ export type Database = {
           data?: string | null
           data_criacao_legada?: string | null
           data_texto_legado?: string | null
+          dotacao?: string | null
           fiscal: string
           id?: string
+          import_job_id?: string | null
           legacy_id?: number | null
           link_contrato: string
           numero_contrato: string
@@ -154,8 +305,10 @@ export type Database = {
           data?: string | null
           data_criacao_legada?: string | null
           data_texto_legado?: string | null
+          dotacao?: string | null
           fiscal?: string
           id?: string
+          import_job_id?: string | null
           legacy_id?: number | null
           link_contrato?: string
           numero_contrato?: string
