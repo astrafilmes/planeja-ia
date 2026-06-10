@@ -9,6 +9,9 @@
 (function () {
   const ENGINE_VERSION = "1.7.9";
   const REQUEST_TIMEOUT_MS = 30000;
+  // Timeout estendido (10 min) para uploads pesados como importação de planilha
+  // de itens com muitas linhas — o portal pode demorar para responder.
+  const LONG_REQUEST_TIMEOUT_MS = 600000;
   const CSRF_CACHE_TTL_MS = 10 * 60 * 1000;
   const CONTRACT_CREATE_SETTLE_MS = 600;
   const PROCESS_CREATE_SETTLE_MS = 3000;
