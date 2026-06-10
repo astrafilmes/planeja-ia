@@ -678,13 +678,13 @@ export function prepararDadosPautaConsolidada(dadosBrutos: any[]): Array<{ proce
     }
   }
 
-  const processes: Array<{ processo_id: string; contrato_numero?: string | null; items: Array<{ cells: (string | number | null)[]; valor_unit?: number | null; valor_total?: number | null }> }> = [];
-  for (const [pid, proc] of processesMap) {
+  const processes: Array<{ processo_id: string; processo_nome?: string | null; contrato_numero?: string | null; items: Array<{ cells: (string | number | null)[]; valor_unit?: number | null; valor_total?: number | null }> }> = [];
+  for (const [, proc] of processesMap) {
     const items: Array<{ cells: (string | number | null)[]; valor_unit?: number | null; valor_total?: number | null }> = [];
     for (const [, entry] of proc.itemsMap) {
       items.push({ cells: entry.cells, valor_unit: entry.valor_unit, valor_total: entry.valor_total });
     }
-    processes.push({ processo_id: proc.processo_id, contrato_numero: proc.contrato_numero, items });
+    processes.push({ processo_id: proc.processo_id, processo_nome: proc.processo_nome, contrato_numero: proc.contrato_numero, items });
   }
 
   return processes;
