@@ -1,5 +1,8 @@
 import "dotenv/config";
 
+const M2A_ENTITY_LOGIN_PATH = "/usuario/login/";
+const M2A_ENTITY_LOGIN_PROFILE = "1";
+
 function required(name) {
   const v = process.env[name];
   if (!v || !v.trim()) {
@@ -17,8 +20,11 @@ export const config = {
     baseUrl: required("M2A_BASE_URL").replace(/\/+$/, ""),
     username: required("M2A_USERNAME"),
     password: required("M2A_PASSWORD"),
-    loginPath: process.env.M2A_LOGIN_PATH ?? "/usuario/login/",
-    loginProfile: process.env.M2A_LOGIN_PROFILE ?? "1",
+    // Login é sempre no portal da entidade/órgão público.
+    // Não lemos mais M2A_LOGIN_PATH/M2A_LOGIN_PROFILE do .env para evitar
+    // cair acidentalmente no portal de fornecedores por variável antiga do PM2.
+    loginPath: M2A_ENTITY_LOGIN_PATH,
+    loginProfile: M2A_ENTITY_LOGIN_PROFILE,
     maxConcurrency: Number(process.env.M2A_MAX_CONCURRENCY ?? 2),
   },
 
