@@ -246,6 +246,8 @@ interface PautaColDef {
   isGeneralTotal?: boolean;
   sumCols?: number[];
   isCurrency?: boolean;
+  /** Quando true, as células de dados desta coluna herdam a cor da linha 2 do cabeçalho. */
+  fillRow2InData?: boolean;
 }
 
 // Cores GovTech (ARGB - prefixo FF)
@@ -309,31 +311,31 @@ const PAUTA_COLUMNS_CONFIG: PautaColDef[] = [
   { index: 26, macro: 'SMA', sub: 'TOTAL',  width: 5, row1Color: C_SMA, row2Color: C_SMA, isGroupTotal: true, sumCols: [25] },
   // SME (27..32)
   { index: 27, macro: 'SME', sub: 'SEC',     width: 5, row1Color: C_SME, row2Color: C_SME_A },
-  { index: 28, macro: 'SME', sub: 'SEC EDU', width: 5, row1Color: C_SME, row2Color: C_SME_A },
+  { index: 28, macro: 'SME', sub: 'SEC EDU', width: 5, row1Color: C_SME, row2Color: C_SME_A, fillRow2InData: true },
   { index: 29, macro: 'SME', sub: 'FF',      width: 5, row1Color: C_SME, row2Color: C_SME_B },
   { index: 30, macro: 'SME', sub: 'FI',      width: 5, row1Color: C_SME, row2Color: C_SME_B },
-  { index: 31, macro: 'SME', sub: 'FUNDEB',  width: 5, row1Color: C_SME, row2Color: C_SME },
+  { index: 31, macro: 'SME', sub: 'FUNDEB',  width: 5, row1Color: C_SME, row2Color: C_SME, fillRow2InData: true },
   { index: 32, macro: 'SME', sub: 'TOTAL',   width: 5, row1Color: C_SME, row2Color: C_SME, isGroupTotal: true, sumCols: [27, 28, 29, 30, 31] },
   // SMS (33..42)
   { index: 33, macro: 'SMS', sub: 'SEC',      width: 5, row1Color: C_SMS, row2Color: C_SMS_GREEN },
-  { index: 34, macro: 'SMS', sub: 'SAÚDE',    width: 5, row1Color: C_SMS, row2Color: C_SMS_GREEN },
+  { index: 34, macro: 'SMS', sub: 'SAÚDE',    width: 5, row1Color: C_SMS, row2Color: C_SMS_GREEN, fillRow2InData: true },
   { index: 35, macro: 'SMS', sub: 'HOSP',     width: 5, row1Color: C_SMS, row2Color: C_SMS_ORANGE },
-  { index: 36, macro: 'SMS', sub: 'HOSPITAL', width: 5, row1Color: C_SMS, row2Color: C_SMS_ORANGE },
+  { index: 36, macro: 'SMS', sub: 'HOSPITAL', width: 5, row1Color: C_SMS, row2Color: C_SMS_ORANGE, fillRow2InData: true },
   { index: 37, macro: 'SMS', sub: 'MAC',      width: 5, row1Color: C_SMS, row2Color: C_SMS_LIME },
   { index: 38, macro: 'SMS', sub: 'CAF',      width: 5, row1Color: C_SMS, row2Color: C_SMS_LIME },
   { index: 39, macro: 'SMS', sub: 'ATB',      width: 5, row1Color: C_SMS, row2Color: C_SMS_LIME },
   { index: 40, macro: 'SMS', sub: 'VIGIL.',   width: 5, row1Color: C_SMS, row2Color: C_SMS_LIME },
-  { index: 41, macro: 'SMS', sub: 'FMS',      width: 5, row1Color: C_SMS, row2Color: C_SMS },
+  { index: 41, macro: 'SMS', sub: 'FMS',      width: 5, row1Color: C_SMS, row2Color: C_SMS, fillRow2InData: true },
   { index: 42, macro: 'SMS', sub: 'TOTAL',    width: 5, row1Color: C_SMS, row2Color: C_SMS, isGroupTotal: true, sumCols: [33, 34, 35, 36, 37, 38, 39, 40, 41] },
   // SPS (43..51)
   { index: 43, macro: 'SPS', sub: 'SECRET',         width: 5, row1Color: C_SPS, row2Color: C_SPS_A },
-  { index: 44, macro: 'SPS', sub: 'PROTECAO',       width: 5, row1Color: C_SPS, row2Color: C_SPS_A },
+  { index: 44, macro: 'SPS', sub: 'PROTECAO',       width: 5, row1Color: C_SPS, row2Color: C_SPS_A, fillRow2InData: true },
   { index: 45, macro: 'SPS', sub: 'IGD/PBF',        width: 5, row1Color: C_SPS, row2Color: C_SPS_B },
   { index: 46, macro: 'SPS', sub: 'CRAS SCFV',      width: 5, row1Color: C_SPS, row2Color: C_SPS_B },
   { index: 47, macro: 'SPS', sub: 'CREAS',          width: 5, row1Color: C_SPS, row2Color: C_SPS_B },
   { index: 48, macro: 'SPS', sub: 'CRIANÇA FELIZ',  width: 5, row1Color: C_SPS, row2Color: C_SPS_B },
   { index: 49, macro: 'SPS', sub: 'PROCAD',         width: 5, row1Color: C_SPS, row2Color: C_SPS_B },
-  { index: 50, macro: 'SPS', sub: 'FUNDO',          width: 5, row1Color: C_SPS, row2Color: C_SPS_B },
+  { index: 50, macro: 'SPS', sub: 'FUNDO',          width: 5, row1Color: C_SPS, row2Color: C_SPS_B, fillRow2InData: true },
   { index: 51, macro: 'SPS', sub: 'TOTAL',          width: 5, row1Color: C_SPS, row2Color: C_SPS, isGroupTotal: true, sumCols: [43, 44, 45, 46, 47, 48, 49, 50] },
   // TOTAIS FINAIS (52..54)
   { index: 52, macro: '', sub: 'TOTAL',        width: 15, row1Color: C_BASE, row2Color: C_BASE, isGeneralTotal: true },
@@ -393,12 +395,12 @@ export async function exportarPautaConsolidadaExcel(
       cell2.value = cfg.sub;
 
       cell1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: cfg.row1Color } };
-      cell1.font = { bold: true, color: { argb: 'FF000000' } };
+      cell1.font = { bold: false, size: 9, color: { argb: 'FF000000' } };
       cell1.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
       cell1.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
 
       cell2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: cfg.row2Color } };
-      cell2.font = { bold: true, color: { argb: 'FF000000' } };
+      cell2.font = { bold: false, size: 9, color: { argb: 'FF000000' } };
       // Da coluna 8 em diante, texto da linha 2 rotacionado em 90 graus
       cell2.alignment = cfg.index >= 8
         ? { horizontal: 'center', vertical: 'middle', textRotation: 90, wrapText: false }
@@ -423,42 +425,59 @@ export async function exportarPautaConsolidadaExcel(
 
     const startRow = 3;
 
-    // Preenchimento de Dados (Sem cores infinitas nas colunas)
+    // Preenchimento de Dados
     proc.items.forEach((item, idx) => {
       const rowIndex = startRow + idx;
-      
+
       const rowData = new Array(54).fill(null);
       item.cells.forEach((val, i) => {
         if (i < 54) rowData[i] = val;
       });
 
-      // Aplica CAIXA ALTA na coluna de descrição (Index 5 - coluna F)
-      if (typeof rowData[5] === 'string') {
-        rowData[5] = formatTechnicalDesc(rowData[5]);
-      }
+      // Coluna E (idx 4) DESCRIÇÃO e F (idx 5) ESPECIFICAÇÃO em CAIXA ALTA
+      if (typeof rowData[4] === 'string') rowData[4] = formatTechnicalDesc(rowData[4]);
+      if (typeof rowData[5] === 'string') rowData[5] = formatTechnicalDesc(rowData[5]);
+
+      // Força B/C/D (idx 1,2,3) para Number quando possível
+      [1, 2, 3].forEach(i => {
+        const v = rowData[i];
+        if (v !== null && v !== undefined && v !== '') {
+          const n = Number(String(v).replace(',', '.'));
+          if (!Number.isNaN(n)) rowData[i] = n;
+        }
+      });
 
       const row = ws.addRow(rowData);
 
       row.eachCell({ includeEmpty: true }, (cell: Cell, colNumber: number) => {
         const colConf = PAUTA_COLUMNS_CONFIG[colNumber - 1];
-        
-        // Apenas bordas finas para as células de dados, sem preenchimento de cor
-        cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
 
-        if (colConf.isCurrency || typeof cell.value === 'number') {
-          cell.alignment = { horizontal: 'right', vertical: 'middle' };
+        cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+        cell.font = { bold: false, size: 9, color: { argb: 'FF000000' } };
+
+        // Alinhamentos
+        if (colNumber === 1) {
+          // Coluna A (EMPRESA) à esquerda a partir da linha 3
+          cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
         } else if (colNumber === 5 || colNumber === 6) {
           cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+        } else if (colConf.isCurrency || typeof cell.value === 'number') {
+          cell.alignment = { horizontal: 'right', vertical: 'middle' };
         } else {
           cell.alignment = { horizontal: 'center', vertical: 'middle' };
         }
 
+        // Formatos numéricos
+        if ((colNumber === 2 || colNumber === 3 || colNumber === 4) && typeof cell.value === 'number') {
+          cell.numFmt = '0';
+        }
         if (colConf.isCurrency && typeof cell.value === 'number') {
           cell.numFmt = moedaFmt;
         }
 
-        if (colConf.isGroupTotal || colConf.isGeneralTotal) {
-          cell.font = { bold: true };
+        // Herda a cor da linha 2 nas células de dados das colunas marcadas (TOTAIS e subtotais visuais)
+        if (colConf.fillRow2InData || colConf.isGroupTotal || colConf.isGeneralTotal) {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colConf.row2Color } };
         }
       });
 
@@ -466,20 +485,21 @@ export async function exportarPautaConsolidadaExcel(
       PAUTA_COLUMNS_CONFIG.forEach(colConf => {
         if (colConf.sumCols && colConf.sumCols.length > 0) {
           const letter = colLetter(colConf.index);
-          const isConsecutive = colConf.sumCols.length > 2 && 
+          const isConsecutive = colConf.sumCols.length > 2 &&
             (colConf.sumCols[colConf.sumCols.length - 1] - colConf.sumCols[0] === colConf.sumCols.length - 1);
-            
+
           let formulaStr = '';
           if (isConsecutive) {
             formulaStr = `SUM(${colLetter(colConf.sumCols[0])}${rowIndex}:${colLetter(colConf.sumCols[colConf.sumCols.length - 1])}${rowIndex})`;
           } else {
             formulaStr = `SUM(${colConf.sumCols.map(c => `${colLetter(c)}${rowIndex}`).join(',')})`;
           }
-          
+
           const cell = ws.getCell(`${letter}${rowIndex}`);
           cell.value = { formula: formulaStr } as any;
           cell.alignment = { horizontal: 'right', vertical: 'middle' };
-          cell.font = { bold: true };
+          cell.font = { bold: false, size: 9, color: { argb: 'FF000000' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colConf.row2Color } };
         }
       });
 
@@ -490,7 +510,8 @@ export async function exportarPautaConsolidadaExcel(
         const cell = ws.getCell(`AZ${rowIndex}`);
         cell.value = { formula: formulaStr } as any;
         cell.alignment = { horizontal: 'right', vertical: 'middle' };
-        cell.font = { bold: true };
+        cell.font = { bold: false, size: 9, color: { argb: 'FF000000' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C_BASE } };
       }
 
       // Sobrescrita explícita para Valores Unitários e Totais (BA e BB)
@@ -498,11 +519,13 @@ export async function exportarPautaConsolidadaExcel(
         const cell = ws.getCell(`BA${rowIndex}`);
         cell.value = item.valor_unit;
         cell.numFmt = moedaFmt;
+        cell.font = { bold: false, size: 9, color: { argb: 'FF000000' } };
       }
       if (typeof item.valor_total === 'number') {
         const cell = ws.getCell(`BB${rowIndex}`);
         cell.value = item.valor_total;
         cell.numFmt = moedaFmt;
+        cell.font = { bold: false, size: 9, color: { argb: 'FF000000' } };
       }
     });
 
@@ -511,7 +534,7 @@ export async function exportarPautaConsolidadaExcel(
     ws.mergeCells(`A${footerRowIndex}:G${footerRowIndex}`);
     const footerCell = ws.getCell(`A${footerRowIndex}`);
     footerCell.value = proc.contrato_numero ? `${proc.processo_id} / ${proc.contrato_numero}` : proc.processo_id;
-    footerCell.font = { bold: true };
+    footerCell.font = { bold: false, size: 9, color: { argb: 'FF000000' } };
     footerCell.alignment = { horizontal: 'left', vertical: 'middle' };
   }
 
@@ -601,22 +624,39 @@ export function prepararDadosPautaConsolidada(dadosBrutos: any[]): Array<{ proce
     }
     const proc = processesMap.get(pid)!;
 
-    const itemKey = row.item_id ? String(row.item_id) : `${row.empresa || ''}::${row.item_numero || row.numero_item || ''}`;
+    // Consolida o mesmo item (mesmo lote + nº item) através de múltiplos contratos do mesmo processo.
+    // Assim, se o item 5 aparece em ADM e GAB (contratos distintos), o resultado é UMA linha
+    // com as quantidades distribuídas nas colunas ADM e GAB.
+    const lote = String(row.lote ?? '').trim();
+    const numItem = String(row.numero_item ?? row.numero ?? row.item_numero ?? '').trim();
+    const itemKey = (lote || numItem)
+      ? `L:${lote}|N:${numItem}`
+      : (row.item_id ? String(row.item_id) : `${row.empresa || ''}::${numItem}`);
+
+    const descricaoRaw = row.descricao ?? row.item_descricao ?? row.objeto ?? '';
+    const especificacaoRaw = row.especificacao ?? row.item_especificacao ?? '';
+    const descricao = formatTechnicalDesc(String(descricaoRaw));
+    const especificacao = formatTechnicalDesc(String(especificacaoRaw));
+
     if (!proc.itemsMap.has(itemKey)) {
       const cells = new Array(54).fill(null);
       cells[0] = row.empresa || row.fornecedor_nome || '';
-      cells[1] = row.item_codigo || row.item || row.item_numero || '';
-      cells[2] = row.lote || '';
-      cells[3] = row.numero_item || row.numero || '';
-      cells[4] = row.item || row.item_descricao || '';
-      // CAIXA ALTA aplicada diretamente na base de tratamento de dados
-      cells[5] = formatTechnicalDesc(row.descricao || row.item_descricao || row.objeto);
+      cells[1] = row.item_codigo || row.item || numItem || '';
+      cells[2] = lote || '';
+      cells[3] = numItem || '';
+      // E (idx 4) = DESCRIÇÃO ; F (idx 5) = ESPECIFICAÇÃO ; fallback duplicado
+      cells[4] = descricao || especificacao || '';
+      cells[5] = especificacao || descricao || '';
       cells[6] = row.unidade || row.item_unidade || '';
 
       proc.itemsMap.set(itemKey, { cells, valor_unit: row.valor_unitario ?? row.item_valor_unitario ?? null, valor_total: row.valor_total ?? row.item_valor_total ?? null });
     }
 
     const itemEntry = proc.itemsMap.get(itemKey)!;
+
+    // Reforça fallback caso outra linha do mesmo item traga a info ausente
+    if (!itemEntry.cells[4] && (descricao || especificacao)) itemEntry.cells[4] = descricao || especificacao;
+    if (!itemEntry.cells[5] && (especificacao || descricao)) itemEntry.cells[5] = especificacao || descricao;
 
     const target = getTargetIndex(row.secretaria_sigla || row.sigla || row.unidade_sigla, row.subcategoria || row.dotacao || row.subtipo);
     if (target !== null && target !== undefined) {

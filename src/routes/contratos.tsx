@@ -90,6 +90,7 @@ import {
   type M2ADocumentoGerado,
 } from "@/lib/m2a";
 import { ContractReportGenerator } from "@/components/contratos/ContractReportGenerator";
+import { PautaConsolidadaExporter } from "@/components/contratos/PautaConsolidadaExporter";
 
 export const Route = createFileRoute("/contratos")({
   component: Page,
@@ -506,7 +507,13 @@ function Page() {
             </Button>
           )}
           {selected.size > 0 ? (
-            <ContractReportGenerator contractIds={Array.from(selected)} isBatch={true} />
+            <>
+              <ContractReportGenerator contractIds={Array.from(selected)} isBatch={true} />
+              <PautaConsolidadaExporter
+                contractIds={Array.from(selected)}
+                label="Pauta Consolidada (XLSX)"
+              />
+            </>
           ) : (
             <Button
               size="sm"
