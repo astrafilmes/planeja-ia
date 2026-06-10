@@ -74,17 +74,37 @@ function decodeEscapedHtmlString(value) {
     .replace(/\\u([0-9a-fA-F]{4})/g, (_m, hex) => String.fromCharCode(parseInt(hex, 16)))
     .replace(/\\\\/g, "\\");
 }
-function findHtmlLikeString(node) {
+// Chaves conhecidas que o portal M2A usa para envelopar HTML em JSON.
+const HTML_ENVELOPE_KEYS = [
+  "html_table",
+  "html",
+  "htmlTable",
+  "data",
+  "table",
+  "content",
+  "conteudo",
+  "tbody",
+  "rows",
+];
+function findHtmlLikeString(node, depth = 0) {
+  if (depth > 6) return null;
   if (typeof node === "string") {
-    if (node.includes("<tr") || node.includes("<table") || node.includes("kt-datatable__row") || node.includes("\\n<td")) return node;
+    if (/<(table|tbody|tr|td|div)\b/i.test(node) || node.includes("kt-datatable__row") || node.includes("\\n<td")) return node;
     return null;
   }
   if (Array.isArray(node)) {
-    for (const it of node) { const f = findHtmlLikeString(it); if (f) return f; }
+    for (const it of node) { const f = findHtmlLikeString(it, depth + 1); if (f) return f; }
     return null;
   }
   if (node && typeof node === "object") {
-    for (const v of Object.values(node)) { const f = findHtmlLikeString(v); if (f) return f; }
+    // Prioriza chaves conhecidas (html_table etc.)
+    for (const key of HTML_ENVELOPE_KEYS) {
+      if (key in node) {
+        const f = findHtmlLikeString(node[key], depth + 1);
+        if (f) return f;
+      }
+    }
+    for (const v of Object.values(node)) { const f = findHtmlLikeString(v, depth + 1); if (f) return f; }
   }
   return null;
 }
