@@ -35,7 +35,6 @@ import { toast } from "sonner";
 import {
   Send,
   ArrowLeft,
-  Download,
   ExternalLink,
   AlertTriangle,
   FileSignature,
