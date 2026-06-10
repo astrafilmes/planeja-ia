@@ -1404,6 +1404,14 @@ export type Database = {
           valor_unitario: number
         }[]
       }
+      get_secretarias_cpfs: {
+        Args: never
+        Returns: {
+          id: string
+          m2a_fiscal_cpf: string
+          m2a_gestor_cpf: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
