@@ -425,42 +425,59 @@ export async function exportarPautaConsolidadaExcel(
 
     const startRow = 3;
 
-    // Preenchimento de Dados (Sem cores infinitas nas colunas)
+    // Preenchimento de Dados
     proc.items.forEach((item, idx) => {
       const rowIndex = startRow + idx;
-      
+
       const rowData = new Array(54).fill(null);
       item.cells.forEach((val, i) => {
         if (i < 54) rowData[i] = val;
       });
 
-      // Aplica CAIXA ALTA na coluna de descrição (Index 5 - coluna F)
-      if (typeof rowData[5] === 'string') {
-        rowData[5] = formatTechnicalDesc(rowData[5]);
-      }
+      // Coluna E (idx 4) DESCRIÇÃO e F (idx 5) ESPECIFICAÇÃO em CAIXA ALTA
+      if (typeof rowData[4] === 'string') rowData[4] = formatTechnicalDesc(rowData[4]);
+      if (typeof rowData[5] === 'string') rowData[5] = formatTechnicalDesc(rowData[5]);
+
+      // Força B/C/D (idx 1,2,3) para Number quando possível
+      [1, 2, 3].forEach(i => {
+        const v = rowData[i];
+        if (v !== null && v !== undefined && v !== '') {
+          const n = Number(String(v).replace(',', '.'));
+          if (!Number.isNaN(n)) rowData[i] = n;
+        }
+      });
 
       const row = ws.addRow(rowData);
 
       row.eachCell({ includeEmpty: true }, (cell: Cell, colNumber: number) => {
         const colConf = PAUTA_COLUMNS_CONFIG[colNumber - 1];
-        
-        // Apenas bordas finas para as células de dados, sem preenchimento de cor
-        cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
 
-        if (colConf.isCurrency || typeof cell.value === 'number') {
-          cell.alignment = { horizontal: 'right', vertical: 'middle' };
+        cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+        cell.font = { bold: false, size: 9, color: { argb: 'FF000000' } };
+
+        // Alinhamentos
+        if (colNumber === 1) {
+          // Coluna A (EMPRESA) à esquerda a partir da linha 3
+          cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
         } else if (colNumber === 5 || colNumber === 6) {
           cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+        } else if (colConf.isCurrency || typeof cell.value === 'number') {
+          cell.alignment = { horizontal: 'right', vertical: 'middle' };
         } else {
           cell.alignment = { horizontal: 'center', vertical: 'middle' };
         }
 
+        // Formatos numéricos
+        if ((colNumber === 2 || colNumber === 3 || colNumber === 4) && typeof cell.value === 'number') {
+          cell.numFmt = '0';
+        }
         if (colConf.isCurrency && typeof cell.value === 'number') {
           cell.numFmt = moedaFmt;
         }
 
-        if (colConf.isGroupTotal || colConf.isGeneralTotal) {
-          cell.font = { bold: true };
+        // Herda a cor da linha 2 nas células de dados das colunas marcadas (TOTAIS e subtotais visuais)
+        if (colConf.fillRow2InData || colConf.isGroupTotal || colConf.isGeneralTotal) {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colConf.row2Color } };
         }
       });
 
@@ -468,20 +485,21 @@ export async function exportarPautaConsolidadaExcel(
       PAUTA_COLUMNS_CONFIG.forEach(colConf => {
         if (colConf.sumCols && colConf.sumCols.length > 0) {
           const letter = colLetter(colConf.index);
-          const isConsecutive = colConf.sumCols.length > 2 && 
+          const isConsecutive = colConf.sumCols.length > 2 &&
             (colConf.sumCols[colConf.sumCols.length - 1] - colConf.sumCols[0] === colConf.sumCols.length - 1);
-            
+
           let formulaStr = '';
           if (isConsecutive) {
             formulaStr = `SUM(${colLetter(colConf.sumCols[0])}${rowIndex}:${colLetter(colConf.sumCols[colConf.sumCols.length - 1])}${rowIndex})`;
           } else {
             formulaStr = `SUM(${colConf.sumCols.map(c => `${colLetter(c)}${rowIndex}`).join(',')})`;
           }
-          
+
           const cell = ws.getCell(`${letter}${rowIndex}`);
           cell.value = { formula: formulaStr } as any;
           cell.alignment = { horizontal: 'right', vertical: 'middle' };
-          cell.font = { bold: true };
+          cell.font = { bold: false, size: 9, color: { argb: 'FF000000' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colConf.row2Color } };
         }
       });
 
@@ -492,7 +510,8 @@ export async function exportarPautaConsolidadaExcel(
         const cell = ws.getCell(`AZ${rowIndex}`);
         cell.value = { formula: formulaStr } as any;
         cell.alignment = { horizontal: 'right', vertical: 'middle' };
-        cell.font = { bold: true };
+        cell.font = { bold: false, size: 9, color: { argb: 'FF000000' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C_BASE } };
       }
 
       // Sobrescrita explícita para Valores Unitários e Totais (BA e BB)
@@ -500,11 +519,13 @@ export async function exportarPautaConsolidadaExcel(
         const cell = ws.getCell(`BA${rowIndex}`);
         cell.value = item.valor_unit;
         cell.numFmt = moedaFmt;
+        cell.font = { bold: false, size: 9, color: { argb: 'FF000000' } };
       }
       if (typeof item.valor_total === 'number') {
         const cell = ws.getCell(`BB${rowIndex}`);
         cell.value = item.valor_total;
         cell.numFmt = moedaFmt;
+        cell.font = { bold: false, size: 9, color: { argb: 'FF000000' } };
       }
     });
 
