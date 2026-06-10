@@ -105,6 +105,90 @@ export type Database = {
           },
         ]
       }
+      contrato_atores: {
+        Row: {
+          contrato_id: string
+          cpf: string | null
+          created_at: string
+          email: string | null
+          id: string
+          m2a_pessoa_id: string | null
+          nome: string
+          portaria: string | null
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          contrato_id: string
+          cpf?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          m2a_pessoa_id?: string | null
+          nome: string
+          portaria?: string | null
+          tipo: string
+          updated_at?: string
+        }
+        Update: {
+          contrato_id?: string
+          cpf?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          m2a_pessoa_id?: string | null
+          nome?: string
+          portaria?: string | null
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      contrato_documentos: {
+        Row: {
+          contrato_id: string
+          created_at: string
+          created_by: string | null
+          hash_sha256: string | null
+          id: string
+          m2a_documento_id: string | null
+          mime_type: string | null
+          nome: string
+          size_bytes: number | null
+          storage_path: string
+          tipo: string
+          versao: number
+        }
+        Insert: {
+          contrato_id: string
+          created_at?: string
+          created_by?: string | null
+          hash_sha256?: string | null
+          id?: string
+          m2a_documento_id?: string | null
+          mime_type?: string | null
+          nome: string
+          size_bytes?: number | null
+          storage_path: string
+          tipo: string
+          versao?: number
+        }
+        Update: {
+          contrato_id?: string
+          created_at?: string
+          created_by?: string | null
+          hash_sha256?: string | null
+          id?: string
+          m2a_documento_id?: string | null
+          mime_type?: string | null
+          nome?: string
+          size_bytes?: number | null
+          storage_path?: string
+          tipo?: string
+          versao?: number
+        }
+        Relationships: []
+      }
       contrato_import_dotacoes: {
         Row: {
           created_at: string
@@ -252,6 +336,93 @@ export type Database = {
         }
         Relationships: []
       }
+      contrato_item_dotacoes: {
+        Row: {
+          created_at: string
+          dotacao: string
+          id: string
+          item_id: string
+          m2a_dotacao_id: string | null
+          quantidade_alocada: number
+          secretaria_id: string | null
+          secretaria_sigla: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          dotacao: string
+          id?: string
+          item_id: string
+          m2a_dotacao_id?: string | null
+          quantidade_alocada?: number
+          secretaria_id?: string | null
+          secretaria_sigla: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          dotacao?: string
+          id?: string
+          item_id?: string
+          m2a_dotacao_id?: string | null
+          quantidade_alocada?: number
+          secretaria_id?: string | null
+          secretaria_sigla?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      contrato_itens: {
+        Row: {
+          contrato_id: string
+          created_at: string
+          descricao: string
+          especificacao: string | null
+          id: string
+          lote: string | null
+          m2a_item_id: string | null
+          numero_item: string | null
+          ordem_item: number | null
+          quantidade: number
+          unidade: string | null
+          updated_at: string
+          valor_total: number
+          valor_unitario: number
+        }
+        Insert: {
+          contrato_id: string
+          created_at?: string
+          descricao: string
+          especificacao?: string | null
+          id?: string
+          lote?: string | null
+          m2a_item_id?: string | null
+          numero_item?: string | null
+          ordem_item?: number | null
+          quantidade?: number
+          unidade?: string | null
+          updated_at?: string
+          valor_total?: number
+          valor_unitario?: number
+        }
+        Update: {
+          contrato_id?: string
+          created_at?: string
+          descricao?: string
+          especificacao?: string | null
+          id?: string
+          lote?: string | null
+          m2a_item_id?: string | null
+          numero_item?: string | null
+          ordem_item?: number | null
+          quantidade?: number
+          unidade?: string | null
+          updated_at?: string
+          valor_total?: number
+          valor_unitario?: number
+        }
+        Relationships: []
+      }
       contratos: {
         Row: {
           created_at: string
@@ -260,11 +431,14 @@ export type Database = {
           data_criacao_legada: string | null
           data_texto_legado: string | null
           dotacao: string | null
+          enviado_m2a_em: string | null
           fiscal: string
           id: string
           import_job_id: string | null
           legacy_id: number | null
           link_contrato: string
+          m2a_ata_id: string | null
+          m2a_contrato_id: string | null
           numero_contrato: string
           objeto: string
           preposto: string
@@ -274,6 +448,8 @@ export type Database = {
           secretaria_num: number
           secretaria_sigla: string
           status: string
+          status_envio_m2a: string
+          ultimo_erro_m2a: string | null
           updated_at: string
         }
         Insert: {
@@ -283,11 +459,14 @@ export type Database = {
           data_criacao_legada?: string | null
           data_texto_legado?: string | null
           dotacao?: string | null
+          enviado_m2a_em?: string | null
           fiscal: string
           id?: string
           import_job_id?: string | null
           legacy_id?: number | null
           link_contrato: string
+          m2a_ata_id?: string | null
+          m2a_contrato_id?: string | null
           numero_contrato: string
           objeto: string
           preposto: string
@@ -297,6 +476,8 @@ export type Database = {
           secretaria_num: number
           secretaria_sigla: string
           status?: string
+          status_envio_m2a?: string
+          ultimo_erro_m2a?: string | null
           updated_at?: string
         }
         Update: {
@@ -306,11 +487,14 @@ export type Database = {
           data_criacao_legada?: string | null
           data_texto_legado?: string | null
           dotacao?: string | null
+          enviado_m2a_em?: string | null
           fiscal?: string
           id?: string
           import_job_id?: string | null
           legacy_id?: number | null
           link_contrato?: string
+          m2a_ata_id?: string | null
+          m2a_contrato_id?: string | null
           numero_contrato?: string
           objeto?: string
           preposto?: string
@@ -320,6 +504,8 @@ export type Database = {
           secretaria_num?: number
           secretaria_sigla?: string
           status?: string
+          status_envio_m2a?: string
+          ultimo_erro_m2a?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -560,6 +746,48 @@ export type Database = {
           },
         ]
       }
+      m2a_envio_logs: {
+        Row: {
+          contrato_id: string
+          created_at: string
+          created_by: string | null
+          duracao_ms: number | null
+          etapa: string
+          http_status: number | null
+          id: string
+          mensagem: string | null
+          payload_json: Json | null
+          response_json: Json | null
+          sucesso: boolean
+        }
+        Insert: {
+          contrato_id: string
+          created_at?: string
+          created_by?: string | null
+          duracao_ms?: number | null
+          etapa: string
+          http_status?: number | null
+          id?: string
+          mensagem?: string | null
+          payload_json?: Json | null
+          response_json?: Json | null
+          sucesso?: boolean
+        }
+        Update: {
+          contrato_id?: string
+          created_at?: string
+          created_by?: string | null
+          duracao_ms?: number | null
+          etapa?: string
+          http_status?: number | null
+          id?: string
+          mensagem?: string | null
+          payload_json?: Json | null
+          response_json?: Json | null
+          sucesso?: boolean
+        }
+        Relationships: []
+      }
       numeracao: {
         Row: {
           contador: number
@@ -585,6 +813,8 @@ export type Database = {
           created_by: string | null
           data_abertura: string | null
           id: string
+          m2a_processo_id: string | null
+          m2a_url: string | null
           modalidade: string | null
           numero_processo: string | null
           objeto: string
@@ -599,6 +829,8 @@ export type Database = {
           created_by?: string | null
           data_abertura?: string | null
           id?: string
+          m2a_processo_id?: string | null
+          m2a_url?: string | null
           modalidade?: string | null
           numero_processo?: string | null
           objeto: string
@@ -613,6 +845,8 @@ export type Database = {
           created_by?: string | null
           data_abertura?: string | null
           id?: string
+          m2a_processo_id?: string | null
+          m2a_url?: string | null
           modalidade?: string | null
           numero_processo?: string | null
           objeto?: string
@@ -670,6 +904,15 @@ export type Database = {
           ativa: boolean
           created_at: string
           id: string
+          m2a_dot_id: string | null
+          m2a_dotacao_default: string | null
+          m2a_fiscal_cpf: string | null
+          m2a_fiscal_nome: string | null
+          m2a_gestor_cpf: string | null
+          m2a_gestor_nome: string | null
+          m2a_orgao_id: string | null
+          m2a_ref_coluna: number | null
+          m2a_uo_id: string | null
           nome: string
           numero: number
           origem_legada: boolean
@@ -680,6 +923,15 @@ export type Database = {
           ativa?: boolean
           created_at?: string
           id?: string
+          m2a_dot_id?: string | null
+          m2a_dotacao_default?: string | null
+          m2a_fiscal_cpf?: string | null
+          m2a_fiscal_nome?: string | null
+          m2a_gestor_cpf?: string | null
+          m2a_gestor_nome?: string | null
+          m2a_orgao_id?: string | null
+          m2a_ref_coluna?: number | null
+          m2a_uo_id?: string | null
           nome: string
           numero: number
           origem_legada?: boolean
@@ -690,6 +942,15 @@ export type Database = {
           ativa?: boolean
           created_at?: string
           id?: string
+          m2a_dot_id?: string | null
+          m2a_dotacao_default?: string | null
+          m2a_fiscal_cpf?: string | null
+          m2a_fiscal_nome?: string | null
+          m2a_gestor_cpf?: string | null
+          m2a_gestor_nome?: string | null
+          m2a_orgao_id?: string | null
+          m2a_ref_coluna?: number | null
+          m2a_uo_id?: string | null
           nome?: string
           numero?: number
           origem_legada?: boolean
