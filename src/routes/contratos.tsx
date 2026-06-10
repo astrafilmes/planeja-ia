@@ -507,7 +507,13 @@ function Page() {
             </Button>
           )}
           {selected.size > 0 ? (
-            <ContractReportGenerator contractIds={Array.from(selected)} isBatch={true} />
+            <>
+              <ContractReportGenerator contractIds={Array.from(selected)} isBatch={true} />
+              <PautaConsolidadaExporter
+                contractIds={Array.from(selected)}
+                label="Pauta Consolidada (XLSX)"
+              />
+            </>
           ) : (
             <Button
               size="sm"
