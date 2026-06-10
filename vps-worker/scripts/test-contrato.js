@@ -1,8 +1,14 @@
 #!/usr/bin/env node
 // Smoke test do streaming SSE do worker.
-// Uso: SHARED_SECRET=xxx node scripts/test-contrato.js < payload.json
+// Uso: node scripts/test-contrato.js < payload.json
 import { createHmac } from "node:crypto";
 import { readFileSync } from "node:fs";
+import dotenv from "dotenv";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: resolve(__dirname, "../.env") });
 
 const secret = process.env.SHARED_SECRET;
 const base = process.env.WORKER_URL || "http://localhost:8080";
