@@ -136,7 +136,9 @@ function RootComponent() {
       <AuthProvider>
         <ProgressProvider>
           <M2AConnectionProvider>
-            <Outlet />
+            <main id="main-content">
+              <Outlet />
+            </main>
             <GlobalProgressTracker />
           </M2AConnectionProvider>
         </ProgressProvider>

@@ -1,4 +1,5 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
+import { routeHead } from "@/lib/route-head";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell, StatusBadge } from "@/components/layout/AppShell";
 import { EmptyState } from "@/components/layout/EmptyState";
@@ -16,7 +17,17 @@ import {
 import { formatBRL, formatNumber } from "@/lib/normalize";
 import { Eye, History } from "lucide-react";
 
-export const Route = createFileRoute("/historico")({ component: Page });
+export const Route = createFileRoute("/historico")({
+  component: Page,
+  head: () =>
+    routeHead({
+      path: "/historico",
+      title: "Histórico",
+      description:
+        "Linha do tempo das alterações em processos, contratos e cadastros do Planeja IA.",
+      noindex: true,
+    }),
+});
 
 function Page() {
   const { data, isLoading } = useQuery({

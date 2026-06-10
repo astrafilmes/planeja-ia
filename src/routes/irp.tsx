@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { routeHead } from "@/lib/route-head";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell, StatusBadge } from "@/components/layout/AppShell";
@@ -137,6 +138,14 @@ export const Route = createFileRoute("/irp")({
     job: typeof search.job === "string" ? search.job : undefined,
   }),
   component: Page,
+  head: () =>
+    routeHead({
+      path: "/irp",
+      title: "IRP",
+      description:
+        "Processamento e consolidação de planilhas IRP (Intenção de Registro de Preços) com apoio de IA.",
+      noindex: true,
+    }),
 });
 
 async function uploadIrpFile({

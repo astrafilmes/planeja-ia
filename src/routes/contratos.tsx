@@ -5,6 +5,7 @@ import {
   useNavigate,
   useRouterState,
 } from "@tanstack/react-router";
+import { routeHead } from "@/lib/route-head";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -90,7 +91,16 @@ import {
 } from "@/lib/m2a";
 import { ContractReportGenerator } from "@/components/contratos/ContractReportGenerator";
 
-export const Route = createFileRoute("/contratos")({ component: Page });
+export const Route = createFileRoute("/contratos")({
+  component: Page,
+  head: () =>
+    routeHead({
+      path: "/contratos",
+      title: "Contratos",
+      description:
+        "Gerencie contratos públicos, fiscais, prepostos e documentos vinculados ao planejamento.",
+    }),
+});
 
 const BRL = new Intl.NumberFormat("pt-BR", {
   style: "currency",

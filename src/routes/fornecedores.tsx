@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { routeHead } from "@/lib/route-head";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/layout/AppShell";
@@ -32,7 +33,16 @@ import {
 } from "@/components/ui/table";
 import { HandCoins, Search, Plus, Save, Trash2 } from "lucide-react";
 
-export const Route = createFileRoute("/fornecedores")({ component: Page });
+export const Route = createFileRoute("/fornecedores")({
+  component: Page,
+  head: () =>
+    routeHead({
+      path: "/fornecedores",
+      title: "Fornecedores",
+      description:
+        "Cadastro de fornecedores, com dados de contato e vínculos com atas e contratos.",
+    }),
+});
 
 type FornecedorRow = {
   id?: string;

@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { routeHead } from "@/lib/route-head";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
@@ -37,7 +38,17 @@ interface NumeracaoComSec {
   sec?: Secretaria;
 }
 
-export const Route = createFileRoute("/numeracao")({ component: Page });
+export const Route = createFileRoute("/numeracao")({
+  component: Page,
+  head: () =>
+    routeHead({
+      path: "/numeracao",
+      title: "Numeração",
+      description:
+        "Configure e acompanhe a numeração sequencial de processos e contratos administrativos.",
+      noindex: true,
+    }),
+});
 
 function Page() {
   const qc = useQueryClient();

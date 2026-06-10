@@ -1,7 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ServidoresCatalogPage } from "@/components/m2a/ServidoresCatalogPage";
+import { routeHead } from "@/lib/route-head";
 
-export const Route = createFileRoute("/fiscais")({ component: Page });
+export const Route = createFileRoute("/fiscais")({
+  component: Page,
+  head: () =>
+    routeHead({
+      path: "/fiscais",
+      title: "Fiscais",
+      description:
+        "Catálogo de fiscais de contrato disponíveis para designação em contratações públicas.",
+    }),
+});
 
 function Page() {
   return (

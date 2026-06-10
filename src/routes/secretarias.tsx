@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { routeHead } from "@/lib/route-head";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
@@ -69,7 +70,16 @@ import {
 import { logAudit } from "@/lib/audit";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/secretarias")({ component: Page });
+export const Route = createFileRoute("/secretarias")({
+  component: Page,
+  head: () =>
+    routeHead({
+      path: "/secretarias",
+      title: "Secretarias",
+      description:
+        "Cadastre e organize as secretarias requisitantes participantes do planejamento de contratações.",
+    }),
+});
 
 const EMPTY_SELECT_VALUE = "__none__";
 const KEEP_SELECT_VALUE = "__keep__";

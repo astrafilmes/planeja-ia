@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { routeHead } from "@/lib/route-head";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/layout/AppShell";
 import { EmptyState } from "@/components/layout/EmptyState";
@@ -15,7 +16,17 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ScrollText } from "lucide-react";
 
-export const Route = createFileRoute("/logs")({ component: Page });
+export const Route = createFileRoute("/logs")({
+  component: Page,
+  head: () =>
+    routeHead({
+      path: "/logs",
+      title: "Logs",
+      description:
+        "Logs de auditoria e operações realizadas pelos usuários no Planeja IA.",
+      noindex: true,
+    }),
+});
 
 function Page() {
   const { data, isLoading } = useQuery({

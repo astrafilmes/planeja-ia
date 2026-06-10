@@ -1,7 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ServidoresCatalogPage } from "@/components/m2a/ServidoresCatalogPage";
+import { routeHead } from "@/lib/route-head";
 
-export const Route = createFileRoute("/gestores")({ component: Page });
+export const Route = createFileRoute("/gestores")({
+  component: Page,
+  head: () =>
+    routeHead({
+      path: "/gestores",
+      title: "Gestores",
+      description:
+        "Catálogo de gestores responsáveis pelos contratos administrativos no Planeja IA.",
+    }),
+});
 
 function Page() {
   return (

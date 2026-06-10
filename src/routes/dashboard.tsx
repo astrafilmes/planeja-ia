@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { routeHead } from "@/lib/route-head";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/layout/AppShell";
 import { WorkflowGuide } from "@/components/layout/WorkflowGuide";
@@ -22,7 +23,16 @@ import {
   CartesianGrid,
 } from "recharts";
 
-export const Route = createFileRoute("/dashboard")({ component: Dashboard });
+export const Route = createFileRoute("/dashboard")({
+  component: Dashboard,
+  head: () =>
+    routeHead({
+      path: "/dashboard",
+      title: "Dashboard",
+      description:
+        "Visão geral do setor de planejamento: processos, contratos, secretarias e indicadores de contratações públicas.",
+    }),
+});
 
 function Dashboard() {
   const { data } = useQuery({

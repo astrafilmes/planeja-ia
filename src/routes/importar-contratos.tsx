@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { routeHead } from "@/lib/route-head";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/layout/AppShell";
@@ -75,6 +76,14 @@ import type { M2aSyncPayload } from "@/lib/m2a-sync";
 
 export const Route = createFileRoute("/importar-contratos")({
   component: Page,
+  head: () =>
+    routeHead({
+      path: "/importar-contratos",
+      title: "Importar contratos",
+      description:
+        "Importe contratos a partir de planilhas e documentos, com validação assistida por IA.",
+      noindex: true,
+    }),
 });
 
 type JobRow = {

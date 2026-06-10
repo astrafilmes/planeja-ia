@@ -5,6 +5,7 @@ import {
   useNavigate,
   useRouterState,
 } from "@tanstack/react-router";
+import { routeHead } from "@/lib/route-head";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -81,7 +82,16 @@ import { downloadCSV } from "@/lib/export";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PautaConsolidadaExporter } from "@/components/contratos/PautaConsolidadaExporter";
 
-export const Route = createFileRoute("/processos")({ component: Page });
+export const Route = createFileRoute("/processos")({
+  component: Page,
+  head: () =>
+    routeHead({
+      path: "/processos",
+      title: "Processos",
+      description:
+        "Acompanhe os processos administrativos de contratações públicas, com itens, atas e status detalhados.",
+    }),
+});
 
 const PROCESSO_RE = /^(\d{3})\/(\d{4})-(PE|CE|DE|CR|INE|CH)$/i;
 

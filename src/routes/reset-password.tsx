@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { routeHead } from "@/lib/route-head";
 import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -20,6 +21,14 @@ import {
 
 export const Route = createFileRoute("/reset-password")({
   component: ResetPassword,
+  head: () =>
+    routeHead({
+      path: "/reset-password",
+      title: "Redefinir senha",
+      description:
+        "Defina uma nova senha para acessar o Planeja IA com segurança.",
+      noindex: true,
+    }),
 });
 
 const schema = z
