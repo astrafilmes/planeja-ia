@@ -169,16 +169,22 @@ class M2aClient {
   /** request com auto-relogin. Aceita method/path/body/headers. */
   async request(method, path, opts = {}) {
     return this.queue.add(async () => {
-      if (!this.loggedIn) await this.login();
+      if (!this.loggedIn) {
+        console.log(`[m2a] sessão ausente — efetuando login antes de ${method} ${path}`);
+        await this.login();
+      }
       let r = await this._raw(method, path, opts);
+      console.log(`[m2a] ${method} ${path} → ${r.status} (finalUrl=${r.finalUrl || "-"}, bytes=${r.html.length})`);
       if (
         M2aClient.isLoginPage(r.html, r.finalUrl) ||
         r.status === 401 ||
         r.status === 403
       ) {
+        console.warn(`[m2a] sessão expirada em ${method} ${path} — re-login e retry`);
         this.loggedIn = false;
         await this.login();
         r = await this._raw(method, path, opts);
+        console.log(`[m2a] retry ${method} ${path} → ${r.status} (finalUrl=${r.finalUrl || "-"})`);
         if (M2aClient.isLoginPage(r.html, r.finalUrl)) {
           throw new Error("M2A_SESSION_REFRESH_FAILED");
         }
@@ -188,6 +194,7 @@ class M2aClient {
       return r;
     });
   }
+
 
   get(path, opts = {}) {
     return this.request("GET", path, opts);
