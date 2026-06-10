@@ -558,7 +558,7 @@ export async function exportarPautaConsolidadaExcel(
  * prepararDadosPautaConsolidada
  * Indexação preservada (0-based) integrando com segurança ao mapeamento dos 54 itens.
  */
-export function prepararDadosPautaConsolidada(dadosBrutos: any[]): Array<{ processo_id: string; contrato_numero?: string | null; items: Array<{ cells: (string | number | null)[]; valor_unit?: number | null; valor_total?: number | null }> }> {
+export function prepararDadosPautaConsolidada(dadosBrutos: any[]): Array<{ processo_id: string; processo_nome?: string | null; contrato_numero?: string | null; items: Array<{ cells: (string | number | null)[]; valor_unit?: number | null; valor_total?: number | null }> }> {
   const columnMap: Record<string, number> = {
     ADM: 7, ADM_GM: 8, ADM_TOTAL: 9,
     CGM: 10, CGM_TOTAL: 11,
