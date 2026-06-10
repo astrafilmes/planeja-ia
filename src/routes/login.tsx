@@ -90,6 +90,7 @@ function Login() {
   const [mode, setMode] = useState<Mode>("auth");
   const [showPw, setShowPw] = useState(false);
   const [showSignupPw, setShowSignupPw] = useState(false);
+  const [trustDevice, setTrustDevice] = useState(true);
 
   useEffect(() => {
     if (!loading && user) navigate({ to: "/dashboard" });
@@ -122,12 +123,23 @@ function Login() {
   async function onLogin(v: z.infer<typeof loginSchema>) {
     setSubmitting(true);
     const { error } = await supabase.auth.signInWithPassword(v);
-    setSubmitting(false);
-    if (error)
+    if (error) {
+      setSubmitting(false);
       return toast.error("Falha no login", { description: error.message });
+    }
+    if (trustDevice) {
+      try {
+        const { issueTrustedDevice } = await import("@/lib/trusted-device");
+        await issueTrustedDevice();
+      } catch (e) {
+        console.warn("[trusted-device] não foi possível registrar:", e);
+      }
+    }
+    setSubmitting(false);
     toast.success("Bem-vindo de volta");
     navigate({ to: "/dashboard" });
   }
+
 
   async function onSignup(v: z.infer<typeof signupSchema>) {
     setSubmitting(true);
