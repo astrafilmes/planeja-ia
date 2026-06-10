@@ -90,6 +90,7 @@ import {
   type M2ADocumentoGerado,
 } from "@/lib/m2a";
 import { ContractReportGenerator } from "@/components/contratos/ContractReportGenerator";
+import { PautaConsolidadaExporter } from "@/components/contratos/PautaConsolidadaExporter";
 
 export const Route = createFileRoute("/contratos")({
   component: Page,
