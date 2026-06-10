@@ -1,5 +1,6 @@
 import * as cheerio from "cheerio";
 import { m2a } from "../m2a-client.js";
+import { config } from "../config.js";
 
 // =====================================================================
 // Porta da lógica de m2a-extension/engine/processo_scraper.js
@@ -109,10 +110,9 @@ function isAjaxLikePath(path) {
 
 function buildAjaxHeaders(path) {
   if (!isAjaxLikePath(path)) return undefined;
-  // Tenta um Referer plausível: a página "pai" do processo.
   const m = path.match(/\/(\d+)(?:\/|\?|$)/);
   const referer = m
-    ? `${(await import("../config.js")).config.m2a.baseUrl}/processo_administrativo/${m[1]}/`
+    ? `${config.m2a.baseUrl}/processo_administrativo/${m[1]}/`
     : undefined;
   return {
     Accept: "application/json, text/javascript, */*; q=0.01",
