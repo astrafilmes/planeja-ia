@@ -7,11 +7,28 @@ import {
 } from "@/lib/m2a-sync";
 import { parseNumeroContrato } from "@/lib/numeracao-m2a";
 
+async function insertInChunks<T>(
+  table: "m2a_atas" | "m2a_itens" | "m2a_contratos_snapshot",
+  rows: T[],
+  chunkSize = 200,
+) {
+  for (let i = 0; i < rows.length; i += chunkSize) {
+    const chunk = rows.slice(i, i + chunkSize);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase.from(table) as any).insert(chunk);
+    if (error) {
+      throw new Error(
+        `Falha ao gravar ${table} (lote ${i / chunkSize + 1}): ${error.message}`,
+      );
+    }
+  }
+}
+
 export async function persistM2ASnapshot(
   processoId: string,
   payload: M2aSyncPayload,
 ) {
-  await Promise.all([
+  const deletes = await Promise.all([
     supabase.from("m2a_atas").delete().eq("processo_id", processoId),
     supabase.from("m2a_itens").delete().eq("processo_id", processoId),
     supabase
@@ -19,6 +36,9 @@ export async function persistM2ASnapshot(
       .delete()
       .eq("processo_id", processoId),
   ]);
+  for (const d of deletes) {
+    if (d.error) throw new Error(`Falha ao limpar snapshot: ${d.error.message}`);
+  }
 
   const atasRows = payload.atas.map((ata) => ({
     processo_id: processoId,
@@ -52,16 +72,16 @@ export async function persistM2ASnapshot(
     };
   });
 
-  if (atasRows.length) await supabase.from("m2a_atas").insert(atasRows);
-  if (itensRows.length) await supabase.from("m2a_itens").insert(itensRows);
-  if (contratosRows.length) {
-    await supabase.from("m2a_contratos_snapshot").insert(contratosRows);
-  }
+  if (atasRows.length) await insertInChunks("m2a_atas", atasRows);
+  if (itensRows.length) await insertInChunks("m2a_itens", itensRows);
+  if (contratosRows.length)
+    await insertInChunks("m2a_contratos_snapshot", contratosRows);
 
-  await supabase
+  const { error: updErr } = await supabase
     .from("processos")
     .update({ m2a_sync_at: new Date().toISOString() })
     .eq("id", processoId);
+  if (updErr) throw new Error(`Falha ao atualizar processo: ${updErr.message}`);
 }
 
 export function syncM2AProcessoOnce(
