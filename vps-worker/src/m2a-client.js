@@ -133,8 +133,9 @@ class M2aClient {
           headers: {
             "Content-Type": "application/x-www-form-urlencoded",
             "Cache-Control": "max-age=0",
+            "Upgrade-Insecure-Requests": "1",
+            Origin: config.m2a.baseUrl,
             Referer: loginUrl,
-            "X-CSRFToken": csrf || undefined,
           },
         });
       } catch (err) {
