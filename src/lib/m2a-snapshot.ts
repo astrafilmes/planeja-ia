@@ -214,7 +214,7 @@ export async function persistM2ASnapshot(
         if (Object.keys(patch).length > 0) {
           const { error: upErr } = await supabase
             .from("contratos")
-            .update(patch)
+            .update(patch as any)
             .eq("id", local.id);
           if (upErr) {
             console.warn(`${LOG} ⚠ falha ao atualizar contrato ${local.id}:`, upErr);
@@ -261,7 +261,7 @@ export async function persistM2ASnapshot(
           if (Object.keys(patch).length > 0) {
             const { error: ueErr } = await supabase
               .from("contrato_itens")
-              .update(patch)
+              .update(patch as any)
               .eq("id", ci.id);
             if (!ueErr) summary.itens_atualizados++;
           }
