@@ -109,6 +109,11 @@ function findHtmlLikeString(node, depth = 0) {
   return null;
 }
 function coerceHtmlPayload(rawText) {
+  if (rawText && typeof rawText === "object") {
+    const htmlStr = findHtmlLikeString(rawText);
+    if (htmlStr) return decodeEscapedHtmlString(htmlStr);
+    return JSON.stringify(rawText);
+  }
   const text = String(rawText ?? "");
   try {
     const parsed = JSON.parse(text);
@@ -151,6 +156,10 @@ async function fetchDoc(path, extraHeaders) {
   }
   const html = coerceHtmlPayload(r.html);
   return cheerio.load(html);
+}
+
+export function parseM2aHtmlPayloadForTest(rawPayload) {
+  return cheerio.load(coerceHtmlPayload(rawPayload));
 }
 
 // ---------- atas ----------
