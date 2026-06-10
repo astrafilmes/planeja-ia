@@ -66,29 +66,29 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       meta: [
         { charSet: "utf-8" },
         { name: "viewport", content: "width=device-width, initial-scale=1" },
-        { title: "Planejamento — Contratações Públicas" },
+        { title: "Planeja IA - Contratações Públicas" },
         {
           name: "description",
           content:
-            "Sistema de planejamento, processos, contratos e processamento de planilhas IRP.",
+            "Sistema de planejamento e gestão de contratações públicas com apoio de IA para organizar demandas, itens e processos.",
         },
         {
           property: "og:title",
-          content: "Planejamento — Contratações Públicas",
+          content: "Planeja IA - Contratações Públicas",
         },
         {
           name: "twitter:title",
-          content: "Planejamento — Contratações Públicas",
+          content: "Planeja IA - Contratações Públicas",
         },
         {
           property: "og:description",
           content:
-            "Sistema de planejamento, processos, contratos e processamento de planilhas IRP.",
+            "Sistema de planejamento e gestão de contratações públicas com apoio de IA para organizar demandas, itens e processos.",
         },
         {
           name: "twitter:description",
           content:
-            "Sistema de planejamento, processos, contratos e processamento de planilhas IRP.",
+            "Sistema de planejamento e gestão de contratações públicas com apoio de IA para organizar demandas, itens e processos.",
         },
         { name: "twitter:card", content: "summary_large_image" },
         { property: "og:type", content: "website" },
