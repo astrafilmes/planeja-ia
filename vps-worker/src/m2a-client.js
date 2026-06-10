@@ -51,6 +51,14 @@ class M2aClient {
     this.csrfCache = new Map();
   }
 
+  resetSession() {
+    this.jar = new CookieJar();
+    this.http.defaults.jar = this.jar;
+    this.loggedIn = false;
+    this.sessionCsrf = null;
+    this.csrfCache.clear();
+  }
+
   static isLoginPage(html, finalUrl = "") {
     if (!html) return false;
     if (/(?:\/login\/|\/usuario\/login\/)/i.test(finalUrl)) return true;
@@ -77,8 +85,9 @@ class M2aClient {
   async login() {
     if (this.loginPromise) return this.loginPromise;
     this.loginPromise = (async () => {
+      this.resetSession();
       const loginUrl = `${config.m2a.baseUrl}${config.m2a.loginPath}`;
-      console.log(`[m2a-login] start user=${config.m2a.username} url=${loginUrl} perfil=${config.m2a.loginProfile}`);
+      console.log(`[m2a-login] start ENTIDADE user=${config.m2a.username} url=${loginUrl} perfil=${config.m2a.loginProfile}`);
       let getRes;
       try {
         getRes = await this.http.get(config.m2a.loginPath);
@@ -109,14 +118,13 @@ class M2aClient {
       console.log(`[m2a-login] cookies pré-POST: ${cookieStr || "(vazio)"}`);
 
       const form = new URLSearchParams();
+      if (csrf) {
+        form.set("csrfmiddlewaretoken", csrf);
+      }
       form.set("perfil", config.m2a.loginProfile);
       form.set("username", config.m2a.username);
       form.set("password", config.m2a.password);
       form.set("login-form", "");
-      if (csrf) {
-        form.set("csrfmiddlewaretoken", csrf);
-        form.set("_token", csrf);
-      }
       console.log(`[m2a-login] POST payload: perfil=${form.get("perfil")} username=${form.get("username")} password=(oculta) csrf=${csrf ? "sim" : "não"} login-form=sim`);
 
       let postRes;
@@ -124,6 +132,7 @@ class M2aClient {
         postRes = await this.http.post(config.m2a.loginPath, form, {
           headers: {
             "Content-Type": "application/x-www-form-urlencoded",
+            "Cache-Control": "max-age=0",
             Referer: loginUrl,
             "X-CSRFToken": csrf || undefined,
           },
@@ -148,8 +157,8 @@ class M2aClient {
           $$(".help-block").first().text().trim() ||
           "";
         console.error(`[m2a-login] FALHOU — ainda na página de login. perfil=${config.m2a.loginProfile} finalUrl=${finalUrl} msg="${errMsg}"`);
-        if (/portal de fornecedores/i.test(errMsg) && config.m2a.loginProfile !== "1") {
-          console.error(`[m2a-login] diagnóstico: portal respondeu como fornecedor; ajuste M2A_LOGIN_PROFILE=1 no .env da VPS e reinicie o PM2 com --update-env.`);
+        if (/portal de fornecedores/i.test(errMsg)) {
+          console.error(`[m2a-login] diagnóstico: o worker atual força /usuario/login/ com perfil=1. Se este log não mostra "start ENTIDADE" ou "perfil=1", a VPS ainda está rodando código antigo; faça git pull, npm install e pm2 restart planeja-m2a-worker --update-env.`);
         }
         const snippet = html.replace(/\s+/g, " ").slice(0, 400);
         console.error(`[m2a-login] snippet: ${snippet}`);
