@@ -1,56 +1,88 @@
-# Port do `automation_engine.js` → `vps-worker`
+# Plano de implementação
 
-Replicar 1:1 o fluxo da extensão como rotas HTTP no worker, reaproveitando o `m2a-client` (sessão única + login automático + fila). Sem inventar rotas novas — só as que a extensão já chama.
+## 1. Confiar neste dispositivo (token longo)
 
-## Arquitetura
+**Backend (migration)**
+- Nova tabela `public.trusted_devices`:
+  - `user_id uuid` (FK auth.users), `token_hash text` (SHA-256 do token), `device_label text`, `user_agent text`, `last_ip inet`, `created_at`, `last_used_at`, `expires_at` (default `now() + 60 days`), `revoked_at`.
+- GRANTs para `authenticated` e `service_role`; RLS:
+  - SELECT/UPDATE/DELETE só do próprio `user_id`.
+  - INSERT restrita a edge function (via service_role).
+- Função `consume_trusted_device(token text)` SECURITY DEFINER que valida hash, atualiza `last_used_at`, retorna `user_id` se válido.
 
-- Toda lógica do `automation_engine.js` migra para módulos em `vps-worker/src/m2a/` (puros, recebem o `m2a` client por DI).
-- Rotas finas em `vps-worker/src/routes/*.js` só validam payload, chamam o módulo, e fazem stream de progresso via **SSE** (`text/event-stream`) — equivalente direto aos `M2A_PROGRESS` que a extensão posta via `postMessage`.
-- O `m2a-client` ganha `post(path, body, opts)` (form-url-encoded + CSRF) além do `get` atual. CSRF é lembrado por URL (igual `rememberCsrfFromDoc`).
-- Helpers comuns (`absoluteUrl`, `isLoginHtml`, `extractFormDiagnostics`, `ensureOperationAccepted`, datas úteis, normalização de número/quantidade/itens) viram `vps-worker/src/m2a/utils.js`.
+**Edge function `trusted-device`**
+- `POST /issue` — gera token aleatório (32 bytes hex), grava hash, devolve token bruto + expiração.
+- `POST /revoke` — marca `revoked_at = now()` para o token atual.
+- `POST /validate` — usada no boot; se válido e sessão expirou, mantém usuário logado refrescando a sessão.
 
-## Fases
+**Frontend**
+- Checkbox **“Confiar neste dispositivo por 60 dias”** em `src/routes/login.tsx`.
+- Ao logar com sucesso e checkbox marcado → chama `trusted-device/issue`, salva token em `localStorage` (`pj_trusted_token`).
+- `useAuth` no boot: se não há sessão, chama `/validate`. Se válido, mantém a UI logada (o token age como “lembrar”, não substitui a sessão — apenas evita exigir senha imediatamente; o usuário só precisará re-autenticar quando o token expirar).
+- Botão **“Sair de todos os dispositivos confiáveis”** no menu de conta (revoga todos os tokens do user).
 
-### Fase 1 — Infra + Contrato (alvo desta entrega)
-Cobre `processarContratoCompleto` (linha 2116) e todas as suas dependências de contrato:
+> Limitação: como o Supabase JWT tem TTL próprio, o token de dispositivo serve para pular o formulário de senha — apresenta tela mínima “Continuar como Fulano” e refresca a sessão automaticamente via fluxo de refresh do Supabase quando possível.
 
-1. `m2a-client`: adicionar `post()`, cache de CSRF por URL, helper `capturarCsrf(path)`.
-2. `src/m2a/utils.js`: portar helpers genéricos (datas, normalize, diagnostics, ensure*).
-3. `src/m2a/contrato.js`:
-   - `buscarIdContratoPorNumero` (1220) + `discoverContratoTableUrls` (1181)
-   - `criarCabecalhoContrato` (1006)
-   - `vincularFiscal` / `vincularGestor` / `vincularPreposto` (1335-1428)
-   - `adicionarItensAoContrato` (1665) + `atualizarQuantidadesItens` (1811) + scrapers de itens (1548-1665)
-   - `incluirDotacao` (1917)
-   - `configurarDocumentos` (2100) + sub-rotinas (1958-2099)
-4. `src/m2a/orquestrador-contrato.js`: porta de `processarContratoCompleto` emitindo eventos `progress(etapa, mensagem, extra)` via callback.
-5. Rota nova `POST /contratos/processar` (SSE) em `src/routes/contratos.js`:
-   - Body: mesmo payload do `M2A_START_AUTOMATION` (já tipado em `src/lib/m2a-payload.ts`).
-   - Resposta: stream de `event: progress` + `event: done`/`event: error`.
-6. Variante `POST /contratos/diagnosticar` chamando `diagnosticarContrato` (1276).
-7. Smoke test em `vps-worker/scripts/test-contrato.js` (igual `test-call.js`, mas consumindo SSE).
+## 2. Sincronização reforçada do processo
 
-### Fase 2 — Processo SRP
-Porta de `orquestrarCriacaoProcesso` (925) + `criarDFDProcesso` / `capturarIdsProcesso` / `atualizarParametrosProcesso` / `importarPlanilhasItens`. Rota `POST /processos/criar` (SSE). Decodificação de XLSX (base64/signedUrl) feita no worker (já tem `axios`).
+Em `src/lib/m2a-snapshot.ts` (persistência) e `useM2ASync`:
 
-### Fase 3 — Integração com o frontend (opcional, depois)
-Adapter no Planeja que decide: se a extensão estiver instalada usa o caminho atual (`postMessage`); senão chama o worker via Edge Function (preserva HMAC). Fora do escopo desta primeira entrega.
+- **Upsert estável** por chaves:
+  - Atas: `(processo_id, m2a_ata_id)`.
+  - Itens M2A: `(processo_id, lote_norm, numero_item_norm)` — dedupe ao gravar.
+  - Contratos: `(processo_id, m2a_contrato_id)` ou `numero_contrato` normalizado.
+- **Reconciliação**:
+  - Para cada contrato existente, atualiza: `fornecedor_nome`, `fornecedor_cnpj`, `valor_global`, `vigencia_*`, datas, `m2a_ata_numero`.
+  - Para cada item de contrato existente, atualiza `valor_unitario`, `valor_total`, `quantidade`, `unidade`, `descricao`, `especificacao` quando o portal trouxer novidade (sem apagar campos preenchidos manualmente — política: portal vence em campos M2A).
+- **Dedupe pós-sync** (SQL helper `dedupe_m2a_itens(p_processo_id uuid)`): mantém a linha mais recente por `(processo_id, lower(trim(lote)), lower(trim(numero_item)))` e remove as demais.
+- **Stream de progresso** já existe; adicionar contadores: `atualizados`, `criados`, `duplicatas_removidas` e expor no toast final.
 
-## Detalhes técnicos
+## 3. Aba de itens sem duplicatas
 
-- **CSRF**: a extensão lê `csrfmiddlewaretoken` do HTML da resposta anterior e do cookie `csrftoken`. No worker, `cheerio` extrai do HTML e `tough-cookie` fornece o cookie — replicar `rememberCsrfFromDoc` num `Map<path, token>`.
-- **DOM parsing**: trocar `DOMParser` por `cheerio` (já dep do worker). Todos os `doc.querySelector(...)` viram seletores `$()` — wrapper fino `parseDoc(html)` para minimizar diff visual.
-- **Concorrência**: o `PQueue` do `m2a-client` já serializa; nenhum endpoint do worker precisa paralelizar mais que isso.
-- **Progresso**: callback `onProgress(etapa, mensagem, extra)` no orquestrador; a rota SSE serializa cada chamada como `event: progress\ndata: {...}\n\n`.
-- **Erros**: preservar mensagens originais (`SESSAO_EXPIRADA`, `M2A_LOGIN_FAILED`, `ensureOperationAccepted`) para o frontend reaproveitar tratamento.
-- **Não muda**: assinatura HMAC, layout do `.env`, ecosystem PM2, nada do frontend Planeja.
+- Migration: índice único parcial `UNIQUE (processo_id, lower(trim(lote)), lower(trim(numero_item)))` em `m2a_itens` (após dedupe inicial via helper acima).
+- Listagem em `src/routes/processos.$id.tsx`: ordenar por `lote, numero_item::int`, deduplicar defensivamente no cliente também.
 
-## Entrega desta rodada
+## 4. Correções de segurança e otimização
 
-Apenas **Fase 1** (contrato). Fase 2 fica como próximo PR para manter o diff revisável (~600-800 linhas novas no worker + helpers).
+- Revisar `get_pauta_consolidada_data`: já filtra `deleted_at IS NULL`; adicionar `SECURITY INVOKER` explícito e `STABLE`.
+- Adicionar índices: `contrato_itens(contrato_id)`, `contrato_item_dotacoes(item_id)`, `m2a_itens(processo_id, lote, numero_item)`.
+- `useAuth`: trocar `getSession()` por `getUser()` na verificação inicial (já validado server-side), conforme regra de segurança.
+- Lint Supabase ao final; corrigir avisos críticos da migração.
 
-## Confirmações necessárias
+## 5. XLSX consolidada — todos os itens do processo
 
-1. OK fazer streaming via **SSE** na resposta HTTP (alternativa: 1 POST que devolve só o resultado final + GET de log). SSE é o que mais se parece com o `postMessage` atual.
-2. OK criar a árvore `vps-worker/src/m2a/{utils,contrato,orquestrador-contrato}.js` (separar do `routes/` ajuda muito a testar).
-3. Confirma que vamos parar nesta primeira entrega na Fase 1 (contrato) e fazer Processo SRP depois.
+- Nova RPC `get_pauta_consolidada_full(p_processo_id, p_contrato_ids uuid[])`:
+  - Retorna **união** de:
+    - itens de contratos filtrados (com `secretaria_sigla`, `dotacao`, `quantidade_alocada`);
+    - **todos os itens do processo** vindos de `m2a_itens` (ou `contrato_itens` agregado por `processo_id`) que **não** estão nos contratos selecionados → com `quantidade_alocada = 0`, `secretaria_sigla = NULL`.
+- `prepararDadosPautaConsolidada` (em `excel-export.ts`):
+  - Agrupa por `lote|numero_item`.
+  - **Ordenação**: `lote ASC, numero_item ASC (numérico), ordem ASC`.
+  - Linhas “sem contrato selecionado” aparecem com colunas de secretaria vazias e total = 0.
+  - Mantém `=SUM()` em TOTAL/AZ.
+- `PautaConsolidadaExporter`: passa `contractIds` para a nova RPC; mantém multi-abas por processo; nome do arquivo/aba/footer continua via `buildProcessoNome`.
+- Excel: ativa **AutoFilter** em `A2:AZ2` para permitir filtrar por empresa/secretaria.
+
+## Detalhes técnicos / arquivos
+
+- **Migrations** (uma única):
+  - `trusted_devices` + RLS + GRANTs + função `consume_trusted_device`.
+  - `dedupe_m2a_itens(uuid)`, índice único parcial.
+  - Novos índices.
+  - `get_pauta_consolidada_full(uuid, uuid[])`.
+- **Edge function**: `supabase/functions/trusted-device/index.ts`.
+- **Edits**:
+  - `src/routes/login.tsx` (+ checkbox + chamada).
+  - `src/hooks/useAuth.tsx` (boot validate + signOutAllTrusted).
+  - `src/lib/m2a-snapshot.ts` (upsert + reconciliação + chamar dedupe).
+  - `src/hooks/useM2ASync.ts` (contadores no toast).
+  - `src/routes/processos.$id.tsx` (ordenação/dedupe de exibição).
+  - `src/lib/excel-export.ts` (todos itens + autofilter + ordenação).
+  - `src/components/contratos/PautaConsolidadaExporter.tsx` (RPC nova).
+
+## Fora de escopo (confirmar se quer agora)
+- 2FA real.
+- Reescrita do worker M2A.
+- Reorganização visual da aba de itens.
+
+Aprovar para eu começar a executar?
