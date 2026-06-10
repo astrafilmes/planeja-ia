@@ -17,7 +17,8 @@ export const config = {
     baseUrl: required("M2A_BASE_URL").replace(/\/+$/, ""),
     username: required("M2A_USERNAME"),
     password: required("M2A_PASSWORD"),
-    loginPath: process.env.M2A_LOGIN_PATH ?? "/login/",
+    loginPath: process.env.M2A_LOGIN_PATH ?? "/usuario/login/",
+    loginProfile: process.env.M2A_LOGIN_PROFILE ?? "1",
     maxConcurrency: Number(process.env.M2A_MAX_CONCURRENCY ?? 2),
   },
 

@@ -53,7 +53,7 @@ class M2aClient {
 
   static isLoginPage(html, finalUrl = "") {
     if (!html) return false;
-    if (/\/login\//i.test(finalUrl)) return true;
+    if (/(?:\/login\/|\/usuario\/login\/)/i.test(finalUrl)) return true;
     return /name=["']password["']/i.test(html);
   }
 
@@ -78,7 +78,7 @@ class M2aClient {
     if (this.loginPromise) return this.loginPromise;
     this.loginPromise = (async () => {
       const loginUrl = `${config.m2a.baseUrl}${config.m2a.loginPath}`;
-      console.log(`[m2a-login] start user=${config.m2a.username} url=${loginUrl}`);
+      console.log(`[m2a-login] start user=${config.m2a.username} url=${loginUrl} perfil=${config.m2a.loginProfile}`);
       let getRes;
       try {
         getRes = await this.http.get(config.m2a.loginPath);
@@ -99,6 +99,7 @@ class M2aClient {
       console.log(`[m2a-login] cookies pré-POST: ${cookieStr || "(vazio)"}`);
 
       const form = new URLSearchParams();
+      form.set("perfil", config.m2a.loginProfile);
       form.set("username", config.m2a.username);
       form.set("password", config.m2a.password);
       if (csrf) {
