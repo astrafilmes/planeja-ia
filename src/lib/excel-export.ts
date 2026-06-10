@@ -575,7 +575,7 @@ export function prepararDadosPautaConsolidada(dadosBrutos: any[]): Array<{ proce
     AZ_TOTAL: 51, BA_VALOR_UNIT: 52, BB_VALOR_TOTAL: 53
   };
 
-  const processesMap = new Map<string, { processo_id: string; contrato_numero?: string | null; itemsMap: Map<string, { cells: (string | number | null)[]; valor_unit?: number | null; valor_total?: number | null }> }>();
+  const processesMap = new Map<string, { processo_id: string; processo_nome?: string | null; contrato_numero?: string | null; itemsMap: Map<string, { cells: (string | number | null)[]; valor_unit?: number | null; valor_total?: number | null }> }>();
 
   const getTargetIndex = (sigla?: string | null, sub?: string | null): number | null => {
     if (!sigla) return null;
