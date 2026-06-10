@@ -116,7 +116,9 @@ pm2 restart planeja-m2a-worker      # ou: docker compose up -d --build
 ## 8. Troubleshooting
 
 - **`M2A_LOGIN_FAILED`**: usuário/senha errados, perfil sem permissão, ou CAPTCHA.
-  Veja `pm2 logs planeja-m2a-worker`.
+  Veja `pm2 logs planeja-m2a-worker`. Se aparecer "portal de fornecedores",
+  confirme `M2A_LOGIN_PATH=/usuario/login/` e `M2A_LOGIN_PROFILE=1` no `.env`
+  da VPS e reinicie com `pm2 restart planeja-m2a-worker --update-env`.
 - **`401 bad_signature`** vindo da edge function: `SHARED_SECRET` divergente
   entre a VPS e o Lovable Cloud.
 - **`stale_timestamp`**: relógio da VPS muito fora de hora —
