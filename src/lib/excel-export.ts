@@ -160,13 +160,13 @@ export async function exportarRelatorioContratoExcel(contracts: ContractGroupedD
       const r = idx + 1;
       const labelCell = ws.getCell(`A${r}`);
       labelCell.value = cols[0];
-      labelCell.font = { bold: true };
+      labelCell.font = { bold: false };
       labelCell.alignment = { vertical: 'top', horizontal: 'left' };
 
       ws.mergeCells(`B${r}:H${r}`);
       const valueCell = ws.getCell(`B${r}`);
       valueCell.value = cols[1] || '';
-      valueCell.alignment = { wrapText: true, vertical: 'top', horizontal: 'left' }; 
+      valueCell.alignment = { wrapText: true, vertical: 'top', horizontal: 'left' };
     });
 
     ws.addRow([]);
