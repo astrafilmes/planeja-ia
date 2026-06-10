@@ -391,9 +391,31 @@ async function mapWithConcurrency(items, limit, mapper) {
 }
 
 // ---------- cascata completa ----------
+async function fetchAtasDoProcesso(processoId) {
+  // O endpoint AJAX /licitacao_ata_contrato/tabela/{id}/ nem sempre responde
+  // direto — tentamos várias estratégias até achar atas.
+  const attempts = [
+    `/licitacao_ata_contrato/tabela/${processoId}/`,
+    `/licitacao_ata_contrato/tabela/${processoId}/?page_size=1000`,
+    `/processo_administrativo/${processoId}/`,
+    `/processo_administrativo/${processoId}/#processo_administrativo_item`,
+  ];
+  let lastErr = null;
+  for (const url of attempts) {
+    try {
+      const $ = await fetchDoc(url);
+      const atas = extractAtasFromDoc($);
+      if (atas.length) return atas;
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  if (lastErr) throw lastErr;
+  return [];
+}
+
 async function runCascata(processoId) {
-  const $atas = await fetchDoc(`/licitacao_ata_contrato/tabela/${processoId}/`);
-  const atas = extractAtasFromDoc($atas);
+  const atas = await fetchAtasDoProcesso(processoId);
 
   const resultados = await mapWithConcurrency(atas, SYNC_CONCURRENCY, async (ata) => {
     const [itens, contratos] = await Promise.all([fetchItensDaAta(ata), fetchContratosDaAta(ata)]);
