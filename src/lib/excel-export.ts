@@ -278,9 +278,9 @@ const PAUTA_COLUMNS_CONFIG: PautaColDef[] = [
   { index: 2, macro: '', sub: 'ITEM',      width: 5,  row1Color: C_BASE, row2Color: C_BASE },
   { index: 3, macro: '', sub: 'LOTE',      width: 5,  row1Color: C_BASE, row2Color: C_BASE },
   { index: 4, macro: '', sub: 'Nº',        width: 5,  row1Color: C_BASE, row2Color: C_BASE },
-  { index: 5, macro: '', sub: 'ITEM',      width: 40, row1Color: C_BASE, row2Color: C_BASE },
-  { index: 6, macro: '', sub: 'DESCRIÇÃO', width: 40, row1Color: C_BASE, row2Color: C_BASE },
-  { index: 7, macro: '', sub: 'UNIDADE',   width: 15, row1Color: C_BASE, row2Color: C_BASE },
+  { index: 5, macro: '', sub: 'DESCRIÇÃO',     width: 40, row1Color: C_BASE, row2Color: C_BASE },
+  { index: 6, macro: '', sub: 'ESPECIFICAÇÃO', width: 40, row1Color: C_BASE, row2Color: C_BASE },
+  { index: 7, macro: '', sub: 'UNIDADE',       width: 15, row1Color: C_BASE, row2Color: C_BASE },
   // ADM
   { index: 8,  macro: 'ADM', sub: 'SECRET', width: 5, row1Color: C_ADM, row2Color: C_ADM },
   { index: 9,  macro: 'ADM', sub: 'G. M.',  width: 5, row1Color: C_ADM, row2Color: C_ADM },
