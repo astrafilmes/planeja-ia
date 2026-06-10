@@ -321,8 +321,11 @@ export function AppShell({
           size="icon"
           className="size-8 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
           onClick={() => signOut()}
+          aria-label="Sair"
+          title="Sair"
         >
-          <LogOut className="size-4" />
+          <LogOut className="size-4" aria-hidden="true" />
+          <span className="sr-only">Sair</span>
         </Button>
       </div>
     </div>
