@@ -1391,6 +1391,7 @@ export type Database = {
           contrato_numero: string
           descricao: string
           empresa: string
+          especificacao: string
           item_codigo: string
           item_id: string
           lote: string
