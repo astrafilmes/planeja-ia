@@ -8,6 +8,12 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
 
+import {
+  clearTrustedToken,
+  revokeCurrentTrustedDevice,
+  tryRestoreFromTrustedDevice,
+} from "@/lib/trusted-device";
+
 type Role = "admin" | "gestor" | "operador" | "consulta";
 
 interface AuthContextType {
@@ -19,6 +25,7 @@ interface AuthContextType {
   isGestor: boolean;
   signOut: () => Promise<void>;
 }
+
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
