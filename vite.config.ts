@@ -31,7 +31,12 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(appVersion),
     __EXT_VERSION__: JSON.stringify(extensionVersion),
   },
-  plugins: [tanstackStart(), react(), tailwindcss(), tsconfigPaths()],
+  plugins: [
+    tanstackStart({ server: { entry: "./src/server.ts" } }),
+    react(),
+    tailwindcss(),
+    tsconfigPaths(),
+  ],
   server: {
     port: 3000,
   },
