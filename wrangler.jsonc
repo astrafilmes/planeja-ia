@@ -3,7 +3,7 @@
   "name": "planeja",
   "compatibility_date": "2025-09-24",
   "compatibility_flags": ["nodejs_compat"],
-  "main": "@tanstack/react-start/server-entry",
+  "main": "src/server.ts",
   "assets": {
     "directory": "dist/client"
   }
