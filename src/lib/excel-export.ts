@@ -329,13 +329,13 @@ const PAUTA_COLUMNS_CONFIG: PautaColDef[] = [
   { index: 42, macro: 'SMS', sub: 'TOTAL',    width: 5, row1Color: C_SMS, row2Color: C_SMS, isGroupTotal: true, sumCols: [33, 34, 35, 36, 37, 38, 39, 40, 41] },
   // SPS (43..51)
   { index: 43, macro: 'SPS', sub: 'SECRET',         width: 5, row1Color: C_SPS, row2Color: C_SPS_A },
-  { index: 44, macro: 'SPS', sub: 'PROTECAO',       width: 5, row1Color: C_SPS, row2Color: C_SPS_A },
+  { index: 44, macro: 'SPS', sub: 'PROTECAO',       width: 5, row1Color: C_SPS, row2Color: C_SPS_A, fillRow2InData: true },
   { index: 45, macro: 'SPS', sub: 'IGD/PBF',        width: 5, row1Color: C_SPS, row2Color: C_SPS_B },
   { index: 46, macro: 'SPS', sub: 'CRAS SCFV',      width: 5, row1Color: C_SPS, row2Color: C_SPS_B },
   { index: 47, macro: 'SPS', sub: 'CREAS',          width: 5, row1Color: C_SPS, row2Color: C_SPS_B },
   { index: 48, macro: 'SPS', sub: 'CRIANÇA FELIZ',  width: 5, row1Color: C_SPS, row2Color: C_SPS_B },
   { index: 49, macro: 'SPS', sub: 'PROCAD',         width: 5, row1Color: C_SPS, row2Color: C_SPS_B },
-  { index: 50, macro: 'SPS', sub: 'FUNDO',          width: 5, row1Color: C_SPS, row2Color: C_SPS_B },
+  { index: 50, macro: 'SPS', sub: 'FUNDO',          width: 5, row1Color: C_SPS, row2Color: C_SPS_B, fillRow2InData: true },
   { index: 51, macro: 'SPS', sub: 'TOTAL',          width: 5, row1Color: C_SPS, row2Color: C_SPS, isGroupTotal: true, sumCols: [43, 44, 45, 46, 47, 48, 49, 50] },
   // TOTAIS FINAIS (52..54)
   { index: 52, macro: '', sub: 'TOTAL',        width: 15, row1Color: C_BASE, row2Color: C_BASE, isGeneralTotal: true },
