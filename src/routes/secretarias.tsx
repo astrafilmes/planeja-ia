@@ -281,10 +281,17 @@ function Page() {
         )
         .order("numero");
       if (error) throw error;
-      // CPFs sensíveis: só admin/gestor conseguem; merge via RPC quando autorizado
-      const { data: cpfs } = await supabase.rpc("get_secretarias_cpfs");
+      // CPFs sensíveis: só admin/gestor conseguem; merge via RPC quando autorizado.
+      // Body explícito `{}` evita 400 do PostgREST.
+      let cpfs: Array<{ id: string; m2a_gestor_cpf: string | null; m2a_fiscal_cpf: string | null }> = [];
+      try {
+        const { data, error: rpcErr } = await supabase.rpc("get_secretarias_cpfs", {});
+        if (!rpcErr && Array.isArray(data)) cpfs = data as typeof cpfs;
+      } catch {
+        /* sem permissão, segue sem CPFs */
+      }
       const cpfMap = new Map<string, { gestor: string | null; fiscal: string | null }>();
-      (cpfs ?? []).forEach((c: any) =>
+      cpfs.forEach((c) =>
         cpfMap.set(c.id, { gestor: c.m2a_gestor_cpf, fiscal: c.m2a_fiscal_cpf }),
       );
       return (data ?? []).map((s: any) => ({

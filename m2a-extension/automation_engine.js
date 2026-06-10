@@ -9,6 +9,9 @@
 (function () {
   const ENGINE_VERSION = "1.7.9";
   const REQUEST_TIMEOUT_MS = 30000;
+  // Timeout estendido (10 min) para uploads pesados como importação de planilha
+  // de itens com muitas linhas — o portal pode demorar para responder.
+  const LONG_REQUEST_TIMEOUT_MS = 600000;
   const CSRF_CACHE_TTL_MS = 10 * 60 * 1000;
   const CONTRACT_CREATE_SETTLE_MS = 600;
   const PROCESS_CREATE_SETTLE_MS = 3000;
@@ -169,9 +172,14 @@
 
   async function fetchWithTimeout(url, options = {}) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    const { timeoutMs, ...rest } = options;
+    const effectiveTimeout =
+      typeof timeoutMs === "number" && timeoutMs > 0
+        ? timeoutMs
+        : REQUEST_TIMEOUT_MS;
+    const timeout = setTimeout(() => controller.abort(), effectiveTimeout);
     try {
-      return await fetch(url, { ...options, signal: controller.signal });
+      return await fetch(url, { ...rest, signal: controller.signal });
     } finally {
       clearTimeout(timeout);
     }
@@ -881,6 +889,8 @@
             "X-CSRFToken": csrf,
           },
           body: form,
+          // Importação em lote pode demorar muito no portal — usa timeout estendido.
+          timeoutMs: LONG_REQUEST_TIMEOUT_MS,
         });
         ensureOperationAccepted(
           result.doc,

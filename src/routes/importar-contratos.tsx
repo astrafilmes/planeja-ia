@@ -331,10 +331,17 @@ function Page() {
           "id, numero, sigla, nome, m2a_ref_coluna, m2a_dotacao_default, m2a_orgao_id, m2a_dot_orgao_id, m2a_uo_id, m2a_dot_id, m2a_fiscal_codigo, m2a_fiscal_nome, m2a_gestor_codigo, m2a_gestor_nome",
         )
         .eq("ativa", true);
-      // Tentar enriquecer com CPFs (apenas admin/gestor): falha silenciosa para outros papéis
-      const { data: cpfs } = await supabase.rpc("get_secretarias_cpfs");
+      // Tentar enriquecer com CPFs (apenas admin/gestor): falha silenciosa para outros papéis.
+      // Passamos {} explicitamente para evitar 400 do PostgREST quando o body é undefined.
+      let cpfs: Array<{ id: string; m2a_gestor_cpf: string | null; m2a_fiscal_cpf: string | null }> = [];
+      try {
+        const { data, error } = await supabase.rpc("get_secretarias_cpfs", {});
+        if (!error && Array.isArray(data)) cpfs = data as typeof cpfs;
+      } catch {
+        // usuário sem permissão -> seguimos sem CPFs
+      }
       const cpfMap = new Map<string, { gestor: string | null; fiscal: string | null }>();
-      (cpfs ?? []).forEach((c: any) =>
+      cpfs.forEach((c) =>
         cpfMap.set(c.id, { gestor: c.m2a_gestor_cpf, fiscal: c.m2a_fiscal_cpf }),
       );
       return (data ?? []).map((s: any) => ({
@@ -583,7 +590,11 @@ function Page() {
           parsed.refsIgnoradas,
         );
         toast.warning(
-          `Colunas ignoradas (não cadastradas): ${parsed.refsIgnoradas.join(", ")}`,
+          `Aviso: ${parsed.refsIgnoradas.length} coluna(s) da planilha foram ignoradas pois as secretarias/unidades não foram encontradas no cadastro.`,
+          {
+            description: `Colunas ignoradas: ${parsed.refsIgnoradas.join(", ")}`,
+            duration: 8000,
+          },
         );
       }
 

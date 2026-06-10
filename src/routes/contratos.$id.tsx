@@ -217,11 +217,18 @@ function Page() {
           (dotMap[d.item_id] ??= []).push(d);
         }
       }
-      // CPFs sensíveis: só admin/gestor recebem; falha silenciosa para outros papéis
+      // CPFs sensíveis: só admin/gestor recebem; falha silenciosa para outros papéis.
+      // Body explícito `{}` evita 400 do PostgREST.
       let secretariaWithCpf: any = secretaria.data;
       if (secretariaWithCpf?.id) {
-        const { data: cpfs } = await supabase.rpc("get_secretarias_cpfs");
-        const match = (cpfs ?? []).find((c: any) => c.id === secretariaWithCpf.id);
+        let cpfs: Array<{ id: string; m2a_gestor_cpf: string | null; m2a_fiscal_cpf: string | null }> = [];
+        try {
+          const { data, error: cpfErr } = await supabase.rpc("get_secretarias_cpfs", {});
+          if (!cpfErr && Array.isArray(data)) cpfs = data as typeof cpfs;
+        } catch {
+          /* sem permissão */
+        }
+        const match = cpfs.find((c) => c.id === secretariaWithCpf.id);
         secretariaWithCpf = {
           ...secretariaWithCpf,
           m2a_gestor_cpf: match?.m2a_gestor_cpf ?? null,
