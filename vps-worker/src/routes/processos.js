@@ -1,5 +1,6 @@
 import * as cheerio from "cheerio";
 import { m2a } from "../m2a-client.js";
+import { config } from "../config.js";
 
 // =====================================================================
 // Porta da lógica de m2a-extension/engine/processo_scraper.js
@@ -101,8 +102,28 @@ function coerceHtmlPayload(rawText) {
   return text;
 }
 
-async function fetchDoc(path) {
-  const r = await m2a.get(path);
+// Endpoints AJAX do portal (tabela/subtabela) só devolvem corpo quando
+// recebem o handshake típico de XHR. Sem isso, voltam 200 com bytes=0.
+function isAjaxLikePath(path) {
+  return /\/(tabela|subtabela)\//i.test(path);
+}
+
+function buildAjaxHeaders(path) {
+  if (!isAjaxLikePath(path)) return undefined;
+  const m = path.match(/\/(\d+)(?:\/|\?|$)/);
+  const referer = m
+    ? `${config.m2a.baseUrl}/processo_administrativo/${m[1]}/`
+    : undefined;
+  return {
+    Accept: "application/json, text/javascript, */*; q=0.01",
+    "X-Requested-With": "XMLHttpRequest",
+    ...(referer ? { Referer: referer } : {}),
+  };
+}
+
+async function fetchDoc(path, extraHeaders) {
+  const headers = { ...(buildAjaxHeaders(path) || {}), ...(extraHeaders || {}) };
+  const r = await m2a.get(path, Object.keys(headers).length ? { headers } : undefined);
   if (r.status >= 400) {
     const err = new Error(`M2A respondeu ${r.status} em ${path}`);
     err.status = r.status;
