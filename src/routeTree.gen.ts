@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SecretariasRouteImport } from './routes/secretarias'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ProcessosRouteImport } from './routes/processos'
 import { Route as NumeracaoRouteImport } from './routes/numeracao'
 import { Route as LogsRouteImport } from './routes/logs'
@@ -29,6 +30,11 @@ import { Route as ContratosIdRouteImport } from './routes/contratos.$id'
 const SecretariasRoute = SecretariasRouteImport.update({
   id: '/secretarias',
   path: '/secretarias',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProcessosRoute = ProcessosRouteImport.update({
@@ -121,6 +127,7 @@ export interface FileRoutesByFullPath {
   '/logs': typeof LogsRoute
   '/numeracao': typeof NumeracaoRoute
   '/processos': typeof ProcessosRouteWithChildren
+  '/reset-password': typeof ResetPasswordRoute
   '/secretarias': typeof SecretariasRoute
   '/contratos/$id': typeof ContratosIdRoute
   '/processos/$id': typeof ProcessosIdRoute
@@ -139,6 +146,7 @@ export interface FileRoutesByTo {
   '/logs': typeof LogsRoute
   '/numeracao': typeof NumeracaoRoute
   '/processos': typeof ProcessosRouteWithChildren
+  '/reset-password': typeof ResetPasswordRoute
   '/secretarias': typeof SecretariasRoute
   '/contratos/$id': typeof ContratosIdRoute
   '/processos/$id': typeof ProcessosIdRoute
@@ -158,6 +166,7 @@ export interface FileRoutesById {
   '/logs': typeof LogsRoute
   '/numeracao': typeof NumeracaoRoute
   '/processos': typeof ProcessosRouteWithChildren
+  '/reset-password': typeof ResetPasswordRoute
   '/secretarias': typeof SecretariasRoute
   '/contratos/$id': typeof ContratosIdRoute
   '/processos/$id': typeof ProcessosIdRoute
@@ -178,6 +187,7 @@ export interface FileRouteTypes {
     | '/logs'
     | '/numeracao'
     | '/processos'
+    | '/reset-password'
     | '/secretarias'
     | '/contratos/$id'
     | '/processos/$id'
@@ -196,6 +206,7 @@ export interface FileRouteTypes {
     | '/logs'
     | '/numeracao'
     | '/processos'
+    | '/reset-password'
     | '/secretarias'
     | '/contratos/$id'
     | '/processos/$id'
@@ -214,6 +225,7 @@ export interface FileRouteTypes {
     | '/logs'
     | '/numeracao'
     | '/processos'
+    | '/reset-password'
     | '/secretarias'
     | '/contratos/$id'
     | '/processos/$id'
@@ -233,6 +245,7 @@ export interface RootRouteChildren {
   LogsRoute: typeof LogsRoute
   NumeracaoRoute: typeof NumeracaoRoute
   ProcessosRoute: typeof ProcessosRouteWithChildren
+  ResetPasswordRoute: typeof ResetPasswordRoute
   SecretariasRoute: typeof SecretariasRoute
 }
 
@@ -243,6 +256,13 @@ declare module '@tanstack/react-router' {
       path: '/secretarias'
       fullPath: '/secretarias'
       preLoaderRoute: typeof SecretariasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/processos': {
@@ -391,6 +411,7 @@ const rootRouteChildren: RootRouteChildren = {
   LogsRoute: LogsRoute,
   NumeracaoRoute: NumeracaoRoute,
   ProcessosRoute: ProcessosRouteWithChildren,
+  ResetPasswordRoute: ResetPasswordRoute,
   SecretariasRoute: SecretariasRoute,
 }
 export const routeTree = rootRouteImport
