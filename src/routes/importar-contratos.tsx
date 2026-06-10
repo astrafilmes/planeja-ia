@@ -335,7 +335,7 @@ function Page() {
       // Passamos {} explicitamente para evitar 400 do PostgREST quando o body é undefined.
       let cpfs: Array<{ id: string; m2a_gestor_cpf: string | null; m2a_fiscal_cpf: string | null }> = [];
       try {
-        const { data, error } = await supabase.rpc("get_secretarias_cpfs", {});
+        const { data, error } = await supabase.rpc("get_secretarias_cpfs");
         if (!error && Array.isArray(data)) cpfs = data as typeof cpfs;
       } catch {
         // usuário sem permissão -> seguimos sem CPFs

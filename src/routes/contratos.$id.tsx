@@ -223,7 +223,7 @@ function Page() {
       if (secretariaWithCpf?.id) {
         let cpfs: Array<{ id: string; m2a_gestor_cpf: string | null; m2a_fiscal_cpf: string | null }> = [];
         try {
-          const { data, error: cpfErr } = await supabase.rpc("get_secretarias_cpfs", {});
+          const { data, error: cpfErr } = await supabase.rpc("get_secretarias_cpfs");
           if (!cpfErr && Array.isArray(data)) cpfs = data as typeof cpfs;
         } catch {
           /* sem permissão */
