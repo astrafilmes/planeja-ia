@@ -624,22 +624,39 @@ export function prepararDadosPautaConsolidada(dadosBrutos: any[]): Array<{ proce
     }
     const proc = processesMap.get(pid)!;
 
-    const itemKey = row.item_id ? String(row.item_id) : `${row.empresa || ''}::${row.item_numero || row.numero_item || ''}`;
+    // Consolida o mesmo item (mesmo lote + nº item) através de múltiplos contratos do mesmo processo.
+    // Assim, se o item 5 aparece em ADM e GAB (contratos distintos), o resultado é UMA linha
+    // com as quantidades distribuídas nas colunas ADM e GAB.
+    const lote = String(row.lote ?? '').trim();
+    const numItem = String(row.numero_item ?? row.numero ?? row.item_numero ?? '').trim();
+    const itemKey = (lote || numItem)
+      ? `L:${lote}|N:${numItem}`
+      : (row.item_id ? String(row.item_id) : `${row.empresa || ''}::${numItem}`);
+
+    const descricaoRaw = row.descricao ?? row.item_descricao ?? row.objeto ?? '';
+    const especificacaoRaw = row.especificacao ?? row.item_especificacao ?? '';
+    const descricao = formatTechnicalDesc(String(descricaoRaw));
+    const especificacao = formatTechnicalDesc(String(especificacaoRaw));
+
     if (!proc.itemsMap.has(itemKey)) {
       const cells = new Array(54).fill(null);
       cells[0] = row.empresa || row.fornecedor_nome || '';
-      cells[1] = row.item_codigo || row.item || row.item_numero || '';
-      cells[2] = row.lote || '';
-      cells[3] = row.numero_item || row.numero || '';
-      cells[4] = row.item || row.item_descricao || '';
-      // CAIXA ALTA aplicada diretamente na base de tratamento de dados
-      cells[5] = formatTechnicalDesc(row.descricao || row.item_descricao || row.objeto);
+      cells[1] = row.item_codigo || row.item || numItem || '';
+      cells[2] = lote || '';
+      cells[3] = numItem || '';
+      // E (idx 4) = DESCRIÇÃO ; F (idx 5) = ESPECIFICAÇÃO ; fallback duplicado
+      cells[4] = descricao || especificacao || '';
+      cells[5] = especificacao || descricao || '';
       cells[6] = row.unidade || row.item_unidade || '';
 
       proc.itemsMap.set(itemKey, { cells, valor_unit: row.valor_unitario ?? row.item_valor_unitario ?? null, valor_total: row.valor_total ?? row.item_valor_total ?? null });
     }
 
     const itemEntry = proc.itemsMap.get(itemKey)!;
+
+    // Reforça fallback caso outra linha do mesmo item traga a info ausente
+    if (!itemEntry.cells[4] && (descricao || especificacao)) itemEntry.cells[4] = descricao || especificacao;
+    if (!itemEntry.cells[5] && (especificacao || descricao)) itemEntry.cells[5] = especificacao || descricao;
 
     const target = getTargetIndex(row.secretaria_sigla || row.sigla || row.unidade_sigla, row.subcategoria || row.dotacao || row.subtipo);
     if (target !== null && target !== undefined) {
