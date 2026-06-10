@@ -278,9 +278,9 @@ const PAUTA_COLUMNS_CONFIG: PautaColDef[] = [
   { index: 2, macro: '', sub: 'ITEM',      width: 5,  row1Color: C_BASE, row2Color: C_BASE },
   { index: 3, macro: '', sub: 'LOTE',      width: 5,  row1Color: C_BASE, row2Color: C_BASE },
   { index: 4, macro: '', sub: 'Nº',        width: 5,  row1Color: C_BASE, row2Color: C_BASE },
-  { index: 5, macro: '', sub: 'ITEM',      width: 40, row1Color: C_BASE, row2Color: C_BASE },
-  { index: 6, macro: '', sub: 'DESCRIÇÃO', width: 40, row1Color: C_BASE, row2Color: C_BASE },
-  { index: 7, macro: '', sub: 'UNIDADE',   width: 15, row1Color: C_BASE, row2Color: C_BASE },
+  { index: 5, macro: '', sub: 'DESCRIÇÃO',     width: 40, row1Color: C_BASE, row2Color: C_BASE },
+  { index: 6, macro: '', sub: 'ESPECIFICAÇÃO', width: 40, row1Color: C_BASE, row2Color: C_BASE },
+  { index: 7, macro: '', sub: 'UNIDADE',       width: 15, row1Color: C_BASE, row2Color: C_BASE },
   // ADM
   { index: 8,  macro: 'ADM', sub: 'SECRET', width: 5, row1Color: C_ADM, row2Color: C_ADM },
   { index: 9,  macro: 'ADM', sub: 'G. M.',  width: 5, row1Color: C_ADM, row2Color: C_ADM },
@@ -356,6 +356,7 @@ const colLetter = (n: number) => {
 export async function exportarPautaConsolidadaExcel(
   processes: Array<{
     processo_id: string;
+    processo_nome?: string | null;
     contrato_numero?: string | null;
     items: Array<{ cells: (string | number | null)[]; valor_unit?: number | null; valor_total?: number | null }>;
   }>,
@@ -369,7 +370,8 @@ export async function exportarPautaConsolidadaExcel(
   const moedaFmt = '"R$" #,##0.00';
 
   for (const proc of processes) {
-    const safeName = (proc.processo_id || proc.contrato_numero || 'Processo').toString().replace(/[\\/*?:[\]]/g, '_').substring(0, 31);
+    const displayName = (proc.processo_nome || proc.processo_id || proc.contrato_numero || 'Processo').toString();
+    const safeName = displayName.replace(/[\\/*?:[\]]/g, '_').substring(0, 31);
     const ws = workbook.addWorksheet(safeName, {
       pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 }
     });
@@ -448,6 +450,7 @@ export async function exportarPautaConsolidadaExcel(
       });
 
       const row = ws.addRow(rowData);
+      row.height = 13;
 
       row.eachCell({ includeEmpty: true }, (cell: Cell, colNumber: number) => {
         const colConf = PAUTA_COLUMNS_CONFIG[colNumber - 1];
@@ -455,16 +458,15 @@ export async function exportarPautaConsolidadaExcel(
         cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
         cell.font = { bold: false, size: 9, color: { argb: 'FF000000' } };
 
-        // Alinhamentos
+        // Alinhamentos — sem quebra de linha em nenhuma célula de dados
         if (colNumber === 1) {
-          // Coluna A (EMPRESA) à esquerda a partir da linha 3
-          cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+          cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: false };
         } else if (colNumber === 5 || colNumber === 6) {
-          cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+          cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: false };
         } else if (colConf.isCurrency || typeof cell.value === 'number') {
-          cell.alignment = { horizontal: 'right', vertical: 'middle' };
+          cell.alignment = { horizontal: 'right', vertical: 'middle', wrapText: false };
         } else {
-          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+          cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: false };
         }
 
         // Formatos numéricos
@@ -533,7 +535,7 @@ export async function exportarPautaConsolidadaExcel(
     ws.getRow(footerRowIndex).height = 13;
     ws.mergeCells(`A${footerRowIndex}:G${footerRowIndex}`);
     const footerCell = ws.getCell(`A${footerRowIndex}`);
-    footerCell.value = proc.contrato_numero ? `${proc.processo_id} / ${proc.contrato_numero}` : proc.processo_id;
+    footerCell.value = proc.processo_nome || proc.processo_id || '';
     footerCell.font = { bold: false, size: 9, color: { argb: 'FF000000' } };
     footerCell.alignment = { horizontal: 'left', vertical: 'middle' };
   }
@@ -556,7 +558,7 @@ export async function exportarPautaConsolidadaExcel(
  * prepararDadosPautaConsolidada
  * Indexação preservada (0-based) integrando com segurança ao mapeamento dos 54 itens.
  */
-export function prepararDadosPautaConsolidada(dadosBrutos: any[]): Array<{ processo_id: string; contrato_numero?: string | null; items: Array<{ cells: (string | number | null)[]; valor_unit?: number | null; valor_total?: number | null }> }> {
+export function prepararDadosPautaConsolidada(dadosBrutos: any[]): Array<{ processo_id: string; processo_nome?: string | null; contrato_numero?: string | null; items: Array<{ cells: (string | number | null)[]; valor_unit?: number | null; valor_total?: number | null }> }> {
   const columnMap: Record<string, number> = {
     ADM: 7, ADM_GM: 8, ADM_TOTAL: 9,
     CGM: 10, CGM_TOTAL: 11,
@@ -573,7 +575,7 @@ export function prepararDadosPautaConsolidada(dadosBrutos: any[]): Array<{ proce
     AZ_TOTAL: 51, BA_VALOR_UNIT: 52, BB_VALOR_TOTAL: 53
   };
 
-  const processesMap = new Map<string, { processo_id: string; contrato_numero?: string | null; itemsMap: Map<string, { cells: (string | number | null)[]; valor_unit?: number | null; valor_total?: number | null }> }>();
+  const processesMap = new Map<string, { processo_id: string; processo_nome?: string | null; contrato_numero?: string | null; itemsMap: Map<string, { cells: (string | number | null)[]; valor_unit?: number | null; valor_total?: number | null }> }>();
 
   const getTargetIndex = (sigla?: string | null, sub?: string | null): number | null => {
     if (!sigla) return null;
@@ -620,9 +622,10 @@ export function prepararDadosPautaConsolidada(dadosBrutos: any[]): Array<{ proce
   for (const row of dadosBrutos) {
     const pid = row.processo_id || row.process_id || 'unknown';
     if (!processesMap.has(pid)) {
-      processesMap.set(pid, { processo_id: pid, contrato_numero: row.contrato_numero || row.numero_contrato || null, itemsMap: new Map() });
+      processesMap.set(pid, { processo_id: pid, processo_nome: row.processo_nome || null, contrato_numero: row.contrato_numero || row.numero_contrato || null, itemsMap: new Map() });
     }
     const proc = processesMap.get(pid)!;
+    if (!proc.processo_nome && row.processo_nome) proc.processo_nome = row.processo_nome;
 
     // Consolida o mesmo item (mesmo lote + nº item) através de múltiplos contratos do mesmo processo.
     // Assim, se o item 5 aparece em ADM e GAB (contratos distintos), o resultado é UMA linha
@@ -675,13 +678,13 @@ export function prepararDadosPautaConsolidada(dadosBrutos: any[]): Array<{ proce
     }
   }
 
-  const processes: Array<{ processo_id: string; contrato_numero?: string | null; items: Array<{ cells: (string | number | null)[]; valor_unit?: number | null; valor_total?: number | null }> }> = [];
-  for (const [pid, proc] of processesMap) {
+  const processes: Array<{ processo_id: string; processo_nome?: string | null; contrato_numero?: string | null; items: Array<{ cells: (string | number | null)[]; valor_unit?: number | null; valor_total?: number | null }> }> = [];
+  for (const [, proc] of processesMap) {
     const items: Array<{ cells: (string | number | null)[]; valor_unit?: number | null; valor_total?: number | null }> = [];
     for (const [, entry] of proc.itemsMap) {
       items.push({ cells: entry.cells, valor_unit: entry.valor_unit, valor_total: entry.valor_total });
     }
-    processes.push({ processo_id: proc.processo_id, contrato_numero: proc.contrato_numero, items });
+    processes.push({ processo_id: proc.processo_id, processo_nome: proc.processo_nome, contrato_numero: proc.contrato_numero, items });
   }
 
   return processes;

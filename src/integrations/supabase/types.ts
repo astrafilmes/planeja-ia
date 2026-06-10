@@ -1388,6 +1388,7 @@ export type Database = {
       get_pauta_consolidada_data: {
         Args: { p_processo_id: string }
         Returns: {
+          contrato_id: string
           contrato_numero: string
           descricao: string
           empresa: string
