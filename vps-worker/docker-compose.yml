@@ -1,0 +1,8 @@
+services:
+  m2a-worker:
+    build: .
+    container_name: planeja-m2a-worker
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "8080:8080"
