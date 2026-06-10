@@ -14,7 +14,7 @@ export default tseslint.config(
       ".output",
       ".vinxi",
       ".wrangler",
-      "m2a-extension/vendor",
+      "m2a-extension",
     ],
   },
   {
