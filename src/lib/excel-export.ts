@@ -1,4 +1,5 @@
 import ExcelJS from 'exceljs';
+import type { Cell, Worksheet } from 'exceljs';
 import { saveAs } from 'file-saver';
 
 export interface ContractReportData {
@@ -123,7 +124,7 @@ export async function exportarRelatorioContratoExcel(contracts: ContractGroupedD
     let sheetName = baseName;
     let counter = 1;
     
-    while (workbook.worksheets.some(w => w.name === sheetName)) {
+    while (workbook.worksheets.some((w: Worksheet) => w.name === sheetName)) {
       const suffix = ` (${counter})`;
       sheetName = (baseName.substring(0, 31 - suffix.length) + suffix).substring(0, 31);
       counter++;
@@ -173,7 +174,7 @@ export async function exportarRelatorioContratoExcel(contracts: ContractGroupedD
       ws.getColumn(i + 1).width = w;
     });
 
-    headerRow.eachCell(cell => {
+    headerRow.eachCell((cell: Cell) => {
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
       cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
       cell.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -192,7 +193,7 @@ export async function exportarRelatorioContratoExcel(contracts: ContractGroupedD
         it.item_valor_total ?? null
       ]);
 
-      row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+      row.eachCell({ includeEmpty: true }, (cell: Cell, colNumber: number) => {
         cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
 
         if (colNumber === 3 || colNumber === 4) {
@@ -404,7 +405,7 @@ export async function exportarPautaConsolidadaExcel(
 
       const row = ws.addRow(rowData);
 
-      row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+      row.eachCell({ includeEmpty: true }, (cell: Cell, colNumber: number) => {
         const colConf = PAUTA_COLUMNS_CONFIG[colNumber - 1];
         
         // Apenas bordas finas para as células de dados, sem preenchimento de cor
