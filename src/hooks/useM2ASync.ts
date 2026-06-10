@@ -32,14 +32,29 @@ export function useM2ASync({
     toastIdRef.current = toast.loading(
       "Conectando ao portal M2A pelo worker…",
     );
+    const LOG = "[m2a-sync]";
+    console.group(`${LOG} sync processo=${processoId}`);
+    console.log(`${LOG} url=${m2aProcessoUrl}`);
+    const tStart = performance.now();
 
     try {
+      console.log(`${LOG} → fetchProcessoFromWorker (m2a-proxy → VPS)`);
+      const tFetch = performance.now();
       const payload = await fetchProcessoFromWorker(m2aProcessoUrl);
+      console.log(
+        `${LOG} ✓ worker respondeu em ${(performance.now() - tFetch).toFixed(0)}ms`,
+        {
+          atas: payload.atas?.length ?? 0,
+          itens: payload.itens?.length ?? 0,
+          contratos: payload.contratos_existentes?.length ?? 0,
+        },
+      );
 
       toast.loading("Salvando atas, itens e contratos…", {
         id: toastIdRef.current ?? undefined,
       });
 
+      console.log(`${LOG} → persistM2ASnapshot`);
       await persistM2ASnapshot(processoId, {
         atas: payload.atas ?? [],
         itens: payload.itens ?? [],
@@ -52,17 +67,22 @@ export function useM2ASync({
         } itens, ${payload.resumo?.qtd_contratos ?? 0} contratos.`,
         { id: toastIdRef.current ?? undefined },
       );
+      console.log(
+        `${LOG} ✅ TOTAL ${(performance.now() - tStart).toFixed(0)}ms`,
+      );
 
       qc.invalidateQueries({ queryKey: ["m2a-snapshot", processoId] });
       qc.invalidateQueries({ queryKey: ["processo-detail", processoId] });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
+      console.error(`${LOG} ❌ falhou:`, e);
       toast.error(`Falha ao sincronizar: ${msg}`, {
         id: toastIdRef.current ?? undefined,
       });
     } finally {
       setIsSyncing(false);
       toastIdRef.current = null;
+      console.groupEnd();
     }
   }, [m2aProcessoUrl, processoId, qc]);
 
