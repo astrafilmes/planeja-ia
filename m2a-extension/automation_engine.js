@@ -889,6 +889,8 @@
             "X-CSRFToken": csrf,
           },
           body: form,
+          // Importação em lote pode demorar muito no portal — usa timeout estendido.
+          timeoutMs: LONG_REQUEST_TIMEOUT_MS,
         });
         ensureOperationAccepted(
           result.doc,
