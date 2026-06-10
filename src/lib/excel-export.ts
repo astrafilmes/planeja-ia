@@ -507,6 +507,7 @@ export async function exportarPautaConsolidadaExcel(
     });
 
     const footerRowIndex = startRow + proc.items.length;
+    ws.getRow(footerRowIndex).height = 13;
     ws.mergeCells(`A${footerRowIndex}:G${footerRowIndex}`);
     const footerCell = ws.getCell(`A${footerRowIndex}`);
     footerCell.value = proc.contrato_numero ? `${proc.processo_id} / ${proc.contrato_numero}` : proc.processo_id;
