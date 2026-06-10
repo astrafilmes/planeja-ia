@@ -1,15 +1,11 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error(
-    "Erro de Configuração: Variáveis de ambiente VITE_SUPABASE_URL ou VITE_SUPABASE_ANON_KEY não encontradas. " +
-      "Certifique-se de que o arquivo .env está configurado corretamente.",
-  );
-}
+// Restaurado do backup: aponta para o projeto Supabase original do sistema Planejamento.
+// A anon key é publishable (segura para o cliente). RLS controla o acesso.
+const supabaseUrl = "https://abrjvncynywqpxppclxe.supabase.co";
+const supabaseAnonKey =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFicmp2bmN5bnl3cXB4cHBjbHhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyMzE1MzYsImV4cCI6MjA5NTgwNzUzNn0.ORkzOEb1rsEIt6pGwZjgVkPzPu-s4xS9jxkZajRhRtY";
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
