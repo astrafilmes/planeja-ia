@@ -179,7 +179,9 @@ function Page() {
           c.secretaria_id
             ? supabase
                 .from("secretarias")
-                .select("*")
+                .select(
+                  "id, numero, sigla, nome, ativa, m2a_orgao_id, m2a_dot_orgao_id, m2a_uo_id, m2a_dot_id, m2a_dotacao_default, m2a_ref_coluna, m2a_fiscal_codigo, m2a_fiscal_nome, m2a_gestor_codigo, m2a_gestor_nome",
+                )
                 .eq("id", c.secretaria_id)
                 .maybeSingle()
             : Promise.resolve({ data: null }),
@@ -203,6 +205,17 @@ function Page() {
           (dotMap[d.item_id] ??= []).push(d);
         }
       }
+      // CPFs sensíveis: só admin/gestor recebem; falha silenciosa para outros papéis
+      let secretariaWithCpf: any = secretaria.data;
+      if (secretariaWithCpf?.id) {
+        const { data: cpfs } = await supabase.rpc("get_secretarias_cpfs");
+        const match = (cpfs ?? []).find((c: any) => c.id === secretariaWithCpf.id);
+        secretariaWithCpf = {
+          ...secretariaWithCpf,
+          m2a_gestor_cpf: match?.m2a_gestor_cpf ?? null,
+          m2a_fiscal_cpf: match?.m2a_fiscal_cpf ?? null,
+        };
+      }
       return {
         contrato: c,
         itens: itensList.map((i: any) => ({
@@ -212,7 +225,7 @@ function Page() {
         atores: atores.data ?? [],
         documentos: docs.data ?? [],
         processo: processo.data,
-        secretaria: secretaria.data,
+        secretaria: secretariaWithCpf,
         m2aAtas: m2aAtas.data ?? [],
       };
     },

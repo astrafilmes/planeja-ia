@@ -315,15 +315,25 @@ function Page() {
 
   const { data: secretarias } = useQuery({
     queryKey: ["secretarias-min"],
-    queryFn: async () =>
-      (
-        await supabase
-          .from("secretarias")
-          .select(
-            "id, numero, sigla, nome, m2a_ref_coluna, m2a_dotacao_default, m2a_orgao_id, m2a_dot_orgao_id, m2a_uo_id, m2a_dot_id, m2a_fiscal_codigo, m2a_fiscal_nome, m2a_fiscal_cpf, m2a_gestor_codigo, m2a_gestor_nome, m2a_gestor_cpf",
-          )
-          .eq("ativa", true)
-      ).data ?? [],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("secretarias")
+        .select(
+          "id, numero, sigla, nome, m2a_ref_coluna, m2a_dotacao_default, m2a_orgao_id, m2a_dot_orgao_id, m2a_uo_id, m2a_dot_id, m2a_fiscal_codigo, m2a_fiscal_nome, m2a_gestor_codigo, m2a_gestor_nome",
+        )
+        .eq("ativa", true);
+      // Tentar enriquecer com CPFs (apenas admin/gestor): falha silenciosa para outros papéis
+      const { data: cpfs } = await supabase.rpc("get_secretarias_cpfs");
+      const cpfMap = new Map<string, { gestor: string | null; fiscal: string | null }>();
+      (cpfs ?? []).forEach((c: any) =>
+        cpfMap.set(c.id, { gestor: c.m2a_gestor_cpf, fiscal: c.m2a_fiscal_cpf }),
+      );
+      return (data ?? []).map((s: any) => ({
+        ...s,
+        m2a_fiscal_cpf: cpfMap.get(s.id)?.fiscal ?? null,
+        m2a_gestor_cpf: cpfMap.get(s.id)?.gestor ?? null,
+      }));
+    },
   });
 
   const { data: fornecedoresPrepostos = [] } = useQuery({
