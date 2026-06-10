@@ -392,13 +392,14 @@ async function mapWithConcurrency(items, limit, mapper) {
 
 // ---------- cascata completa ----------
 async function fetchAtasDoProcesso(processoId) {
-  // O endpoint AJAX /licitacao_ata_contrato/tabela/{id}/ nem sempre responde
-  // direto — tentamos várias estratégias até achar atas.
+  // Endpoints reais usados pelo portal (descobertos via inspeção da página
+  // /processo_administrativo/{id}/).
   const attempts = [
-    `/licitacao_ata_contrato/tabela/${processoId}/`,
+    `/processo_administrativo/tabela/ata_registro_de_preco/${processoId}/?page_size=1000`,
+    `/processo_administrativo/tabela/ata_registro_de_preco/${processoId}/`,
     `/licitacao_ata_contrato/tabela/${processoId}/?page_size=1000`,
+    `/licitacao_ata_contrato/tabela/${processoId}/`,
     `/processo_administrativo/${processoId}/`,
-    `/processo_administrativo/${processoId}/#processo_administrativo_item`,
   ];
   let lastErr = null;
   for (const url of attempts) {
