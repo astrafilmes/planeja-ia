@@ -9,10 +9,10 @@ import {
 } from "@/lib/excel-export";
 
 interface PautaConsolidadaExporterProps {
-  /** IDs de processos: o sistema gera 1 aba por processo. */
+  /** IDs de processos: gera 1 aba por processo com TODOS os contratos do processo. */
   processoIds?: string[];
-  /** IDs de contratos: o sistema deriva os processos dos contratos e gera 1 aba por processo,
-   *  trazendo TODOS os itens do processo (e não apenas os itens dos contratos selecionados). */
+  /** IDs de contratos selecionados: gera 1 aba por processo, mas filtrando apenas
+   *  os contratos selecionados (não traz todos os contratos do processo). */
   contractIds?: string[];
   buttonClassName?: string;
   variant?:
@@ -24,6 +24,16 @@ interface PautaConsolidadaExporterProps {
     | "link";
   size?: "default" | "sm" | "lg" | "icon";
   label?: string;
+}
+
+function buildProcessoNome(p: { numero_processo?: string | null; ano?: number | null; modalidade?: string | null }) {
+  const num = (p.numero_processo || "").toString().trim();
+  const ano = p.ano ? String(p.ano) : "";
+  const mod = (p.modalidade || "").toString().trim().toUpperCase();
+  let base = num;
+  if (ano) base = base ? `${base}/${ano}` : ano;
+  if (mod) base = base ? `${base}-${mod}` : mod;
+  return base || "Processo";
 }
 
 export function PautaConsolidadaExporter({
@@ -41,19 +51,22 @@ export function PautaConsolidadaExporter({
     toast.info(`Gerando Pauta Consolidada...`, { id: "pauta-export" });
 
     try {
-      // 1) Resolver os IDs de processo a partir de processoIds OU contractIds
+      // 1) Resolver IDs de processo + (opcional) lista de contratos selecionados
       let resolvedProcessoIds: string[] = [];
-      if (processoIds && processoIds.length > 0) {
-        resolvedProcessoIds = Array.from(new Set(processoIds.filter(Boolean)));
-      } else if (contractIds && contractIds.length > 0) {
+      let selectedContractIds: Set<string> | null = null;
+
+      if (contractIds && contractIds.length > 0) {
+        selectedContractIds = new Set(contractIds);
         const { data, error } = await supabase
           .from("contratos")
-          .select("processo_id")
+          .select("id, processo_id")
           .in("id", contractIds);
         if (error) throw error;
         resolvedProcessoIds = Array.from(
           new Set((data ?? []).map((r: any) => r.processo_id).filter(Boolean))
         );
+      } else if (processoIds && processoIds.length > 0) {
+        resolvedProcessoIds = Array.from(new Set(processoIds.filter(Boolean)));
       }
 
       if (resolvedProcessoIds.length === 0) {
@@ -64,33 +77,48 @@ export function PautaConsolidadaExporter({
         return;
       }
 
-      // 2) Buscar dados de TODOS os itens de cada processo via RPC
-      //    (a função já retorna todos os itens do processo, não só do contrato)
-      const processoBlocks: { processoId: string; raw: any[] }[] = [];
+      // 2) Buscar nomes dos processos
+      const { data: processosData, error: procErr } = await supabase
+        .from("processos")
+        .select("id, numero_processo, ano, modalidade")
+        .in("id", resolvedProcessoIds);
+      if (procErr) throw procErr;
+      const nomeByProcessoId = new Map<string, string>();
+      (processosData ?? []).forEach((p: any) => {
+        nomeByProcessoId.set(p.id, buildProcessoNome(p));
+      });
+
+      // 3) Buscar dados via RPC por processo, filtrando contratos quando aplicável
+      const allRaw: any[] = [];
       for (const pid of resolvedProcessoIds) {
         const { data, error } = await supabase.rpc(
           "get_pauta_consolidada_data" as any,
           { p_processo_id: pid }
         );
         if (error) throw error;
-        processoBlocks.push({ processoId: pid, raw: (data as any[]) ?? [] });
+        const rows = (data as any[]) ?? [];
+        const filtered = selectedContractIds
+          ? rows.filter((r: any) => r.contrato_id && selectedContractIds!.has(r.contrato_id))
+          : rows;
+        for (const r of filtered) {
+          allRaw.push({ ...r, processo_nome: nomeByProcessoId.get(pid) || pid });
+        }
       }
 
-      const allRaw = processoBlocks.flatMap((b) => b.raw);
       if (allRaw.length === 0) {
-        toast.error("Nenhum dado encontrado para os processos selecionados.", {
+        toast.error("Nenhum dado encontrado para os contratos/processos selecionados.", {
           id: "pauta-export",
         });
         setLoading(false);
         return;
       }
 
-      // 3) Preparar e exportar — múltiplos processos → 1 arquivo com várias abas
+      // 4) Preparar + exportar
       const processes = prepararDadosPautaConsolidada(allRaw);
 
       const filename =
-        resolvedProcessoIds.length === 1
-          ? `pauta_consolidada_${resolvedProcessoIds[0]}.xlsx`
+        processes.length === 1
+          ? `pauta_consolidada_${(processes[0].processo_nome || processes[0].processo_id).replace(/[\\/*?:[\]]/g, "_")}.xlsx`
           : `pauta_consolidada_multiplos_processos.xlsx`;
 
       await exportarPautaConsolidadaExcel(processes, filename);
