@@ -622,9 +622,10 @@ export function prepararDadosPautaConsolidada(dadosBrutos: any[]): Array<{ proce
   for (const row of dadosBrutos) {
     const pid = row.processo_id || row.process_id || 'unknown';
     if (!processesMap.has(pid)) {
-      processesMap.set(pid, { processo_id: pid, contrato_numero: row.contrato_numero || row.numero_contrato || null, itemsMap: new Map() });
+      processesMap.set(pid, { processo_id: pid, processo_nome: row.processo_nome || null, contrato_numero: row.contrato_numero || row.numero_contrato || null, itemsMap: new Map() });
     }
     const proc = processesMap.get(pid)!;
+    if (!proc.processo_nome && row.processo_nome) proc.processo_nome = row.processo_nome;
 
     // Consolida o mesmo item (mesmo lote + nº item) através de múltiplos contratos do mesmo processo.
     // Assim, se o item 5 aparece em ADM e GAB (contratos distintos), o resultado é UMA linha
