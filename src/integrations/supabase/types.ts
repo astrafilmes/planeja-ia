@@ -1244,8 +1244,10 @@ export type Database = {
           m2a_dot_id: string | null
           m2a_dot_orgao_id: string | null
           m2a_dotacao_default: string | null
+          m2a_fiscal_codigo: string | null
           m2a_fiscal_cpf: string | null
           m2a_fiscal_nome: string | null
+          m2a_gestor_codigo: string | null
           m2a_gestor_cpf: string | null
           m2a_gestor_nome: string | null
           m2a_orgao_id: string | null
@@ -1264,8 +1266,10 @@ export type Database = {
           m2a_dot_id?: string | null
           m2a_dot_orgao_id?: string | null
           m2a_dotacao_default?: string | null
+          m2a_fiscal_codigo?: string | null
           m2a_fiscal_cpf?: string | null
           m2a_fiscal_nome?: string | null
+          m2a_gestor_codigo?: string | null
           m2a_gestor_cpf?: string | null
           m2a_gestor_nome?: string | null
           m2a_orgao_id?: string | null
@@ -1284,8 +1288,10 @@ export type Database = {
           m2a_dot_id?: string | null
           m2a_dot_orgao_id?: string | null
           m2a_dotacao_default?: string | null
+          m2a_fiscal_codigo?: string | null
           m2a_fiscal_cpf?: string | null
           m2a_fiscal_nome?: string | null
+          m2a_gestor_codigo?: string | null
           m2a_gestor_cpf?: string | null
           m2a_gestor_nome?: string | null
           m2a_orgao_id?: string | null
