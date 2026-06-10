@@ -447,8 +447,10 @@ export async function exportarPautaConsolidadaExcel(
 
         if (colConf.isCurrency || typeof cell.value === 'number') {
           cell.alignment = { horizontal: 'right', vertical: 'middle' };
+        } else if (colNumber === 5 || colNumber === 6) {
+          cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
         } else {
-          cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: colNumber === 6 };
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
         }
 
         if (colConf.isCurrency && typeof cell.value === 'number') {
