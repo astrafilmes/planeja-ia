@@ -373,9 +373,15 @@ function Login() {
                       </Field>
 
                       <div className="flex items-center justify-between text-[13px]">
-                        <span className="text-muted-foreground">
-                          Lembrar este dispositivo
-                        </span>
+                        <label className="flex cursor-pointer items-center gap-2 text-muted-foreground select-none">
+                          <input
+                            type="checkbox"
+                            className="size-4 rounded border-input accent-primary"
+                            checked={trustDevice}
+                            onChange={(e) => setTrustDevice(e.target.checked)}
+                          />
+                          Confiar neste dispositivo (60 dias)
+                        </label>
                         <button
                           type="button"
                           onClick={() => setMode("recover")}
@@ -384,6 +390,7 @@ function Login() {
                           Esqueci minha senha
                         </button>
                       </div>
+
 
                       <Button
                         type="submit"
