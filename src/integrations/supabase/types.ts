@@ -4,1371 +4,1140 @@ export type Json =
   | boolean
   | null
   | { [key: string]: Json | undefined }
-  | Json[];
+  | Json[]
 
 export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5";
-  };
+    PostgrestVersion: "14.5"
+  }
   public: {
     Tables: {
       app_files: {
         Row: {
-          bucket: string;
-          checksum: string | null;
-          created_at: string;
-          created_by: string | null;
-          file_kind: string;
-          id: string;
-          mime_type: string | null;
-          original_name: string;
-          size_bytes: number | null;
-          storage_path: string;
-        };
+          bucket: string
+          checksum: string | null
+          created_at: string
+          created_by: string | null
+          file_kind: string
+          id: string
+          mime_type: string | null
+          original_name: string
+          size_bytes: number | null
+          storage_path: string
+        }
         Insert: {
-          bucket: string;
-          checksum?: string | null;
-          created_at?: string;
-          created_by?: string | null;
-          file_kind: string;
-          id?: string;
-          mime_type?: string | null;
-          original_name: string;
-          size_bytes?: number | null;
-          storage_path: string;
-        };
+          bucket: string
+          checksum?: string | null
+          created_at?: string
+          created_by?: string | null
+          file_kind: string
+          id?: string
+          mime_type?: string | null
+          original_name: string
+          size_bytes?: number | null
+          storage_path: string
+        }
         Update: {
-          bucket?: string;
-          checksum?: string | null;
-          created_at?: string;
-          created_by?: string | null;
-          file_kind?: string;
-          id?: string;
-          mime_type?: string | null;
-          original_name?: string;
-          size_bytes?: number | null;
-          storage_path?: string;
-        };
+          bucket?: string
+          checksum?: string | null
+          created_at?: string
+          created_by?: string | null
+          file_kind?: string
+          id?: string
+          mime_type?: string | null
+          original_name?: string
+          size_bytes?: number | null
+          storage_path?: string
+        }
         Relationships: [
           {
-            foreignKeyName: "app_files_created_by_fkey";
-            columns: ["created_by"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
+            foreignKeyName: "app_files_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
-        ];
-      };
+        ]
+      }
       audit_logs: {
         Row: {
-          action: string;
-          actor_id: string | null;
-          created_at: string;
-          entity_id: string | null;
-          entity_type: string;
-          id: string;
-          ip_address: string | null;
-          request_payload: Json | null;
-          user_agent: string | null;
-        };
+          action: string
+          actor_id: string | null
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          ip_address: string | null
+          request_payload: Json | null
+          user_agent: string | null
+        }
         Insert: {
-          action: string;
-          actor_id?: string | null;
-          created_at?: string;
-          entity_id?: string | null;
-          entity_type: string;
-          id?: string;
-          ip_address?: string | null;
-          request_payload?: Json | null;
-          user_agent?: string | null;
-        };
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          ip_address?: string | null
+          request_payload?: Json | null
+          user_agent?: string | null
+        }
         Update: {
-          action?: string;
-          actor_id?: string | null;
-          created_at?: string;
-          entity_id?: string | null;
-          entity_type?: string;
-          id?: string;
-          ip_address?: string | null;
-          request_payload?: Json | null;
-          user_agent?: string | null;
-        };
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          ip_address?: string | null
+          request_payload?: Json | null
+          user_agent?: string | null
+        }
         Relationships: [
           {
-            foreignKeyName: "audit_logs_actor_id_fkey";
-            columns: ["actor_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
+            foreignKeyName: "audit_logs_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
-        ];
-      };
+        ]
+      }
       contrato_atores: {
         Row: {
-          contrato_id: string;
-          cpf: string | null;
-          created_at: string;
-          email: string | null;
-          id: string;
-          m2a_pessoa_id: string | null;
-          nome: string;
-          portaria: string | null;
-          tipo: string;
-          updated_at: string;
-        };
+          contrato_id: string
+          cpf: string | null
+          created_at: string
+          email: string | null
+          id: string
+          m2a_pessoa_id: string | null
+          nome: string
+          portaria: string | null
+          tipo: string
+          updated_at: string
+        }
         Insert: {
-          contrato_id: string;
-          cpf?: string | null;
-          created_at?: string;
-          email?: string | null;
-          id?: string;
-          m2a_pessoa_id?: string | null;
-          nome: string;
-          portaria?: string | null;
-          tipo: string;
-          updated_at?: string;
-        };
+          contrato_id: string
+          cpf?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          m2a_pessoa_id?: string | null
+          nome: string
+          portaria?: string | null
+          tipo: string
+          updated_at?: string
+        }
         Update: {
-          contrato_id?: string;
-          cpf?: string | null;
-          created_at?: string;
-          email?: string | null;
-          id?: string;
-          m2a_pessoa_id?: string | null;
-          nome?: string;
-          portaria?: string | null;
-          tipo?: string;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
+          contrato_id?: string
+          cpf?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          m2a_pessoa_id?: string | null
+          nome?: string
+          portaria?: string | null
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       contrato_documentos: {
         Row: {
-          contrato_id: string;
-          created_at: string;
-          created_by: string | null;
-          hash_sha256: string | null;
-          id: string;
-          m2a_documento_id: string | null;
-          mime_type: string | null;
-          nome: string;
-          size_bytes: number | null;
-          storage_path: string;
-          tipo: string;
-          versao: number;
-        };
+          contrato_id: string
+          created_at: string
+          created_by: string | null
+          hash_sha256: string | null
+          id: string
+          m2a_documento_id: string | null
+          mime_type: string | null
+          nome: string
+          size_bytes: number | null
+          storage_path: string
+          tipo: string
+          versao: number
+        }
         Insert: {
-          contrato_id: string;
-          created_at?: string;
-          created_by?: string | null;
-          hash_sha256?: string | null;
-          id?: string;
-          m2a_documento_id?: string | null;
-          mime_type?: string | null;
-          nome: string;
-          size_bytes?: number | null;
-          storage_path: string;
-          tipo: string;
-          versao?: number;
-        };
+          contrato_id: string
+          created_at?: string
+          created_by?: string | null
+          hash_sha256?: string | null
+          id?: string
+          m2a_documento_id?: string | null
+          mime_type?: string | null
+          nome: string
+          size_bytes?: number | null
+          storage_path: string
+          tipo: string
+          versao?: number
+        }
         Update: {
-          contrato_id?: string;
-          created_at?: string;
-          created_by?: string | null;
-          hash_sha256?: string | null;
-          id?: string;
-          m2a_documento_id?: string | null;
-          mime_type?: string | null;
-          nome?: string;
-          size_bytes?: number | null;
-          storage_path?: string;
-          tipo?: string;
-          versao?: number;
-        };
-        Relationships: [];
-      };
+          contrato_id?: string
+          created_at?: string
+          created_by?: string | null
+          hash_sha256?: string | null
+          id?: string
+          m2a_documento_id?: string | null
+          mime_type?: string | null
+          nome?: string
+          size_bytes?: number | null
+          storage_path?: string
+          tipo?: string
+          versao?: number
+        }
+        Relationships: []
+      }
       contrato_import_dotacoes: {
         Row: {
-          created_at: string;
-          dotacao: string;
-          id: string;
-          ignorado: boolean;
-          item_id: string;
-          job_id: string;
-          quantidade: number;
-          ref_coluna: number;
-          secretaria_sigla: string;
-          updated_at: string;
-        };
+          created_at: string
+          dotacao: string
+          id: string
+          ignorado: boolean
+          item_id: string
+          job_id: string
+          quantidade: number
+          ref_coluna: number
+          secretaria_sigla: string
+          updated_at: string
+        }
         Insert: {
-          created_at?: string;
-          dotacao: string;
-          id?: string;
-          ignorado?: boolean;
-          item_id: string;
-          job_id: string;
-          quantidade?: number;
-          ref_coluna: number;
-          secretaria_sigla: string;
-          updated_at?: string;
-        };
+          created_at?: string
+          dotacao: string
+          id?: string
+          ignorado?: boolean
+          item_id: string
+          job_id: string
+          quantidade?: number
+          ref_coluna: number
+          secretaria_sigla: string
+          updated_at?: string
+        }
         Update: {
-          created_at?: string;
-          dotacao?: string;
-          id?: string;
-          ignorado?: boolean;
-          item_id?: string;
-          job_id?: string;
-          quantidade?: number;
-          ref_coluna?: number;
-          secretaria_sigla?: string;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
+          created_at?: string
+          dotacao?: string
+          id?: string
+          ignorado?: boolean
+          item_id?: string
+          job_id?: string
+          quantidade?: number
+          ref_coluna?: number
+          secretaria_sigla?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       contrato_import_itens: {
         Row: {
-          created_at: string;
-          descricao: string;
-          empresa: string | null;
-          especificacao: string | null;
-          excluido: boolean;
-          id: string;
-          job_id: string;
-          lote: string | null;
-          m2a_ata_id: string | null;
-          m2a_ata_numero: string | null;
-          m2a_fornecedor_nome: string | null;
-          m2a_item_id: string | null;
-          m2a_match_score: number;
-          m2a_match_status: string;
-          numero_item: string | null;
-          observacoes: string | null;
-          ordem_item: number | null;
-          source_row: number;
-          unidade: string | null;
-          updated_at: string;
-          valor_unitario: number;
-        };
+          created_at: string
+          descricao: string
+          empresa: string | null
+          especificacao: string | null
+          excluido: boolean
+          id: string
+          job_id: string
+          lote: string | null
+          numero_item: string | null
+          observacoes: string | null
+          ordem_item: number | null
+          source_row: number
+          unidade: string | null
+          updated_at: string
+          valor_unitario: number
+        }
         Insert: {
-          created_at?: string;
-          descricao: string;
-          empresa?: string | null;
-          especificacao?: string | null;
-          excluido?: boolean;
-          id?: string;
-          job_id: string;
-          lote?: string | null;
-          m2a_ata_id?: string | null;
-          m2a_ata_numero?: string | null;
-          m2a_fornecedor_nome?: string | null;
-          m2a_item_id?: string | null;
-          m2a_match_score?: number;
-          m2a_match_status?: string;
-          numero_item?: string | null;
-          observacoes?: string | null;
-          ordem_item?: number | null;
-          source_row: number;
-          unidade?: string | null;
-          updated_at?: string;
-          valor_unitario?: number;
-        };
+          created_at?: string
+          descricao: string
+          empresa?: string | null
+          especificacao?: string | null
+          excluido?: boolean
+          id?: string
+          job_id: string
+          lote?: string | null
+          numero_item?: string | null
+          observacoes?: string | null
+          ordem_item?: number | null
+          source_row: number
+          unidade?: string | null
+          updated_at?: string
+          valor_unitario?: number
+        }
         Update: {
-          created_at?: string;
-          descricao?: string;
-          empresa?: string | null;
-          especificacao?: string | null;
-          excluido?: boolean;
-          id?: string;
-          job_id?: string;
-          lote?: string | null;
-          m2a_ata_id?: string | null;
-          m2a_ata_numero?: string | null;
-          m2a_fornecedor_nome?: string | null;
-          m2a_item_id?: string | null;
-          m2a_match_score?: number;
-          m2a_match_status?: string;
-          numero_item?: string | null;
-          observacoes?: string | null;
-          ordem_item?: number | null;
-          source_row?: number;
-          unidade?: string | null;
-          updated_at?: string;
-          valor_unitario?: number;
-        };
-        Relationships: [];
-      };
+          created_at?: string
+          descricao?: string
+          empresa?: string | null
+          especificacao?: string | null
+          excluido?: boolean
+          id?: string
+          job_id?: string
+          lote?: string | null
+          numero_item?: string | null
+          observacoes?: string | null
+          ordem_item?: number | null
+          source_row?: number
+          unidade?: string | null
+          updated_at?: string
+          valor_unitario?: number
+        }
+        Relationships: []
+      }
       contrato_import_jobs: {
         Row: {
-          authorized_at: string | null;
-          authorized_by: string | null;
-          created_at: string;
-          created_by: string | null;
-          empresa: string | null;
-          error_message: string | null;
-          id: string;
-          linha_cabecalho: number | null;
-          m2a_processo_id: string | null;
-          m2a_sync_at: string | null;
-          m2a_url: string | null;
-          original_filename: string;
-          processo_id: string | null;
-          status: string;
-          total_contratos_previstos: number;
-          total_itens: number;
-          total_valor: number;
-          updated_at: string;
-          upload_file_id: string | null;
-        };
+          authorized_at: string | null
+          authorized_by: string | null
+          created_at: string
+          created_by: string | null
+          empresa: string | null
+          error_message: string | null
+          id: string
+          linha_cabecalho: number | null
+          original_filename: string
+          status: string
+          total_contratos_previstos: number
+          total_itens: number
+          total_valor: number
+          updated_at: string
+          upload_file_id: string | null
+        }
         Insert: {
-          authorized_at?: string | null;
-          authorized_by?: string | null;
-          created_at?: string;
-          created_by?: string | null;
-          empresa?: string | null;
-          error_message?: string | null;
-          id?: string;
-          linha_cabecalho?: number | null;
-          m2a_processo_id?: string | null;
-          m2a_sync_at?: string | null;
-          m2a_url?: string | null;
-          original_filename: string;
-          processo_id?: string | null;
-          status?: string;
-          total_contratos_previstos?: number;
-          total_itens?: number;
-          total_valor?: number;
-          updated_at?: string;
-          upload_file_id?: string | null;
-        };
+          authorized_at?: string | null
+          authorized_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          empresa?: string | null
+          error_message?: string | null
+          id?: string
+          linha_cabecalho?: number | null
+          original_filename: string
+          status?: string
+          total_contratos_previstos?: number
+          total_itens?: number
+          total_valor?: number
+          updated_at?: string
+          upload_file_id?: string | null
+        }
         Update: {
-          authorized_at?: string | null;
-          authorized_by?: string | null;
-          created_at?: string;
-          created_by?: string | null;
-          empresa?: string | null;
-          error_message?: string | null;
-          id?: string;
-          linha_cabecalho?: number | null;
-          m2a_processo_id?: string | null;
-          m2a_sync_at?: string | null;
-          m2a_url?: string | null;
-          original_filename?: string;
-          processo_id?: string | null;
-          status?: string;
-          total_contratos_previstos?: number;
-          total_itens?: number;
-          total_valor?: number;
-          updated_at?: string;
-          upload_file_id?: string | null;
-        };
-        Relationships: [];
-      };
+          authorized_at?: string | null
+          authorized_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          empresa?: string | null
+          error_message?: string | null
+          id?: string
+          linha_cabecalho?: number | null
+          original_filename?: string
+          status?: string
+          total_contratos_previstos?: number
+          total_itens?: number
+          total_valor?: number
+          updated_at?: string
+          upload_file_id?: string | null
+        }
+        Relationships: []
+      }
       contrato_item_dotacoes: {
         Row: {
-          created_at: string;
-          dotacao: string;
-          id: string;
-          item_id: string;
-          m2a_dotacao_id: string | null;
-          quantidade_alocada: number;
-          secretaria_id: string | null;
-          secretaria_sigla: string;
-          updated_at: string;
-        };
+          created_at: string
+          dotacao: string
+          id: string
+          item_id: string
+          m2a_dotacao_id: string | null
+          quantidade_alocada: number
+          secretaria_id: string | null
+          secretaria_sigla: string
+          updated_at: string
+        }
         Insert: {
-          created_at?: string;
-          dotacao: string;
-          id?: string;
-          item_id: string;
-          m2a_dotacao_id?: string | null;
-          quantidade_alocada?: number;
-          secretaria_id?: string | null;
-          secretaria_sigla: string;
-          updated_at?: string;
-        };
+          created_at?: string
+          dotacao: string
+          id?: string
+          item_id: string
+          m2a_dotacao_id?: string | null
+          quantidade_alocada?: number
+          secretaria_id?: string | null
+          secretaria_sigla: string
+          updated_at?: string
+        }
         Update: {
-          created_at?: string;
-          dotacao?: string;
-          id?: string;
-          item_id?: string;
-          m2a_dotacao_id?: string | null;
-          quantidade_alocada?: number;
-          secretaria_id?: string | null;
-          secretaria_sigla?: string;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
+          created_at?: string
+          dotacao?: string
+          id?: string
+          item_id?: string
+          m2a_dotacao_id?: string | null
+          quantidade_alocada?: number
+          secretaria_id?: string | null
+          secretaria_sigla?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       contrato_itens: {
         Row: {
-          contrato_id: string;
-          created_at: string;
-          descricao: string;
-          especificacao: string | null;
-          id: string;
-          lote: string | null;
-          m2a_item_id: string | null;
-          numero_item: string | null;
-          ordem_item: number | null;
-          quantidade: number;
-          unidade: string | null;
-          updated_at: string;
-          valor_total: number;
-          valor_unitario: number;
-        };
+          contrato_id: string
+          created_at: string
+          descricao: string
+          especificacao: string | null
+          id: string
+          lote: string | null
+          m2a_item_id: string | null
+          numero_item: string | null
+          ordem_item: number | null
+          quantidade: number
+          unidade: string | null
+          updated_at: string
+          valor_total: number
+          valor_unitario: number
+        }
         Insert: {
-          contrato_id: string;
-          created_at?: string;
-          descricao: string;
-          especificacao?: string | null;
-          id?: string;
-          lote?: string | null;
-          m2a_item_id?: string | null;
-          numero_item?: string | null;
-          ordem_item?: number | null;
-          quantidade?: number;
-          unidade?: string | null;
-          updated_at?: string;
-          valor_total?: number;
-          valor_unitario?: number;
-        };
+          contrato_id: string
+          created_at?: string
+          descricao: string
+          especificacao?: string | null
+          id?: string
+          lote?: string | null
+          m2a_item_id?: string | null
+          numero_item?: string | null
+          ordem_item?: number | null
+          quantidade?: number
+          unidade?: string | null
+          updated_at?: string
+          valor_total?: number
+          valor_unitario?: number
+        }
         Update: {
-          contrato_id?: string;
-          created_at?: string;
-          descricao?: string;
-          especificacao?: string | null;
-          id?: string;
-          lote?: string | null;
-          m2a_item_id?: string | null;
-          numero_item?: string | null;
-          ordem_item?: number | null;
-          quantidade?: number;
-          unidade?: string | null;
-          updated_at?: string;
-          valor_total?: number;
-          valor_unitario?: number;
-        };
-        Relationships: [];
-      };
+          contrato_id?: string
+          created_at?: string
+          descricao?: string
+          especificacao?: string | null
+          id?: string
+          lote?: string | null
+          m2a_item_id?: string | null
+          numero_item?: string | null
+          ordem_item?: number | null
+          quantidade?: number
+          unidade?: string | null
+          updated_at?: string
+          valor_total?: number
+          valor_unitario?: number
+        }
+        Relationships: []
+      }
       contratos: {
         Row: {
-          created_at: string;
-          created_by: string | null;
-          data: string | null;
-          data_criacao_legada: string | null;
-          data_texto_legado: string | null;
-          deleted_at: string | null;
-          dotacao: string | null;
-          enviado_m2a_em: string | null;
-          fiscal: string;
-          fornecedor_nome: string | null;
-          id: string;
-          import_job_id: string | null;
-          legacy_id: number | null;
-          link_contrato: string;
-          m2a_ata_id: string | null;
-          m2a_ata_numero: string | null;
-          m2a_contrato_id: string | null;
-          m2a_documentos_gerados: Json | null;
-          numero_contrato: string;
-          objeto: string;
-          preposto: string;
-          processo_id: string | null;
-          secretaria_id: string | null;
-          secretaria_nome: string;
-          secretaria_num: number;
-          secretaria_sigla: string;
-          status: string;
-          status_envio_m2a: string;
-          ultimo_erro_m2a: string | null;
-          updated_at: string;
-        };
+          created_at: string
+          created_by: string | null
+          data: string | null
+          data_criacao_legada: string | null
+          data_texto_legado: string | null
+          dotacao: string | null
+          enviado_m2a_em: string | null
+          fiscal: string
+          id: string
+          import_job_id: string | null
+          legacy_id: number | null
+          link_contrato: string
+          m2a_ata_id: string | null
+          m2a_contrato_id: string | null
+          numero_contrato: string
+          objeto: string
+          preposto: string
+          processo_id: string | null
+          secretaria_id: string | null
+          secretaria_nome: string
+          secretaria_num: number
+          secretaria_sigla: string
+          status: string
+          status_envio_m2a: string
+          ultimo_erro_m2a: string | null
+          updated_at: string
+        }
         Insert: {
-          created_at?: string;
-          created_by?: string | null;
-          data?: string | null;
-          data_criacao_legada?: string | null;
-          data_texto_legado?: string | null;
-          deleted_at?: string | null;
-          dotacao?: string | null;
-          enviado_m2a_em?: string | null;
-          fiscal: string;
-          fornecedor_nome?: string | null;
-          id?: string;
-          import_job_id?: string | null;
-          legacy_id?: number | null;
-          link_contrato: string;
-          m2a_ata_id?: string | null;
-          m2a_ata_numero?: string | null;
-          m2a_contrato_id?: string | null;
-          m2a_documentos_gerados?: Json | null;
-          numero_contrato: string;
-          objeto: string;
-          preposto: string;
-          processo_id?: string | null;
-          secretaria_id?: string | null;
-          secretaria_nome: string;
-          secretaria_num: number;
-          secretaria_sigla: string;
-          status?: string;
-          status_envio_m2a?: string;
-          ultimo_erro_m2a?: string | null;
-          updated_at?: string;
-        };
+          created_at?: string
+          created_by?: string | null
+          data?: string | null
+          data_criacao_legada?: string | null
+          data_texto_legado?: string | null
+          dotacao?: string | null
+          enviado_m2a_em?: string | null
+          fiscal: string
+          id?: string
+          import_job_id?: string | null
+          legacy_id?: number | null
+          link_contrato: string
+          m2a_ata_id?: string | null
+          m2a_contrato_id?: string | null
+          numero_contrato: string
+          objeto: string
+          preposto: string
+          processo_id?: string | null
+          secretaria_id?: string | null
+          secretaria_nome: string
+          secretaria_num: number
+          secretaria_sigla: string
+          status?: string
+          status_envio_m2a?: string
+          ultimo_erro_m2a?: string | null
+          updated_at?: string
+        }
         Update: {
-          created_at?: string;
-          created_by?: string | null;
-          data?: string | null;
-          data_criacao_legada?: string | null;
-          data_texto_legado?: string | null;
-          deleted_at?: string | null;
-          dotacao?: string | null;
-          enviado_m2a_em?: string | null;
-          fiscal?: string;
-          fornecedor_nome?: string | null;
-          id?: string;
-          import_job_id?: string | null;
-          legacy_id?: number | null;
-          link_contrato?: string;
-          m2a_ata_id?: string | null;
-          m2a_ata_numero?: string | null;
-          m2a_contrato_id?: string | null;
-          m2a_documentos_gerados?: Json | null;
-          numero_contrato?: string;
-          objeto?: string;
-          preposto?: string;
-          processo_id?: string | null;
-          secretaria_id?: string | null;
-          secretaria_nome?: string;
-          secretaria_num?: number;
-          secretaria_sigla?: string;
-          status?: string;
-          status_envio_m2a?: string;
-          ultimo_erro_m2a?: string | null;
-          updated_at?: string;
-        };
+          created_at?: string
+          created_by?: string | null
+          data?: string | null
+          data_criacao_legada?: string | null
+          data_texto_legado?: string | null
+          dotacao?: string | null
+          enviado_m2a_em?: string | null
+          fiscal?: string
+          id?: string
+          import_job_id?: string | null
+          legacy_id?: number | null
+          link_contrato?: string
+          m2a_ata_id?: string | null
+          m2a_contrato_id?: string | null
+          numero_contrato?: string
+          objeto?: string
+          preposto?: string
+          processo_id?: string | null
+          secretaria_id?: string | null
+          secretaria_nome?: string
+          secretaria_num?: number
+          secretaria_sigla?: string
+          status?: string
+          status_envio_m2a?: string
+          ultimo_erro_m2a?: string | null
+          updated_at?: string
+        }
         Relationships: [
           {
-            foreignKeyName: "contratos_created_by_fkey";
-            columns: ["created_by"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
+            foreignKeyName: "contratos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "contratos_processo_id_fkey";
-            columns: ["processo_id"];
-            isOneToOne: false;
-            referencedRelation: "processos";
-            referencedColumns: ["id"];
+            foreignKeyName: "contratos_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "processos"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "contratos_secretaria_id_fkey";
-            columns: ["secretaria_id"];
-            isOneToOne: false;
-            referencedRelation: "secretarias";
-            referencedColumns: ["id"];
+            foreignKeyName: "contratos_secretaria_id_fkey"
+            columns: ["secretaria_id"]
+            isOneToOne: false
+            referencedRelation: "secretarias"
+            referencedColumns: ["id"]
           },
-        ];
-      };
-      fornecedores_prepostos: {
-        Row: {
-          ativo: boolean;
-          created_at: string;
-          fornecedor_cnpj: string | null;
-          fornecedor_nome: string;
-          fornecedor_nome_norm: string;
-          id: string;
-          preposto_nome: string;
-          updated_at: string;
-        };
-        Insert: {
-          ativo?: boolean;
-          created_at?: string;
-          fornecedor_cnpj?: string | null;
-          fornecedor_nome: string;
-          fornecedor_nome_norm: string;
-          id?: string;
-          preposto_nome: string;
-          updated_at?: string;
-        };
-        Update: {
-          ativo?: boolean;
-          created_at?: string;
-          fornecedor_cnpj?: string | null;
-          fornecedor_nome?: string;
-          fornecedor_nome_norm?: string;
-          id?: string;
-          preposto_nome?: string;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
+        ]
+      }
       irp_job_secretarias: {
         Row: {
-          cabecalho_coluna: string;
-          created_at: string;
-          erro: string | null;
-          id: string;
-          itens_validos: number;
-          job_id: string;
-          nome: string;
-          numero: number;
-          output_file_id: string | null;
-          output_filename: string | null;
-          ref_coluna: number;
-          soma_valor: number;
-          status: string;
-          unidade_id: string | null;
-        };
+          cabecalho_coluna: string
+          created_at: string
+          erro: string | null
+          id: string
+          itens_validos: number
+          job_id: string
+          nome: string
+          numero: number
+          output_file_id: string | null
+          output_filename: string | null
+          ref_coluna: number
+          soma_valor: number
+          status: string
+          unidade_id: string | null
+        }
         Insert: {
-          cabecalho_coluna: string;
-          created_at?: string;
-          erro?: string | null;
-          id?: string;
-          itens_validos?: number;
-          job_id: string;
-          nome: string;
-          numero: number;
-          output_file_id?: string | null;
-          output_filename?: string | null;
-          ref_coluna: number;
-          soma_valor?: number;
-          status?: string;
-          unidade_id?: string | null;
-        };
+          cabecalho_coluna: string
+          created_at?: string
+          erro?: string | null
+          id?: string
+          itens_validos?: number
+          job_id: string
+          nome: string
+          numero: number
+          output_file_id?: string | null
+          output_filename?: string | null
+          ref_coluna: number
+          soma_valor?: number
+          status?: string
+          unidade_id?: string | null
+        }
         Update: {
-          cabecalho_coluna?: string;
-          created_at?: string;
-          erro?: string | null;
-          id?: string;
-          itens_validos?: number;
-          job_id?: string;
-          nome?: string;
-          numero?: number;
-          output_file_id?: string | null;
-          output_filename?: string | null;
-          ref_coluna?: number;
-          soma_valor?: number;
-          status?: string;
-          unidade_id?: string | null;
-        };
+          cabecalho_coluna?: string
+          created_at?: string
+          erro?: string | null
+          id?: string
+          itens_validos?: number
+          job_id?: string
+          nome?: string
+          numero?: number
+          output_file_id?: string | null
+          output_filename?: string | null
+          ref_coluna?: number
+          soma_valor?: number
+          status?: string
+          unidade_id?: string | null
+        }
         Relationships: [
           {
-            foreignKeyName: "irp_job_secretarias_job_id_fkey";
-            columns: ["job_id"];
-            isOneToOne: false;
-            referencedRelation: "irp_jobs";
-            referencedColumns: ["id"];
+            foreignKeyName: "irp_job_secretarias_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "irp_jobs"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "irp_job_secretarias_output_file_id_fkey";
-            columns: ["output_file_id"];
-            isOneToOne: false;
-            referencedRelation: "app_files";
-            referencedColumns: ["id"];
+            foreignKeyName: "irp_job_secretarias_output_file_id_fkey"
+            columns: ["output_file_id"]
+            isOneToOne: false
+            referencedRelation: "app_files"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "irp_job_secretarias_unidade_id_fkey";
-            columns: ["unidade_id"];
-            isOneToOne: false;
-            referencedRelation: "irp_unidades_processamento";
-            referencedColumns: ["id"];
+            foreignKeyName: "irp_job_secretarias_unidade_id_fkey"
+            columns: ["unidade_id"]
+            isOneToOne: false
+            referencedRelation: "irp_unidades_processamento"
+            referencedColumns: ["id"]
           },
-        ];
-      };
+        ]
+      }
       irp_jobs: {
         Row: {
-          completed_at: string | null;
-          created_at: string;
-          created_by: string | null;
-          error_message: string | null;
-          id: string;
-          idx_descricao: number | null;
-          idx_especificacao: number | null;
-          idx_natureza: number | null;
-          idx_unidade: number | null;
-          linha_cabecalho: number | null;
-          original_filename: string;
-          processo_id: string | null;
-          secretarias_com_itens: number;
-          secretarias_sem_itens: number;
-          started_at: string | null;
-          status: string;
-          total_linhas: number;
-          total_secretarias: number;
-          total_valor: number;
-          updated_at: string;
-          upload_file_id: string | null;
-        };
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          error_message: string | null
+          id: string
+          idx_descricao: number | null
+          idx_especificacao: number | null
+          idx_natureza: number | null
+          idx_unidade: number | null
+          linha_cabecalho: number | null
+          original_filename: string
+          processo_id: string | null
+          secretarias_com_itens: number
+          secretarias_sem_itens: number
+          started_at: string | null
+          status: string
+          total_linhas: number
+          total_secretarias: number
+          total_valor: number
+          updated_at: string
+          upload_file_id: string | null
+        }
         Insert: {
-          completed_at?: string | null;
-          created_at?: string;
-          created_by?: string | null;
-          error_message?: string | null;
-          id?: string;
-          idx_descricao?: number | null;
-          idx_especificacao?: number | null;
-          idx_natureza?: number | null;
-          idx_unidade?: number | null;
-          linha_cabecalho?: number | null;
-          original_filename: string;
-          processo_id?: string | null;
-          secretarias_com_itens?: number;
-          secretarias_sem_itens?: number;
-          started_at?: string | null;
-          status?: string;
-          total_linhas?: number;
-          total_secretarias?: number;
-          total_valor?: number;
-          updated_at?: string;
-          upload_file_id?: string | null;
-        };
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          id?: string
+          idx_descricao?: number | null
+          idx_especificacao?: number | null
+          idx_natureza?: number | null
+          idx_unidade?: number | null
+          linha_cabecalho?: number | null
+          original_filename: string
+          processo_id?: string | null
+          secretarias_com_itens?: number
+          secretarias_sem_itens?: number
+          started_at?: string | null
+          status?: string
+          total_linhas?: number
+          total_secretarias?: number
+          total_valor?: number
+          updated_at?: string
+          upload_file_id?: string | null
+        }
         Update: {
-          completed_at?: string | null;
-          created_at?: string;
-          created_by?: string | null;
-          error_message?: string | null;
-          id?: string;
-          idx_descricao?: number | null;
-          idx_especificacao?: number | null;
-          idx_natureza?: number | null;
-          idx_unidade?: number | null;
-          linha_cabecalho?: number | null;
-          original_filename?: string;
-          processo_id?: string | null;
-          secretarias_com_itens?: number;
-          secretarias_sem_itens?: number;
-          started_at?: string | null;
-          status?: string;
-          total_linhas?: number;
-          total_secretarias?: number;
-          total_valor?: number;
-          updated_at?: string;
-          upload_file_id?: string | null;
-        };
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          id?: string
+          idx_descricao?: number | null
+          idx_especificacao?: number | null
+          idx_natureza?: number | null
+          idx_unidade?: number | null
+          linha_cabecalho?: number | null
+          original_filename?: string
+          processo_id?: string | null
+          secretarias_com_itens?: number
+          secretarias_sem_itens?: number
+          started_at?: string | null
+          status?: string
+          total_linhas?: number
+          total_secretarias?: number
+          total_valor?: number
+          updated_at?: string
+          upload_file_id?: string | null
+        }
         Relationships: [
           {
-            foreignKeyName: "irp_jobs_created_by_fkey";
-            columns: ["created_by"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
+            foreignKeyName: "irp_jobs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "irp_jobs_processo_id_fkey";
-            columns: ["processo_id"];
-            isOneToOne: false;
-            referencedRelation: "processos";
-            referencedColumns: ["id"];
+            foreignKeyName: "irp_jobs_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "processos"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "irp_jobs_upload_file_id_fkey";
-            columns: ["upload_file_id"];
-            isOneToOne: false;
-            referencedRelation: "app_files";
-            referencedColumns: ["id"];
+            foreignKeyName: "irp_jobs_upload_file_id_fkey"
+            columns: ["upload_file_id"]
+            isOneToOne: false
+            referencedRelation: "app_files"
+            referencedColumns: ["id"]
           },
-        ];
-      };
+        ]
+      }
       irp_unidades_processamento: {
         Row: {
-          ativa: boolean;
-          created_at: string;
-          id: string;
-          nome: string;
-          numero: number;
-          ordem: number;
-          origem_legada: boolean;
-          ref_coluna: number;
-          secretaria_id: string | null;
-          updated_at: string;
-        };
+          ativa: boolean
+          created_at: string
+          id: string
+          nome: string
+          numero: number
+          ordem: number
+          origem_legada: boolean
+          ref_coluna: number
+          secretaria_id: string | null
+          updated_at: string
+        }
         Insert: {
-          ativa?: boolean;
-          created_at?: string;
-          id?: string;
-          nome: string;
-          numero: number;
-          ordem?: number;
-          origem_legada?: boolean;
-          ref_coluna: number;
-          secretaria_id?: string | null;
-          updated_at?: string;
-        };
+          ativa?: boolean
+          created_at?: string
+          id?: string
+          nome: string
+          numero: number
+          ordem?: number
+          origem_legada?: boolean
+          ref_coluna: number
+          secretaria_id?: string | null
+          updated_at?: string
+        }
         Update: {
-          ativa?: boolean;
-          created_at?: string;
-          id?: string;
-          nome?: string;
-          numero?: number;
-          ordem?: number;
-          origem_legada?: boolean;
-          ref_coluna?: number;
-          secretaria_id?: string | null;
-          updated_at?: string;
-        };
+          ativa?: boolean
+          created_at?: string
+          id?: string
+          nome?: string
+          numero?: number
+          ordem?: number
+          origem_legada?: boolean
+          ref_coluna?: number
+          secretaria_id?: string | null
+          updated_at?: string
+        }
         Relationships: [
           {
-            foreignKeyName: "irp_unidades_processamento_secretaria_id_fkey";
-            columns: ["secretaria_id"];
-            isOneToOne: false;
-            referencedRelation: "secretarias";
-            referencedColumns: ["id"];
+            foreignKeyName: "irp_unidades_processamento_secretaria_id_fkey"
+            columns: ["secretaria_id"]
+            isOneToOne: false
+            referencedRelation: "secretarias"
+            referencedColumns: ["id"]
           },
-        ];
-      };
-      m2a_unidades_gestoras: {
-        Row: {
-          ativa: boolean;
-          created_at: string;
-          id_local: string;
-          m2a_id: string;
-          nome: string;
-          sigla: string | null;
-          updated_at: string;
-        };
-        Insert: {
-          ativa?: boolean;
-          created_at?: string;
-          id_local?: string;
-          m2a_id: string;
-          nome: string;
-          sigla?: string | null;
-          updated_at?: string;
-        };
-        Update: {
-          ativa?: boolean;
-          created_at?: string;
-          id_local?: string;
-          m2a_id?: string;
-          nome?: string;
-          sigla?: string | null;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-      m2a_servidores: {
-        Row: {
-          ativo: boolean;
-          cargo: Database["public"]["Enums"]["m2a_servidor_cargo"];
-          cpf: string | null;
-          created_at: string;
-          id_local: string;
-          m2a_id: string;
-          nome: string;
-          updated_at: string;
-        };
-        Insert: {
-          ativo?: boolean;
-          cargo: Database["public"]["Enums"]["m2a_servidor_cargo"];
-          cpf?: string | null;
-          created_at?: string;
-          id_local?: string;
-          m2a_id: string;
-          nome: string;
-          updated_at?: string;
-        };
-        Update: {
-          ativo?: boolean;
-          cargo?: Database["public"]["Enums"]["m2a_servidor_cargo"];
-          cpf?: string | null;
-          created_at?: string;
-          id_local?: string;
-          m2a_id?: string;
-          nome?: string;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-      m2a_servidor_unidade: {
-        Row: {
-          created_at: string;
-          servidor_id: string;
-          unidade_id: string;
-        };
-        Insert: {
-          created_at?: string;
-          servidor_id: string;
-          unidade_id: string;
-        };
-        Update: {
-          created_at?: string;
-          servidor_id?: string;
-          unidade_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "m2a_servidor_unidade_servidor_id_fkey";
-            columns: ["servidor_id"];
-            isOneToOne: false;
-            referencedRelation: "m2a_servidores";
-            referencedColumns: ["id_local"];
-          },
-          {
-            foreignKeyName: "m2a_servidor_unidade_unidade_id_fkey";
-            columns: ["unidade_id"];
-            isOneToOne: false;
-            referencedRelation: "m2a_unidades_gestoras";
-            referencedColumns: ["id_local"];
-          },
-        ];
-      };
+        ]
+      }
       m2a_atas: {
         Row: {
-          created_at: string;
-          fornecedor_cnpj: string | null;
-          fornecedor_nome: string | null;
-          id: string;
-          m2a_ata_id: string;
-          numero_ata: string;
-          processo_id: string;
-          synced_at: string;
-        };
+          created_at: string
+          fornecedor_cnpj: string | null
+          fornecedor_nome: string | null
+          id: string
+          m2a_ata_id: string
+          numero_ata: string
+          processo_id: string
+          synced_at: string
+        }
         Insert: {
-          created_at?: string;
-          fornecedor_cnpj?: string | null;
-          fornecedor_nome?: string | null;
-          id?: string;
-          m2a_ata_id: string;
-          numero_ata: string;
-          processo_id: string;
-          synced_at?: string;
-        };
+          created_at?: string
+          fornecedor_cnpj?: string | null
+          fornecedor_nome?: string | null
+          id?: string
+          m2a_ata_id: string
+          numero_ata: string
+          processo_id: string
+          synced_at?: string
+        }
         Update: {
-          created_at?: string;
-          fornecedor_cnpj?: string | null;
-          fornecedor_nome?: string | null;
-          id?: string;
-          m2a_ata_id?: string;
-          numero_ata?: string;
-          processo_id?: string;
-          synced_at?: string;
-        };
-        Relationships: [];
-      };
+          created_at?: string
+          fornecedor_cnpj?: string | null
+          fornecedor_nome?: string | null
+          id?: string
+          m2a_ata_id?: string
+          numero_ata?: string
+          processo_id?: string
+          synced_at?: string
+        }
+        Relationships: []
+      }
       m2a_contratos_snapshot: {
         Row: {
-          ano: number | null;
-          created_at: string;
-          id: string;
-          m2a_ata_id: string | null;
-          m2a_contrato_id: string;
-          numero_contrato: string;
-          processo_id: string;
-          raw: Json | null;
-          sequencia: number | null;
-          sigla_secretaria: string | null;
-        };
+          ano: number | null
+          created_at: string
+          id: string
+          m2a_ata_id: string | null
+          m2a_contrato_id: string
+          numero_contrato: string
+          processo_id: string
+          raw: Json | null
+          sequencia: number | null
+          sigla_secretaria: string | null
+        }
         Insert: {
-          ano?: number | null;
-          created_at?: string;
-          id?: string;
-          m2a_ata_id?: string | null;
-          m2a_contrato_id: string;
-          numero_contrato: string;
-          processo_id: string;
-          raw?: Json | null;
-          sequencia?: number | null;
-          sigla_secretaria?: string | null;
-        };
+          ano?: number | null
+          created_at?: string
+          id?: string
+          m2a_ata_id?: string | null
+          m2a_contrato_id: string
+          numero_contrato: string
+          processo_id: string
+          raw?: Json | null
+          sequencia?: number | null
+          sigla_secretaria?: string | null
+        }
         Update: {
-          ano?: number | null;
-          created_at?: string;
-          id?: string;
-          m2a_ata_id?: string | null;
-          m2a_contrato_id?: string;
-          numero_contrato?: string;
-          processo_id?: string;
-          raw?: Json | null;
-          sequencia?: number | null;
-          sigla_secretaria?: string | null;
-        };
-        Relationships: [];
-      };
-      m2a_envio_preferencias: {
-        Row: {
-          created_at: string;
-          data_padrao: string | null;
-          fiscal_id: string;
-          gestor_id: string;
-          id: string;
-          secretaria_id: string | null;
-          unidade_gestora_id: string;
-          updated_at: string;
-          user_id: string;
-        };
-        Insert: {
-          created_at?: string;
-          data_padrao?: string | null;
-          fiscal_id: string;
-          gestor_id: string;
-          id?: string;
-          secretaria_id?: string | null;
-          unidade_gestora_id: string;
-          updated_at?: string;
-          user_id: string;
-        };
-        Update: {
-          created_at?: string;
-          data_padrao?: string | null;
-          fiscal_id?: string;
-          gestor_id?: string;
-          id?: string;
-          secretaria_id?: string | null;
-          unidade_gestora_id?: string;
-          updated_at?: string;
-          user_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "m2a_envio_preferencias_secretaria_id_fkey";
-            columns: ["secretaria_id"];
-            isOneToOne: false;
-            referencedRelation: "secretarias";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
+          ano?: number | null
+          created_at?: string
+          id?: string
+          m2a_ata_id?: string | null
+          m2a_contrato_id?: string
+          numero_contrato?: string
+          processo_id?: string
+          raw?: Json | null
+          sequencia?: number | null
+          sigla_secretaria?: string | null
+        }
+        Relationships: []
+      }
       m2a_envio_logs: {
         Row: {
-          contrato_id: string;
-          created_at: string;
-          created_by: string | null;
-          duracao_ms: number | null;
-          etapa: string;
-          http_status: number | null;
-          id: string;
-          mensagem: string | null;
-          payload_json: Json | null;
-          response_json: Json | null;
-          sucesso: boolean;
-        };
+          contrato_id: string
+          created_at: string
+          created_by: string | null
+          duracao_ms: number | null
+          etapa: string
+          http_status: number | null
+          id: string
+          mensagem: string | null
+          payload_json: Json | null
+          response_json: Json | null
+          sucesso: boolean
+        }
         Insert: {
-          contrato_id: string;
-          created_at?: string;
-          created_by?: string | null;
-          duracao_ms?: number | null;
-          etapa: string;
-          http_status?: number | null;
-          id?: string;
-          mensagem?: string | null;
-          payload_json?: Json | null;
-          response_json?: Json | null;
-          sucesso?: boolean;
-        };
+          contrato_id: string
+          created_at?: string
+          created_by?: string | null
+          duracao_ms?: number | null
+          etapa: string
+          http_status?: number | null
+          id?: string
+          mensagem?: string | null
+          payload_json?: Json | null
+          response_json?: Json | null
+          sucesso?: boolean
+        }
         Update: {
-          contrato_id?: string;
-          created_at?: string;
-          created_by?: string | null;
-          duracao_ms?: number | null;
-          etapa?: string;
-          http_status?: number | null;
-          id?: string;
-          mensagem?: string | null;
-          payload_json?: Json | null;
-          response_json?: Json | null;
-          sucesso?: boolean;
-        };
-        Relationships: [];
-      };
+          contrato_id?: string
+          created_at?: string
+          created_by?: string | null
+          duracao_ms?: number | null
+          etapa?: string
+          http_status?: number | null
+          id?: string
+          mensagem?: string | null
+          payload_json?: Json | null
+          response_json?: Json | null
+          sucesso?: boolean
+        }
+        Relationships: []
+      }
       m2a_itens: {
         Row: {
-          created_at: string;
-          descricao: string | null;
-          id: string;
-          m2a_ata_id: string;
-          m2a_item_id: string;
-          numero_item: string | null;
-          processo_id: string;
-          unidade: string | null;
-          valor_unitario: number;
-        };
+          created_at: string
+          descricao: string | null
+          id: string
+          m2a_ata_id: string
+          m2a_item_id: string
+          numero_item: string | null
+          processo_id: string
+          unidade: string | null
+          valor_unitario: number
+        }
         Insert: {
-          created_at?: string;
-          descricao?: string | null;
-          id?: string;
-          m2a_ata_id: string;
-          m2a_item_id: string;
-          numero_item?: string | null;
-          processo_id: string;
-          unidade?: string | null;
-          valor_unitario?: number;
-        };
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          m2a_ata_id: string
+          m2a_item_id: string
+          numero_item?: string | null
+          processo_id: string
+          unidade?: string | null
+          valor_unitario?: number
+        }
         Update: {
-          created_at?: string;
-          descricao?: string | null;
-          id?: string;
-          m2a_ata_id?: string;
-          m2a_item_id?: string;
-          numero_item?: string | null;
-          processo_id?: string;
-          unidade?: string | null;
-          valor_unitario?: number;
-        };
-        Relationships: [];
-      };
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          m2a_ata_id?: string
+          m2a_item_id?: string
+          numero_item?: string | null
+          processo_id?: string
+          unidade?: string | null
+          valor_unitario?: number
+        }
+        Relationships: []
+      }
       numeracao: {
         Row: {
-          contador: number;
-          secretaria_num: number;
-          updated_at: string;
-        };
+          contador: number
+          secretaria_num: number
+          updated_at: string
+        }
         Insert: {
-          contador?: number;
-          secretaria_num: number;
-          updated_at?: string;
-        };
+          contador?: number
+          secretaria_num: number
+          updated_at?: string
+        }
         Update: {
-          contador?: number;
-          secretaria_num?: number;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
+          contador?: number
+          secretaria_num?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       processos: {
         Row: {
-          ano: number | null;
-          created_at: string;
-          created_by: string | null;
-          data_abertura: string | null;
-          deleted_at: string | null;
-          id: string;
-          m2a_processo_id: string | null;
-          m2a_sync_at: string | null;
-          m2a_url: string | null;
-          modalidade: string | null;
-          numero_processo: string | null;
-          objeto: string;
-          observacoes: string | null;
-          secretaria_id: string | null;
-          status: string;
-          updated_at: string;
-        };
+          ano: number | null
+          created_at: string
+          created_by: string | null
+          data_abertura: string | null
+          id: string
+          m2a_processo_id: string | null
+          m2a_sync_at: string | null
+          m2a_url: string | null
+          modalidade: string | null
+          numero_processo: string | null
+          objeto: string
+          observacoes: string | null
+          secretaria_id: string | null
+          status: string
+          updated_at: string
+        }
         Insert: {
-          ano?: number | null;
-          created_at?: string;
-          created_by?: string | null;
-          data_abertura?: string | null;
-          deleted_at?: string | null;
-          id?: string;
-          m2a_processo_id?: string | null;
-          m2a_sync_at?: string | null;
-          m2a_url?: string | null;
-          modalidade?: string | null;
-          numero_processo?: string | null;
-          objeto: string;
-          observacoes?: string | null;
-          secretaria_id?: string | null;
-          status?: string;
-          updated_at?: string;
-        };
+          ano?: number | null
+          created_at?: string
+          created_by?: string | null
+          data_abertura?: string | null
+          id?: string
+          m2a_processo_id?: string | null
+          m2a_sync_at?: string | null
+          m2a_url?: string | null
+          modalidade?: string | null
+          numero_processo?: string | null
+          objeto: string
+          observacoes?: string | null
+          secretaria_id?: string | null
+          status?: string
+          updated_at?: string
+        }
         Update: {
-          ano?: number | null;
-          created_at?: string;
-          created_by?: string | null;
-          data_abertura?: string | null;
-          deleted_at?: string | null;
-          id?: string;
-          m2a_processo_id?: string | null;
-          m2a_sync_at?: string | null;
-          m2a_url?: string | null;
-          modalidade?: string | null;
-          numero_processo?: string | null;
-          objeto?: string;
-          observacoes?: string | null;
-          secretaria_id?: string | null;
-          status?: string;
-          updated_at?: string;
-        };
+          ano?: number | null
+          created_at?: string
+          created_by?: string | null
+          data_abertura?: string | null
+          id?: string
+          m2a_processo_id?: string | null
+          m2a_sync_at?: string | null
+          m2a_url?: string | null
+          modalidade?: string | null
+          numero_processo?: string | null
+          objeto?: string
+          observacoes?: string | null
+          secretaria_id?: string | null
+          status?: string
+          updated_at?: string
+        }
         Relationships: [
           {
-            foreignKeyName: "processos_created_by_fkey";
-            columns: ["created_by"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
+            foreignKeyName: "processos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "processos_secretaria_id_fkey";
-            columns: ["secretaria_id"];
-            isOneToOne: false;
-            referencedRelation: "secretarias";
-            referencedColumns: ["id"];
+            foreignKeyName: "processos_secretaria_id_fkey"
+            columns: ["secretaria_id"]
+            isOneToOne: false
+            referencedRelation: "secretarias"
+            referencedColumns: ["id"]
           },
-        ];
-      };
+        ]
+      }
       profiles: {
         Row: {
-          ativo: boolean;
-          created_at: string;
-          email: string;
-          id: string;
-          nome: string;
-          updated_at: string;
-        };
+          ativo: boolean
+          created_at: string
+          email: string
+          id: string
+          nome: string
+          updated_at: string
+        }
         Insert: {
-          ativo?: boolean;
-          created_at?: string;
-          email: string;
-          id: string;
-          nome: string;
-          updated_at?: string;
-        };
+          ativo?: boolean
+          created_at?: string
+          email: string
+          id: string
+          nome: string
+          updated_at?: string
+        }
         Update: {
-          ativo?: boolean;
-          created_at?: string;
-          email?: string;
-          id?: string;
-          nome?: string;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
+          ativo?: boolean
+          created_at?: string
+          email?: string
+          id?: string
+          nome?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       secretarias: {
         Row: {
-          ativa: boolean;
-          created_at: string;
-          id: string;
-          m2a_dot_id: string | null;
-          m2a_dot_orgao_id: string | null;
-          m2a_dotacao_default: string | null;
-          m2a_fiscal_codigo: string | null;
-          m2a_fiscal_cpf: string | null;
-          m2a_fiscal_nome: string | null;
-          m2a_gestor_codigo: string | null;
-          m2a_gestor_cpf: string | null;
-          m2a_gestor_nome: string | null;
-          m2a_orgao_id: string | null;
-          m2a_ref_coluna: number | null;
-          m2a_uo_id: string | null;
-          nome: string;
-          numero: number;
-          origem_legada: boolean;
-          sigla: string;
-          updated_at: string;
-        };
+          ativa: boolean
+          created_at: string
+          id: string
+          m2a_dot_id: string | null
+          m2a_dotacao_default: string | null
+          m2a_fiscal_cpf: string | null
+          m2a_fiscal_nome: string | null
+          m2a_gestor_cpf: string | null
+          m2a_gestor_nome: string | null
+          m2a_orgao_id: string | null
+          m2a_ref_coluna: number | null
+          m2a_uo_id: string | null
+          nome: string
+          numero: number
+          origem_legada: boolean
+          sigla: string
+          updated_at: string
+        }
         Insert: {
-          ativa?: boolean;
-          created_at?: string;
-          id?: string;
-          m2a_dot_id?: string | null;
-          m2a_dot_orgao_id?: string | null;
-          m2a_dotacao_default?: string | null;
-          m2a_fiscal_codigo?: string | null;
-          m2a_fiscal_cpf?: string | null;
-          m2a_fiscal_nome?: string | null;
-          m2a_gestor_codigo?: string | null;
-          m2a_gestor_cpf?: string | null;
-          m2a_gestor_nome?: string | null;
-          m2a_orgao_id?: string | null;
-          m2a_ref_coluna?: number | null;
-          m2a_uo_id?: string | null;
-          nome: string;
-          numero: number;
-          origem_legada?: boolean;
-          sigla: string;
-          updated_at?: string;
-        };
+          ativa?: boolean
+          created_at?: string
+          id?: string
+          m2a_dot_id?: string | null
+          m2a_dotacao_default?: string | null
+          m2a_fiscal_cpf?: string | null
+          m2a_fiscal_nome?: string | null
+          m2a_gestor_cpf?: string | null
+          m2a_gestor_nome?: string | null
+          m2a_orgao_id?: string | null
+          m2a_ref_coluna?: number | null
+          m2a_uo_id?: string | null
+          nome: string
+          numero: number
+          origem_legada?: boolean
+          sigla: string
+          updated_at?: string
+        }
         Update: {
-          ativa?: boolean;
-          created_at?: string;
-          id?: string;
-          m2a_dot_id?: string | null;
-          m2a_dot_orgao_id?: string | null;
-          m2a_dotacao_default?: string | null;
-          m2a_fiscal_codigo?: string | null;
-          m2a_fiscal_cpf?: string | null;
-          m2a_fiscal_nome?: string | null;
-          m2a_gestor_codigo?: string | null;
-          m2a_gestor_cpf?: string | null;
-          m2a_gestor_nome?: string | null;
-          m2a_orgao_id?: string | null;
-          m2a_ref_coluna?: number | null;
-          m2a_uo_id?: string | null;
-          nome?: string;
-          numero?: number;
-          origem_legada?: boolean;
-          sigla?: string;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
+          ativa?: boolean
+          created_at?: string
+          id?: string
+          m2a_dot_id?: string | null
+          m2a_dotacao_default?: string | null
+          m2a_fiscal_cpf?: string | null
+          m2a_fiscal_nome?: string | null
+          m2a_gestor_cpf?: string | null
+          m2a_gestor_nome?: string | null
+          m2a_orgao_id?: string | null
+          m2a_ref_coluna?: number | null
+          m2a_uo_id?: string | null
+          nome?: string
+          numero?: number
+          origem_legada?: boolean
+          sigla?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
-          created_at: string;
-          id: string;
-          role: Database["public"]["Enums"]["app_role"];
-          user_id: string;
-        };
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
         Insert: {
-          created_at?: string;
-          id?: string;
-          role: Database["public"]["Enums"]["app_role"];
-          user_id: string;
-        };
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
         Update: {
-          created_at?: string;
-          id?: string;
-          role?: Database["public"]["Enums"]["app_role"];
-          user_id?: string;
-        };
-        Relationships: [];
-      };
-    };
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+    }
     Views: {
-      [_ in never]: never;
-    };
+      [_ in never]: never
+    }
     Functions: {
       has_role: {
         Args: {
-          _role: Database["public"]["Enums"]["app_role"];
-          _user_id: string;
-        };
-        Returns: boolean;
-      };
-      next_contrato_number: { Args: { p_sec_num: number }; Returns: number };
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      next_contrato_number: { Args: { p_sec_num: number }; Returns: number }
       next_contrato_numbers_batch: {
-        Args: { p_qtd: number; p_sec_num: number };
-        Returns: number;
-      };
-    };
+        Args: { p_qtd: number; p_sec_num: number }
+        Returns: number
+      }
+    }
     Enums: {
-      app_role: "admin" | "gestor" | "operador" | "consulta";
-      m2a_servidor_cargo: "FISCAL" | "GESTOR" | "PREPOSTO";
-    };
+      app_role: "admin" | "gestor" | "operador" | "consulta"
+    }
     CompositeTypes: {
-      [_ in never]: never;
-    };
-  };
-};
+      [_ in never]: never
+    }
+  }
+}
 
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">;
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
 
-type DefaultSchema = DatabaseWithoutInternals[Extract<
-  keyof Database,
-  "public"
->];
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals;
+    schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
+  schema: keyof DatabaseWithoutInternals
 }
   ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
       DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
-      Row: infer R;
+      Row: infer R
     }
     ? R
     : never
@@ -1376,95 +1145,95 @@ export type Tables<
         DefaultSchema["Views"])
     ? (DefaultSchema["Tables"] &
         DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-        Row: infer R;
+        Row: infer R
       }
       ? R
       : never
-    : never;
+    : never
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals;
+    schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
+  schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I;
+      Insert: infer I
     }
     ? I
     : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
     ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Insert: infer I;
+        Insert: infer I
       }
       ? I
       : never
-    : never;
+    : never
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals;
+    schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
+  schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U;
+      Update: infer U
     }
     ? U
     : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
     ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Update: infer U;
+        Update: infer U
       }
       ? U
       : never
-    : never;
+    : never
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals;
+    schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
+  schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never;
+    : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals;
+    schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
+  schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never;
+    : never
 
 export const Constants = {
   public: {
@@ -1472,4 +1241,4 @@ export const Constants = {
       app_role: ["admin", "gestor", "operador", "consulta"],
     },
   },
-} as const;
+} as const
