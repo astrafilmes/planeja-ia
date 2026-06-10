@@ -5,6 +5,7 @@ import {
   useNavigate,
   useRouterState,
 } from "@tanstack/react-router";
+import { routeHead } from "@/lib/route-head";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
