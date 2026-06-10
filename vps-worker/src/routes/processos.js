@@ -194,7 +194,7 @@ function extractAtasFromDoc($) {
         tr.find("td").each((__, td) => {
           if (fornecedor) return;
           const $td = $(td);
-          if ($td.find(a).length) return;
+          if ($td.find("a").length) return;
           const t = txt($, $td);
           if (t && t !== numero) fornecedor = t;
         });
