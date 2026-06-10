@@ -5,15 +5,12 @@
   "sideEffects": true,
   "type": "module",
   "scripts": {
-    "dev": "node scripts/build-extension.js && vite dev",
-    "build": "vite build && node scripts/build-extension.js --dist",
+    "dev": "vite dev",
+    "build": "vite build",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "build:extension": "node scripts/build-extension.js",
-    "build:extension:full": "node scripts/build-extension.js --dist",
-    "watch:extension": "node scripts/watch-extension.js",
     "test:pauta": "npx ts-node scripts/test-pauta-export.ts"
   },
   "dependencies": {

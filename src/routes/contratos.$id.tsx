@@ -35,7 +35,6 @@ import { toast } from "sonner";
 import {
   Send,
   ArrowLeft,
-  Download,
   ExternalLink,
   AlertTriangle,
   FileSignature,
@@ -223,7 +222,7 @@ function Page() {
       if (secretariaWithCpf?.id) {
         let cpfs: Array<{ id: string; m2a_gestor_cpf: string | null; m2a_fiscal_cpf: string | null }> = [];
         try {
-          const { data, error: cpfErr } = await supabase.rpc("get_secretarias_cpfs", {});
+          const { data, error: cpfErr } = await supabase.rpc("get_secretarias_cpfs");
           if (!cpfErr && Array.isArray(data)) cpfs = data as typeof cpfs;
         } catch {
           /* sem permissão */
@@ -522,11 +521,6 @@ function Page() {
             <ArrowLeft className="size-4" /> Voltar
           </Button>
           <ContractReportGenerator contractIds={[id]} />
-          <a href="/m2a-extension.zip" download>
-            <Button size="sm" variant="outline">
-              <Download className="size-4" /> Extensão
-            </Button>
-          </a>
           <Button
             size="sm"
             onClick={handleEnviar}
@@ -537,7 +531,7 @@ function Page() {
             ) : (
               <Send className="size-4" />
             )}
-            {enviando ? "Enviando..." : "Enviar pela extensão"}
+            {enviando ? "Enviando..." : "Enviar ao portal"}
           </Button>
         </>
       }
