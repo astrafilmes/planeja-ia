@@ -10,7 +10,19 @@ import { config } from "./config.js";
  * - 1 sessão (conta de serviço) compartilhada por todo o worker.
  * - Faz login sob demanda e revalida automaticamente se a sessão expirar.
  * - Serializa requests via p-queue para não derrubar o portal.
+ * - Mantém cache de CSRF por URL (espelha rememberCsrfFromDoc do engine).
  */
+
+const CSRF_TTL_MS = 10 * 60 * 1000;
+
+function absoluteUrl(path) {
+  return path.startsWith("http") ? path : `${config.m2a.baseUrl}${path}`;
+}
+
+function normalizeCacheUrl(url) {
+  return absoluteUrl(url).replace(/#.*$/, "");
+}
+
 class M2aClient {
   constructor() {
     this.jar = new CookieJar();
@@ -25,7 +37,8 @@ class M2aClient {
         headers: {
           "User-Agent":
             "Planeja-M2A-Worker/0.1 (+https://planeja-ia.lovable.app)",
-          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          Accept:
+            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
           "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
         },
       }),
@@ -34,20 +47,36 @@ class M2aClient {
     this.loggedIn = false;
     this.loginPromise = null;
     this.lastLoginAt = 0;
+    this.sessionCsrf = null;
+    this.csrfCache = new Map();
   }
 
-  /** Detecta página de login pelo HTML retornado. */
   static isLoginPage(html, finalUrl = "") {
     if (!html) return false;
     if (/\/login\//i.test(finalUrl)) return true;
     return /name=["']password["']/i.test(html);
   }
 
-  /** Faz login. Idempotente: se outra chamada estiver autenticando, espera. */
+  rememberCsrf(html, sourceUrl) {
+    if (!html) return null;
+    const m = String(html).match(
+      /name=["']csrfmiddlewaretoken["']\s+value=["']([^"']+)["']/i,
+    );
+    if (!m) return null;
+    const token = m[1];
+    this.sessionCsrf = token;
+    if (sourceUrl) {
+      this.csrfCache.set(normalizeCacheUrl(sourceUrl), {
+        token,
+        at: Date.now(),
+      });
+    }
+    return token;
+  }
+
   async login() {
     if (this.loginPromise) return this.loginPromise;
     this.loginPromise = (async () => {
-      // 1) GET na página de login para coletar CSRF + cookies iniciais.
       const getRes = await this.http.get(config.m2a.loginPath);
       const $ = cheerio.load(getRes.data || "");
       const csrf =
@@ -78,35 +107,85 @@ class M2aClient {
       }
       this.loggedIn = true;
       this.lastLoginAt = Date.now();
+      this.sessionCsrf = null;
+      this.csrfCache.clear();
     })().finally(() => {
       this.loginPromise = null;
     });
     return this.loginPromise;
   }
 
-  /**
-   * GET com auto-relogin caso a sessão tenha expirado.
-   * Retorna { status, html, finalUrl }.
-   */
-  async get(path) {
+  async _raw(method, path, opts = {}) {
+    const headers = {
+      Accept: "text/html,application/json,*/*",
+      ...(opts.headers || {}),
+    };
+    const cfg = { method, url: path, headers };
+    if (opts.body !== undefined) cfg.data = opts.body;
+    const res = await this.http.request(cfg);
+    const text = typeof res.data === "string" ? res.data : "";
+    const finalUrl = res.request?.res?.responseUrl || "";
+    return { status: res.status, html: text, finalUrl, raw: res };
+  }
+
+  /** request com auto-relogin. Aceita method/path/body/headers. */
+  async request(method, path, opts = {}) {
     return this.queue.add(async () => {
       if (!this.loggedIn) await this.login();
-      let res = await this.http.get(path);
-      let html = typeof res.data === "string" ? res.data : "";
-      let finalUrl = res.request?.res?.responseUrl || "";
-
-      if (M2aClient.isLoginPage(html, finalUrl) || res.status === 401 || res.status === 403) {
+      let r = await this._raw(method, path, opts);
+      if (
+        M2aClient.isLoginPage(r.html, r.finalUrl) ||
+        r.status === 401 ||
+        r.status === 403
+      ) {
         this.loggedIn = false;
         await this.login();
-        res = await this.http.get(path);
-        html = typeof res.data === "string" ? res.data : "";
-        finalUrl = res.request?.res?.responseUrl || "";
-        if (M2aClient.isLoginPage(html, finalUrl)) {
+        r = await this._raw(method, path, opts);
+        if (M2aClient.isLoginPage(r.html, r.finalUrl)) {
           throw new Error("M2A_SESSION_REFRESH_FAILED");
         }
       }
-      return { status: res.status, html, finalUrl };
+      // Remember CSRF when present
+      this.rememberCsrf(r.html, path);
+      return r;
     });
+  }
+
+  get(path, opts = {}) {
+    return this.request("GET", path, opts);
+  }
+
+  postForm(path, payload, opts = {}) {
+    const body =
+      payload instanceof URLSearchParams
+        ? payload.toString()
+        : new URLSearchParams(payload).toString();
+    return this.request("POST", path, {
+      ...opts,
+      body,
+      headers: {
+        "Content-Type":
+          "application/x-www-form-urlencoded; charset=UTF-8",
+        "X-Requested-With": "XMLHttpRequest",
+        ...(opts.headers || {}),
+      },
+    });
+  }
+
+  /** Captura/retorna CSRF para a URL dada (com cache). */
+  async getCsrf(path, opts = {}) {
+    const key = normalizeCacheUrl(path);
+    const cached = this.csrfCache.get(key);
+    if (!opts.force && cached && Date.now() - cached.at < CSRF_TTL_MS) {
+      return cached.token;
+    }
+    if (!opts.force && this.sessionCsrf) return this.sessionCsrf;
+    const r = await this.request("GET", path, {
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+    });
+    const token = this.rememberCsrf(r.html, path);
+    if (!token) throw new Error(`CSRF ausente em ${path}`);
+    return token;
   }
 
   status() {

@@ -1,90 +1,56 @@
-# Recriação do Planeja + Worker M2A em VPS
+# Port do `automation_engine.js` → `vps-worker`
 
-Mantemos 100% do backend atual (Supabase/Lovable Cloud: 27 tabelas, RLS, RPCs, dados). Refazemos a UI do zero, num stack mais simples e estável, e trocamos a extensão Chrome por um serviço Node.js que roda na sua VPS e fala HTTP direto com o M2A.
+Replicar 1:1 o fluxo da extensão como rotas HTTP no worker, reaproveitando o `m2a-client` (sessão única + login automático + fila). Sem inventar rotas novas — só as que a extensão já chama.
 
-## Por que mudar de stack no frontend
+## Arquitetura
 
-O projeto hoje usa **TanStack Start + Cloudflare Workers SSR**, e esse é justamente o motivo dos crashes recentes de build/preview/deploy ("files are missing", 404, `server-entry` inexistente). Para uma app interna como o Planeja, SSR não traz benefício — só fragilidade. Vamos para o stack padrão do Lovable: **Vite + React + React Router (SPA)**, que publica direto sem worker e elimina toda essa classe de erros.
+- Toda lógica do `automation_engine.js` migra para módulos em `vps-worker/src/m2a/` (puros, recebem o `m2a` client por DI).
+- Rotas finas em `vps-worker/src/routes/*.js` só validam payload, chamam o módulo, e fazem stream de progresso via **SSE** (`text/event-stream`) — equivalente direto aos `M2A_PROGRESS` que a extensão posta via `postMessage`.
+- O `m2a-client` ganha `post(path, body, opts)` (form-url-encoded + CSRF) além do `get` atual. CSRF é lembrado por URL (igual `rememberCsrfFromDoc`).
+- Helpers comuns (`absoluteUrl`, `isLoginHtml`, `extractFormDiagnostics`, `ensureOperationAccepted`, datas úteis, normalização de número/quantidade/itens) viram `vps-worker/src/m2a/utils.js`.
 
-## Arquitetura nova
+## Fases
 
-```text
-┌─────────────────┐    HTTPS+JWT     ┌──────────────────────┐
-│  Planeja (SPA)  │ ───────────────► │  Lovable Cloud       │
-│  React + Vite   │                  │  (Supabase atual)    │
-│  React Router   │                  │  - 27 tabelas + RLS  │
-└────────┬────────┘                  │  - Auth (e-mail+Google)
-         │                           │  - Edge function     │
-         │ chamadas M2A              │    "m2a-proxy"       │
-         │ via edge function         └──────────┬───────────┘
-         ▼                                      │ HTTPS + HMAC
-┌──────────────────────────────────────────────▼────────────┐
-│  SUA VPS  (Node 20 + Fastify + axios + tough-cookie)      │
-│  - Login fixo no M2A (1 conta de serviço)                 │
-│  - Sessão persistida em memória + refresh automático      │
-│  - Endpoints: /numeracao, /processos/:id, /contratos, ... │
-│  - Fila simples (p-queue) para não derrubar o M2A         │
-└────────────────────────────────────────────────────────────┘
-```
+### Fase 1 — Infra + Contrato (alvo desta entrega)
+Cobre `processarContratoCompleto` (linha 2116) e todas as suas dependências de contrato:
 
-O frontend **nunca** fala direto com a VPS. Tudo passa pela edge function `m2a-proxy`, que:
-1. valida o JWT do usuário Lovable Cloud (RLS já garante quem é),
-2. assina a chamada para a VPS com um segredo compartilhado (HMAC),
-3. encaminha a resposta.
+1. `m2a-client`: adicionar `post()`, cache de CSRF por URL, helper `capturarCsrf(path)`.
+2. `src/m2a/utils.js`: portar helpers genéricos (datas, normalize, diagnostics, ensure*).
+3. `src/m2a/contrato.js`:
+   - `buscarIdContratoPorNumero` (1220) + `discoverContratoTableUrls` (1181)
+   - `criarCabecalhoContrato` (1006)
+   - `vincularFiscal` / `vincularGestor` / `vincularPreposto` (1335-1428)
+   - `adicionarItensAoContrato` (1665) + `atualizarQuantidadesItens` (1811) + scrapers de itens (1548-1665)
+   - `incluirDotacao` (1917)
+   - `configurarDocumentos` (2100) + sub-rotinas (1958-2099)
+4. `src/m2a/orquestrador-contrato.js`: porta de `processarContratoCompleto` emitindo eventos `progress(etapa, mensagem, extra)` via callback.
+5. Rota nova `POST /contratos/processar` (SSE) em `src/routes/contratos.js`:
+   - Body: mesmo payload do `M2A_START_AUTOMATION` (já tipado em `src/lib/m2a-payload.ts`).
+   - Resposta: stream de `event: progress` + `event: done`/`event: error`.
+6. Variante `POST /contratos/diagnosticar` chamando `diagnosticarContrato` (1276).
+7. Smoke test em `vps-worker/scripts/test-contrato.js` (igual `test-call.js`, mas consumindo SSE).
 
-Assim a URL/credenciais da VPS nunca vazam pro browser.
+### Fase 2 — Processo SRP
+Porta de `orquestrarCriacaoProcesso` (925) + `criarDFDProcesso` / `capturarIdsProcesso` / `atualizarParametrosProcesso` / `importarPlanilhasItens`. Rota `POST /processos/criar` (SSE). Decodificação de XLSX (base64/signedUrl) feita no worker (já tem `axios`).
 
-## Etapas
+### Fase 3 — Integração com o frontend (opcional, depois)
+Adapter no Planeja que decide: se a extensão estiver instalada usa o caminho atual (`postMessage`); senão chama o worker via Edge Function (preserva HMAC). Fora do escopo desta primeira entrega.
 
-### 1. Worker Node.js para a VPS (entregue como pasta `vps-worker/` no repo)
-- `package.json`, `server.ts` (Fastify), `m2a-client.ts` (axios + cookie jar + login automático), `routes/` por endpoint, `Dockerfile`, `docker-compose.yml`, `.env.example`, `README.md` com passo-a-passo de deploy (SSH, build, PM2 ou Docker, Nginx + Let's Encrypt).
-- Reaproveita a lógica que já existe em `m2a-extension/engine/*` (scrapers de numeração e processo) e em `src/lib/m2a-*.ts`, convertida para Node puro.
-- Endpoints iniciais (espelhando o que a extensão faz hoje):
-  - `POST /auth/refresh` — força novo login
-  - `GET  /numeracao` — lista de numerações
-  - `GET  /processos/:id` — detalhe + itens
-  - `GET  /contratos?ata=...` — snapshot de contratos
-  - `GET  /servidores`, `GET  /unidades` — catálogos
-  - `GET  /health` — usado pelo monitor do Planeja
-- Segurança: cada request da edge function vem com header `X-Signature: HMAC_SHA256(body+timestamp, SHARED_SECRET)` e janela de 5 min.
+## Detalhes técnicos
 
-### 2. Edge function `m2a-proxy` no Lovable Cloud
-- Valida JWT do usuário, checa role mínima (`operador` ou superior em `user_roles`).
-- Assina e encaminha para `VPS_API_URL`.
-- Loga em `m2a_envio_logs` (tabela já existe).
+- **CSRF**: a extensão lê `csrfmiddlewaretoken` do HTML da resposta anterior e do cookie `csrftoken`. No worker, `cheerio` extrai do HTML e `tough-cookie` fornece o cookie — replicar `rememberCsrfFromDoc` num `Map<path, token>`.
+- **DOM parsing**: trocar `DOMParser` por `cheerio` (já dep do worker). Todos os `doc.querySelector(...)` viram seletores `$()` — wrapper fino `parseDoc(html)` para minimizar diff visual.
+- **Concorrência**: o `PQueue` do `m2a-client` já serializa; nenhum endpoint do worker precisa paralelizar mais que isso.
+- **Progresso**: callback `onProgress(etapa, mensagem, extra)` no orquestrador; a rota SSE serializa cada chamada como `event: progress\ndata: {...}\n\n`.
+- **Erros**: preservar mensagens originais (`SESSAO_EXPIRADA`, `M2A_LOGIN_FAILED`, `ensureOperationAccepted`) para o frontend reaproveitar tratamento.
+- **Não muda**: assinatura HMAC, layout do `.env`, ecosystem PM2, nada do frontend Planeja.
 
-### 3. Frontend novo (mesmas funcionalidades, UI limpa)
-Páginas reconstruídas com React Router, shadcn/ui e Tailwind, todas usando o cliente Supabase atual sem mudança de schema:
-- `/login`, `/reset-password`
-- `/` Dashboard (cards de status + saúde da VPS via `/health`)
-- `/processos`, `/processos/:id`
-- `/contratos`, `/contratos/:id`
-- `/importar-contratos` (planilhas — lógica do `src/lib/contratoImport.ts` mantida)
-- `/numeracao`
-- `/irp`
-- `/secretarias`, `/fornecedores`, `/gestores`, `/fiscais`
-- `/historico`, `/logs`
-- Settings: configuração da VPS (URL + status), preferências M2A
-- AppShell com sidebar, command palette, progress tracker e action bar — mas reescritos do zero, sem o peso atual.
+## Entrega desta rodada
 
-### 4. Migração de stack
-- Remover: `@tanstack/react-start`, `@tanstack/react-router`, `wrangler.jsonc`, `src/server.ts`, `src/start.ts`, `src/router.tsx`, `src/routes/`, `src/routeTree.gen.ts`, `m2a-extension/`, `public/m2a-extension.zip`, `scripts/build-extension.js`, `scripts/watch-extension.js`.
-- Adicionar: `react-router-dom`, estrutura `src/pages/`, `src/App.tsx` com `<BrowserRouter>`, `index.html` simples.
-- `vite.config.ts` volta ao padrão Lovable.
-- Backend Supabase fica intacto — nenhuma migration SQL nesta etapa.
+Apenas **Fase 1** (contrato). Fase 2 fica como próximo PR para manter o diff revisável (~600-800 linhas novas no worker + helpers).
 
-### 5. Segredos
-- **Na VPS** (`.env`): `M2A_USERNAME`, `M2A_PASSWORD`, `SHARED_SECRET`, `PORT`.
-- **No Lovable Cloud** (vou pedir via `add_secret` na hora certa): `M2A_VPS_URL`, `M2A_VPS_SHARED_SECRET`.
+## Confirmações necessárias
 
-## O que você precisa me dar quando eu pedir
-1. Sistema operacional da VPS (Ubuntu 22.04? Debian? outro?) — define o `README.md` de deploy.
-2. Se já tem domínio/subdomínio pra apontar pra VPS (ex.: `m2a.seudominio.com`) ou se vamos rodar só por IP+porta com TLS via Caddy.
-3. Confirmar que a conta M2A de serviço já existe e os limites de uso dela.
-
-## Trade-offs honestos
-- **Perda real**: a extensão rodava no browser do usuário e herdava o login dele. Com VPS + conta de serviço, todas as ações no M2A aparecem como sendo dessa conta — auditoria do lado do M2A fica menos granular. Você confirmou que quer assim.
-- **Risco do HTTP direto**: se o M2A adicionar CAPTCHA ou exigir execução de JS, o worker quebra e teremos que migrar para Playwright na mesma VPS. O código fica estruturado pra essa troca ser localizada em `m2a-client.ts`.
-- **Trabalho**: é grande. Vou entregar em ordem: (1) worker VPS, (2) edge function, (3) frontend novo página por página, começando por login + dashboard + processos.
-
-Se aprovar, começo pela **etapa 1 (worker VPS)** para você já conseguir subir e testar enquanto eu reconstruo o frontend.
+1. OK fazer streaming via **SSE** na resposta HTTP (alternativa: 1 POST que devolve só o resultado final + GET de log). SSE é o que mais se parece com o `postMessage` atual.
+2. OK criar a árvore `vps-worker/src/m2a/{utils,contrato,orquestrador-contrato}.js` (separar do `routes/` ajuda muito a testar).
+3. Confirma que vamos parar nesta primeira entrega na Fase 1 (contrato) e fazer Processo SRP depois.
