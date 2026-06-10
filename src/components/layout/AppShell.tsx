@@ -42,6 +42,7 @@ import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { CommandPalette } from "@/components/layout/CommandPalette";
 import { M2AConnectionIndicator } from "@/contexts/M2AConnectionProvider";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
 
 type NavItem = {
   to: string;
@@ -394,6 +395,7 @@ export function AppShell({
             </div>
             <div className="flex flex-wrap items-center justify-end gap-2">
               <M2AConnectionIndicator />
+              <ThemeToggle />
               <Button
                 size="sm"
                 variant="outline"
