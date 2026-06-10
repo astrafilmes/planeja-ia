@@ -77,12 +77,26 @@ class M2aClient {
   async login() {
     if (this.loginPromise) return this.loginPromise;
     this.loginPromise = (async () => {
-      const getRes = await this.http.get(config.m2a.loginPath);
+      const loginUrl = `${config.m2a.baseUrl}${config.m2a.loginPath}`;
+      console.log(`[m2a-login] start user=${config.m2a.username} url=${loginUrl}`);
+      let getRes;
+      try {
+        getRes = await this.http.get(config.m2a.loginPath);
+      } catch (err) {
+        console.error(`[m2a-login] GET form falhou: ${err.message}`);
+        throw new Error(`M2A_LOGIN_FAILED: GET ${config.m2a.loginPath} → ${err.message}`);
+      }
+      const getFinalUrl = getRes.request?.res?.responseUrl || "";
+      console.log(`[m2a-login] GET status=${getRes.status} finalUrl=${getFinalUrl} bytes=${(getRes.data || "").length}`);
+
       const $ = cheerio.load(getRes.data || "");
       const csrf =
         $('input[name="csrfmiddlewaretoken"]').attr("value") ||
         $('input[name="_token"]').attr("value") ||
         "";
+      console.log(`[m2a-login] csrf ${csrf ? `presente(len=${csrf.length})` : "AUSENTE"}`);
+      const cookieStr = await this.jar.getCookieString(config.m2a.baseUrl);
+      console.log(`[m2a-login] cookies pré-POST: ${cookieStr || "(vazio)"}`);
 
       const form = new URLSearchParams();
       form.set("username", config.m2a.username);
@@ -92,19 +106,42 @@ class M2aClient {
         form.set("_token", csrf);
       }
 
-      const postRes = await this.http.post(config.m2a.loginPath, form, {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          Referer: `${config.m2a.baseUrl}${config.m2a.loginPath}`,
-          "X-CSRFToken": csrf || undefined,
-        },
-      });
+      let postRes;
+      try {
+        postRes = await this.http.post(config.m2a.loginPath, form, {
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            Referer: loginUrl,
+            "X-CSRFToken": csrf || undefined,
+          },
+        });
+      } catch (err) {
+        console.error(`[m2a-login] POST falhou: ${err.message}`);
+        throw new Error(`M2A_LOGIN_FAILED: POST ${config.m2a.loginPath} → ${err.message}`);
+      }
 
       const html = String(postRes.data || "");
       const finalUrl = postRes.request?.res?.responseUrl || "";
+      const cookieAfter = await this.jar.getCookieString(config.m2a.baseUrl);
+      console.log(`[m2a-login] POST status=${postRes.status} finalUrl=${finalUrl} bytes=${html.length}`);
+      console.log(`[m2a-login] cookies pós-POST: ${cookieAfter || "(vazio)"}`);
+
       if (M2aClient.isLoginPage(html, finalUrl)) {
-        throw new Error("M2A_LOGIN_FAILED");
+        // Extrai mensagem de erro do form (Django costuma renderizar em .errorlist / .alert)
+        const $$ = cheerio.load(html);
+        const errMsg =
+          $$(".errorlist").first().text().trim() ||
+          $$(".alert").first().text().trim() ||
+          $$(".help-block").first().text().trim() ||
+          "";
+        console.error(`[m2a-login] FALHOU — ainda na página de login. msg="${errMsg}"`);
+        const snippet = html.replace(/\s+/g, " ").slice(0, 400);
+        console.error(`[m2a-login] snippet: ${snippet}`);
+        throw new Error(
+          `M2A_LOGIN_FAILED${errMsg ? `: ${errMsg}` : ""} (status=${postRes.status}, finalUrl=${finalUrl})`,
+        );
       }
+      console.log(`[m2a-login] OK — sessão estabelecida`);
       this.loggedIn = true;
       this.lastLoginAt = Date.now();
       this.sessionCsrf = null;
@@ -114,6 +151,7 @@ class M2aClient {
     });
     return this.loginPromise;
   }
+
 
   async _raw(method, path, opts = {}) {
     const headers = {
