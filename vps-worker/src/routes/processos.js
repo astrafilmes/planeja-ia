@@ -493,4 +493,18 @@ export async function processosRoutes(app) {
       return reply.code(status).send({ error: String(err?.message ?? err) });
     }
   });
+
+  // DEBUG: retorna o HTML cru de qualquer path autenticado para inspeção.
+  // Ex.: GET /debug/raw?path=/processo_administrativo/68973/
+  app.get("/debug/raw", async (req, reply) => {
+    const path = String(req.query.path || "").trim();
+    if (!path) return reply.code(400).send({ error: "path obrigatório" });
+    try {
+      const r = await m2a.get(path);
+      reply.header("content-type", "text/plain; charset=utf-8");
+      return `STATUS=${r.status}\nFINAL_URL=${r.finalUrl}\nLEN=${r.html.length}\n----HTML----\n${r.html}`;
+    } catch (err) {
+      return reply.code(500).send({ error: String(err?.message ?? err) });
+    }
+  });
 }
