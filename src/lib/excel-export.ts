@@ -356,6 +356,7 @@ const colLetter = (n: number) => {
 export async function exportarPautaConsolidadaExcel(
   processes: Array<{
     processo_id: string;
+    processo_nome?: string | null;
     contrato_numero?: string | null;
     items: Array<{ cells: (string | number | null)[]; valor_unit?: number | null; valor_total?: number | null }>;
   }>,
@@ -369,7 +370,8 @@ export async function exportarPautaConsolidadaExcel(
   const moedaFmt = '"R$" #,##0.00';
 
   for (const proc of processes) {
-    const safeName = (proc.processo_id || proc.contrato_numero || 'Processo').toString().replace(/[\\/*?:[\]]/g, '_').substring(0, 31);
+    const displayName = (proc.processo_nome || proc.processo_id || proc.contrato_numero || 'Processo').toString();
+    const safeName = displayName.replace(/[\\/*?:[\]]/g, '_').substring(0, 31);
     const ws = workbook.addWorksheet(safeName, {
       pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 }
     });
