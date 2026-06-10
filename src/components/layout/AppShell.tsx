@@ -394,7 +394,7 @@ export function AppShell({
               </Sheet>
             </div>
             <div className="flex flex-wrap items-center justify-end gap-2">
-              <M2AConnectionIndicator />
+              
               <ThemeToggle />
               <Button
                 size="sm"
