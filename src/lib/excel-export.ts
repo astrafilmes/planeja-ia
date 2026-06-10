@@ -538,7 +538,16 @@ export async function exportarPautaConsolidadaExcel(
     footerCell.value = proc.processo_nome || proc.processo_id || '';
     footerCell.font = { bold: false, size: 9, color: { argb: 'FF000000' } };
     footerCell.alignment = { horizontal: 'left', vertical: 'middle' };
+
+    // AutoFilter na linha de subcategorias (linha 2) — permite filtrar por empresa, lote, secretaria etc.
+    if (proc.items.length > 0) {
+      ws.autoFilter = {
+        from: { row: 2, column: 1 },
+        to: { row: 2 + proc.items.length, column: 54 },
+      };
+    }
   }
+
 
   const outName = fileName || `pauta_consolidada_${new Date().toISOString().slice(0, 10)}.xlsx`;
   try {
@@ -684,6 +693,15 @@ export function prepararDadosPautaConsolidada(dadosBrutos: any[]): Array<{ proce
     for (const [, entry] of proc.itemsMap) {
       items.push({ cells: entry.cells, valor_unit: entry.valor_unit, valor_total: entry.valor_total });
     }
+    // Ordenação: lote ASC, número do item (numérico) ASC
+    items.sort((a, b) => {
+      const la = String(a.cells[2] ?? '').trim();
+      const lb = String(b.cells[2] ?? '').trim();
+      if (la !== lb) return la.localeCompare(lb, 'pt-BR', { numeric: true });
+      const na = Number(String(a.cells[3] ?? '').replace(',', '.')) || 0;
+      const nb = Number(String(b.cells[3] ?? '').replace(',', '.')) || 0;
+      return na - nb;
+    });
     processes.push({ processo_id: proc.processo_id, processo_nome: proc.processo_nome, contrato_numero: proc.contrato_numero, items });
   }
 

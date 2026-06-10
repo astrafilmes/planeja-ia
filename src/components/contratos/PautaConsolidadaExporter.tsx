@@ -88,22 +88,24 @@ export function PautaConsolidadaExporter({
         nomeByProcessoId.set(p.id, buildProcessoNome(p));
       });
 
-      // 3) Buscar dados via RPC por processo, filtrando contratos quando aplicável
+      // 3) Buscar dados via RPC por processo. Sempre traz TODOS os itens do processo;
+      //    itens fora dos contratos selecionados vêm com quantidade 0 (flag no_contrato=true).
       const allRaw: any[] = [];
       for (const pid of resolvedProcessoIds) {
+        const contratoIdsForRpc = selectedContractIds
+          ? Array.from(selectedContractIds)
+          : null;
         const { data, error } = await supabase.rpc(
-          "get_pauta_consolidada_data" as any,
-          { p_processo_id: pid }
+          "get_pauta_consolidada_full" as any,
+          { p_processo_id: pid, p_contrato_ids: contratoIdsForRpc },
         );
         if (error) throw error;
         const rows = (data as any[]) ?? [];
-        const filtered = selectedContractIds
-          ? rows.filter((r: any) => r.contrato_id && selectedContractIds!.has(r.contrato_id))
-          : rows;
-        for (const r of filtered) {
+        for (const r of rows) {
           allRaw.push({ ...r, processo_nome: nomeByProcessoId.get(pid) || pid });
         }
       }
+
 
       if (allRaw.length === 0) {
         toast.error("Nenhum dado encontrado para os contratos/processos selecionados.", {

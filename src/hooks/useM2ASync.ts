@@ -55,18 +55,19 @@ export function useM2ASync({
       });
 
       console.log(`${LOG} → persistM2ASnapshot`);
-      await persistM2ASnapshot(processoId, {
+      const summary = await persistM2ASnapshot(processoId, {
         atas: payload.atas ?? [],
         itens: payload.itens ?? [],
         contratos_existentes: payload.contratos_existentes ?? [],
       });
 
       toast.success(
-        `Sincronização concluída! ${payload.resumo?.qtd_atas ?? 0} atas, ${
-          payload.resumo?.qtd_itens ?? 0
-        } itens, ${payload.resumo?.qtd_contratos ?? 0} contratos.`,
+        `Sincronização concluída! ${summary.atas} atas, ${summary.itens} itens, ${summary.contratos_snapshot} contratos. ` +
+          `Atualizados: ${summary.contratos_atualizados} contratos / ${summary.itens_atualizados} itens. ` +
+          `Duplicatas removidas: ${summary.duplicatas_removidas}.`,
         { id: toastIdRef.current ?? undefined },
       );
+
       console.log(
         `${LOG} ✅ TOTAL ${(performance.now() - tStart).toFixed(0)}ms`,
       );
