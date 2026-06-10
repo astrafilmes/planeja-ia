@@ -48,12 +48,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    supabase.auth.getSession().then(async ({ data: { session: s } }) => {
-      setSession(s);
-      setUser(s?.user ?? null);
-      if (s?.user) await fetchRoles(s.user.id);
+    (async () => {
+      const { data: { session: s } } = await supabase.auth.getSession();
+      if (s?.user) {
+        setSession(s);
+        setUser(s.user);
+        await fetchRoles(s.user.id);
+        setLoading(false);
+        return;
+      }
+      // Sem sessão: tenta restaurar via "Confiar neste dispositivo"
+      const restored = await tryRestoreFromTrustedDevice();
+      if (restored) {
+        const { data: { session: s2 } } = await supabase.auth.getSession();
+        setSession(s2);
+        setUser(s2?.user ?? null);
+        if (s2?.user) await fetchRoles(s2.user.id);
+      }
       setLoading(false);
-    });
+    })();
 
     return () => subscription.unsubscribe();
   }, []);
@@ -67,8 +80,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signOut() {
+    try {
+      await revokeCurrentTrustedDevice();
+    } catch {
+      /* noop */
+    }
+    clearTrustedToken();
     await supabase.auth.signOut();
   }
+
 
   return (
     <AuthContext.Provider
