@@ -1,6 +1,11 @@
 import ExcelJS from 'exceljs';
 import type { Cell, Worksheet } from 'exceljs';
-import { saveAs } from 'file-saver';
+import * as FileSaver from 'file-saver';
+
+const saveAs =
+  (FileSaver as any).saveAs ??
+  (FileSaver as any).default?.saveAs ??
+  (FileSaver as any).default;
 
 export interface ContractReportData {
   contract_id: string;
