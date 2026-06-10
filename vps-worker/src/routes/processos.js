@@ -209,48 +209,106 @@ function normalizeSubtableUrl(url, fallbackAtaId) {
 function extractAtasFromDoc($) {
   const out = [];
   const seen = new Set();
-  $('a[href*="/ata_registro_precos/"]').each((_, a) => {
-    const $a = $(a);
-    const href = $a.attr("href") || "";
+
+  // Estratégia 1: linhas da kt-datatable (resposta de /tabela/ata_registro_de_preco/...)
+  // Mapeamento por posição de coluna conforme HTML real do portal M2A:
+  //   td[0].text-center  -> número da ata (a > span)
+  //   td[1].text-left    -> secretaria/gerenciador (span)
+  //   td[2].text-left    -> fornecedor (span)
+  //   td[3].text-center  -> início vigência (span)
+  //   td[4].text-center  -> fim vigência (span)
+  //   td[5].text-right   -> valor (span)
+  //   td.none (último)   -> objeto / descrição
+  const rows = $('tr.kt-datatable__row, tbody tr').toArray();
+  for (const trEl of rows) {
+    const tr = $(trEl);
+    const anchor = tr.find('a[href*="/ata_registro_precos/"]').first();
+    if (!anchor.length) continue;
+    const href = anchor.attr("href") || "";
     const m = href.match(/\/ata_registro_precos\/(\d+)\/?/);
-    if (!m) return;
+    if (!m) continue;
     const ataId = m[1];
-    if (seen.has(ataId)) return;
+    if (seen.has(ataId)) continue;
     seen.add(ataId);
-    const numero = txt($, $a.find("span").first()) || txt($, $a);
-    const tr = $a.closest("tr");
-    let fornecedor = "";
-    let cnpj = "";
-    let detailUrl = "";
-    let licitacaoAtaContratoId = "";
-    if (tr.length) {
-      const cellTxt = txt($, tr);
-      const cnpjMatch = cellTxt.match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/);
-      if (cnpjMatch) cnpj = cnpjMatch[0];
-      const tdLeft = tr.find("td.text-left").first();
-      fornecedor = findAtaFornecedorCellText($, tdLeft, numero);
-      detailUrl = extractAtaDetailUrl($, tr);
-      licitacaoAtaContratoId = extractLicitacaoAtaContratoId(tr, detailUrl);
-      if (!fornecedor) {
-        tr.find("td").each((__, td) => {
-          if (fornecedor) return;
-          const $td = $(td);
-          if ($td.find("a").length) return;
-          const t = txt($, $td);
-          if (t && t !== numero) fornecedor = t;
-        });
-      }
-    }
-    fornecedor = cleanTextValue(fornecedor);
-    if (!fornecedor || fornecedor === numero) fornecedor = "";
+
+    const cells = tr.find("td").toArray().map((td) => $(td));
+    const cellText = (i) => (cells[i] ? cleanTextValue(cells[i].text()) : "");
+    const spanText = (i) => {
+      if (!cells[i]) return "";
+      const sp = cells[i].find("span").first();
+      return cleanTextValue(sp.length ? sp.text() : cells[i].text());
+    };
+
+    const numero = cleanTextValue(anchor.find("span").first().text() || anchor.text()) || `ATA-${ataId}`;
+    const secretaria = spanText(1);
+    const fornecedor = spanText(2);
+    const vigenciaInicio = spanText(3);
+    const vigenciaFim = spanText(4);
+    const valorStr = spanText(5);
+    const valor = parseValor(valorStr);
+
+    // Objeto: último td (geralmente com classe "none") ou maior bloco de texto.
+    let objeto = "";
+    const noneTd = tr.find("td.none").last();
+    if (noneTd.length) objeto = cleanTextValue(noneTd.text());
+    if (!objeto && cells.length) objeto = cellText(cells.length - 1);
+
+    const cnpjMatch = cleanTextValue(tr.text()).match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/);
+    const cnpj = cnpjMatch ? cnpjMatch[0] : undefined;
+
+    const detailUrl = extractAtaDetailUrl($, tr);
+    const licitacaoAtaContratoId = extractLicitacaoAtaContratoId(tr, detailUrl);
+
     out.push({
       id_ata: ataId,
       id_licitacao_ata_contrato: licitacaoAtaContratoId || undefined,
-      numero_ata: numero || `ATA-${ataId}`,
-      fornecedor: { nome: fornecedor || "", cnpj: cnpj || undefined },
+      numero_ata: numero,
+      secretaria_nome: secretaria || "",
+      fornecedor: { nome: fornecedor || "", cnpj },
+      vigencia_inicio: vigenciaInicio || "",
+      vigencia_fim: vigenciaFim || "",
+      valor_total: valor,
+      valor_total_str: valorStr || "",
+      objeto: objeto || "",
       detail_url: detailUrl || undefined,
     });
-  });
+  }
+
+  // Estratégia 2 (fallback): varredura por âncora se a tabela não casou.
+  if (out.length === 0) {
+    $('a[href*="/ata_registro_precos/"]').each((_, a) => {
+      const $a = $(a);
+      const href = $a.attr("href") || "";
+      const m = href.match(/\/ata_registro_precos\/(\d+)\/?/);
+      if (!m) return;
+      const ataId = m[1];
+      if (seen.has(ataId)) return;
+      seen.add(ataId);
+      const numero = cleanTextValue($a.find("span").first().text() || $a.text());
+      const tr = $a.closest("tr");
+      let fornecedor = "";
+      let cnpj = "";
+      let detailUrl = "";
+      let licitacaoAtaContratoId = "";
+      if (tr.length) {
+        const cellTxt = cleanTextValue(tr.text());
+        const cnpjMatch = cellTxt.match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/);
+        if (cnpjMatch) cnpj = cnpjMatch[0];
+        const tdLeft = tr.find("td.text-left").first();
+        fornecedor = findAtaFornecedorCellText($, tdLeft, numero);
+        detailUrl = extractAtaDetailUrl($, tr);
+        licitacaoAtaContratoId = extractLicitacaoAtaContratoId(tr, detailUrl);
+      }
+      out.push({
+        id_ata: ataId,
+        id_licitacao_ata_contrato: licitacaoAtaContratoId || undefined,
+        numero_ata: numero || `ATA-${ataId}`,
+        fornecedor: { nome: fornecedor || "", cnpj: cnpj || undefined },
+        detail_url: detailUrl || undefined,
+      });
+    });
+  }
+
   return out;
 }
 
