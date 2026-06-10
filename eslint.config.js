@@ -7,15 +7,7 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: [
-      "dist",
-      "out",
-      "node_modules",
-      ".output",
-      ".vinxi",
-      ".wrangler",
-      "m2a-extension",
-    ],
+    ignores: ["dist", "out", "node_modules", ".output", ".vinxi", ".wrangler", "m2a-extension", "scripts"],
   },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
