@@ -538,7 +538,16 @@ export async function exportarPautaConsolidadaExcel(
     footerCell.value = proc.processo_nome || proc.processo_id || '';
     footerCell.font = { bold: false, size: 9, color: { argb: 'FF000000' } };
     footerCell.alignment = { horizontal: 'left', vertical: 'middle' };
+
+    // AutoFilter na linha de subcategorias (linha 2) — permite filtrar por empresa, lote, secretaria etc.
+    if (proc.items.length > 0) {
+      ws.autoFilter = {
+        from: { row: 2, column: 1 },
+        to: { row: 2 + proc.items.length, column: 54 },
+      };
+    }
   }
+
 
   const outName = fileName || `pauta_consolidada_${new Date().toISOString().slice(0, 10)}.xlsx`;
   try {
