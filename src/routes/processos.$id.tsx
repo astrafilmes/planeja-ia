@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { routeHead } from "@/lib/route-head";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
@@ -97,7 +98,18 @@ import {
 } from "@/hooks/useM2ACatalog";
 import { PautaConsolidadaExporter } from "@/components/contratos/PautaConsolidadaExporter";
 
-export const Route = createFileRoute("/processos/$id")({ component: Page });
+export const Route = createFileRoute("/processos/$id")({
+  component: Page,
+  head: ({ params }) =>
+    routeHead({
+      path: `/processos/${params?.id ?? ""}`,
+      title: `Processo ${params?.id ?? ""}`.trim(),
+      description:
+        "Detalhes do processo administrativo: itens, atas, fornecedores e situação atual no Planeja IA.",
+      ogType: "article",
+      noindex: true,
+    }),
+});
 
 function anoFromNumero(numero?: string | null): number | null {
   if (!numero) return null;

@@ -90,7 +90,16 @@ import {
 } from "@/lib/m2a";
 import { ContractReportGenerator } from "@/components/contratos/ContractReportGenerator";
 
-export const Route = createFileRoute("/contratos")({ component: Page });
+export const Route = createFileRoute("/contratos")({
+  component: Page,
+  head: () =>
+    routeHead({
+      path: "/contratos",
+      title: "Contratos",
+      description:
+        "Gerencie contratos públicos, fiscais, prepostos e documentos vinculados ao planejamento.",
+    }),
+});
 
 const BRL = new Intl.NumberFormat("pt-BR", {
   style: "currency",

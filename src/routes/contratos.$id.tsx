@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { routeHead } from "@/lib/route-head";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
@@ -67,7 +68,18 @@ import {
 import { DocumentosEditor } from "@/components/contratos/DocumentosEditor";
 import { ContractReportGenerator } from "@/components/contratos/ContractReportGenerator";
 
-export const Route = createFileRoute("/contratos/$id")({ component: Page });
+export const Route = createFileRoute("/contratos/$id")({
+  component: Page,
+  head: ({ params }) =>
+    routeHead({
+      path: `/contratos/${params?.id ?? ""}`,
+      title: `Contrato ${params?.id ?? ""}`.trim(),
+      description:
+        "Visualize itens, fiscais, documentos e histórico do contrato no Planeja IA.",
+      ogType: "article",
+      noindex: true,
+    }),
+});
 
 const BRL = new Intl.NumberFormat("pt-BR", {
   style: "currency",

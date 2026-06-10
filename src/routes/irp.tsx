@@ -137,6 +137,14 @@ export const Route = createFileRoute("/irp")({
     job: typeof search.job === "string" ? search.job : undefined,
   }),
   component: Page,
+  head: () =>
+    routeHead({
+      path: "/irp",
+      title: "IRP",
+      description:
+        "Processamento e consolidação de planilhas IRP (Intenção de Registro de Preços) com apoio de IA.",
+      noindex: true,
+    }),
 });
 
 async function uploadIrpFile({

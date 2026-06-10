@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { routeHead } from "@/lib/route-head";
 import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -24,7 +25,17 @@ import {
   CheckCircle2,
 } from "lucide-react";
 
-export const Route = createFileRoute("/login")({ component: Login });
+export const Route = createFileRoute("/login")({
+  component: Login,
+  head: () =>
+    routeHead({
+      path: "/login",
+      title: "Entrar",
+      description:
+        "Acesse o Planeja IA para gerenciar processos, contratos e demandas de contratações públicas.",
+      noindex: true,
+    }),
+});
 
 const loginSchema = z.object({
   email: z.string().trim().email("Informe um e-mail válido").max(255),
