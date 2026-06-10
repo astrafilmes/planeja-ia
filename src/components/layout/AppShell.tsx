@@ -158,8 +158,8 @@ function NavList({
                   className={`flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-[13px] font-medium transition-colors
                   ${
                     activeGroup
-                      ? "bg-sidebar-accent text-sidebar-primary-foreground"
-                      : "text-sidebar-foreground/55 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      ? "bg-slate-800/60 text-white"
+                      : "text-slate-400 hover:bg-slate-800/40 hover:text-slate-100"
                   } ${collapsed ? "justify-center px-2" : ""}`}
                   title={collapsed ? groupLabel : undefined}
                 >
