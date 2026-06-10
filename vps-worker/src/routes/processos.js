@@ -441,12 +441,48 @@ async function runCascata(processoId) {
   return { atas, itens, contratos_existentes: contratos, resumo };
 }
 
+// ---------- helpers de URL ----------
+export function extractProcessoIdFromUrl(input) {
+  const s = String(input ?? "").trim();
+  if (!s) return null;
+  if (/^\d+$/.test(s)) return s;
+  const m =
+    s.match(/\/processo_administrativo\/(\d+)/) ||
+    s.match(/\/detail\/(\d+)/) ||
+    s.match(/(\d+)\/?$/);
+  return m ? m[1] : null;
+}
+
 // ---------- rotas ----------
 export async function processosRoutes(app) {
   // Cascata completa do processo: atas + itens + contratos + resumo.
   app.get("/processos/:id", async (req, reply) => {
     const id = String(req.params.id || "").trim();
     if (!id) return reply.code(400).send({ error: "id obrigatório" });
+    try {
+      const payload = await runCascata(id);
+      return { processo_id: id, ...payload };
+    } catch (err) {
+      const status = err.status && err.status >= 400 ? err.status : 500;
+      return reply.code(status).send({ error: String(err?.message ?? err) });
+    }
+  });
+
+  // Espelha M2A_START_SYNC_PROCESSO da extensão: aceita a URL crua do processo
+  // (ou o próprio ID) e devolve o payload completo (atas, itens, contratos,
+  // resumo com último número por secretaria). É esta saída que alimenta
+  // depois o POST /contratos/processar.
+  app.post("/processos/sync", async (req, reply) => {
+    const body = req.body || {};
+    const raw =
+      body.m2a_processo_url || body.url || body.processoId || body.processo_id;
+    const id = extractProcessoIdFromUrl(raw);
+    if (!id) {
+      return reply.code(400).send({
+        error:
+          "informe m2a_processo_url (ex.: https://.../processo_administrativo/68973/) ou processoId",
+      });
+    }
     try {
       const payload = await runCascata(id);
       return { processo_id: id, ...payload };
