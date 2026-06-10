@@ -9,7 +9,11 @@ import {
 } from "@/lib/excel-export";
 
 interface PautaConsolidadaExporterProps {
-  processoIds: string[];
+  /** IDs de processos: o sistema gera 1 aba por processo. */
+  processoIds?: string[];
+  /** IDs de contratos: o sistema deriva os processos dos contratos e gera 1 aba por processo,
+   *  trazendo TODOS os itens do processo (e não apenas os itens dos contratos selecionados). */
+  contractIds?: string[];
   buttonClassName?: string;
   variant?:
     | "default"
@@ -24,6 +28,7 @@ interface PautaConsolidadaExporterProps {
 
 export function PautaConsolidadaExporter({
   processoIds,
+  contractIds,
   buttonClassName,
   variant = "outline",
   size = "sm",
@@ -32,34 +37,47 @@ export function PautaConsolidadaExporter({
   const [loading, setLoading] = useState(false);
 
   const handleGenerateXls = async () => {
-    if (!processoIds || processoIds.length === 0) {
-      toast.error("Nenhum processo selecionado para exportação.");
-      return;
-    }
-
     setLoading(true);
     toast.info(`Gerando Pauta Consolidada...`, { id: "pauta-export" });
 
     try {
-      let allRawData: any[] = [];
-
-      for (const id of processoIds) {
-        const { data, error } = await supabase.rpc("get_pauta_consolidada_data" as any, {
-          p_processo_id: id,
-        });
-        
-        const rawData = data as any[];
-
-        if (error) {
-          throw error;
-        }
-
-        if (rawData && rawData.length > 0) {
-          allRawData = allRawData.concat(rawData);
-        }
+      // 1) Resolver os IDs de processo a partir de processoIds OU contractIds
+      let resolvedProcessoIds: string[] = [];
+      if (processoIds && processoIds.length > 0) {
+        resolvedProcessoIds = Array.from(new Set(processoIds.filter(Boolean)));
+      } else if (contractIds && contractIds.length > 0) {
+        const { data, error } = await supabase
+          .from("contratos")
+          .select("processo_id")
+          .in("id", contractIds);
+        if (error) throw error;
+        resolvedProcessoIds = Array.from(
+          new Set((data ?? []).map((r: any) => r.processo_id).filter(Boolean))
+        );
       }
 
-      if (allRawData.length === 0) {
+      if (resolvedProcessoIds.length === 0) {
+        toast.error("Nenhum processo identificado para exportação.", {
+          id: "pauta-export",
+        });
+        setLoading(false);
+        return;
+      }
+
+      // 2) Buscar dados de TODOS os itens de cada processo via RPC
+      //    (a função já retorna todos os itens do processo, não só do contrato)
+      const processoBlocks: { processoId: string; raw: any[] }[] = [];
+      for (const pid of resolvedProcessoIds) {
+        const { data, error } = await supabase.rpc(
+          "get_pauta_consolidada_data" as any,
+          { p_processo_id: pid }
+        );
+        if (error) throw error;
+        processoBlocks.push({ processoId: pid, raw: (data as any[]) ?? [] });
+      }
+
+      const allRaw = processoBlocks.flatMap((b) => b.raw);
+      if (allRaw.length === 0) {
         toast.error("Nenhum dado encontrado para os processos selecionados.", {
           id: "pauta-export",
         });
@@ -67,20 +85,20 @@ export function PautaConsolidadaExporter({
         return;
       }
 
-      // 1. Process and map the data
-      const processes = prepararDadosPautaConsolidada(allRawData);
+      // 3) Preparar e exportar — múltiplos processos → 1 arquivo com várias abas
+      const processes = prepararDadosPautaConsolidada(allRaw);
 
-      // 2. Export to Excel
       const filename =
-        processoIds.length === 1
-          ? `pauta_consolidada_${processoIds[0]}.xlsx`
+        resolvedProcessoIds.length === 1
+          ? `pauta_consolidada_${resolvedProcessoIds[0]}.xlsx`
           : `pauta_consolidada_multiplos_processos.xlsx`;
 
       await exportarPautaConsolidadaExcel(processes, filename);
 
-      toast.success(`Pauta Consolidada gerada com sucesso!`, {
-        id: "pauta-export",
-      });
+      toast.success(
+        `Pauta Consolidada gerada (${processes.length} aba${processes.length > 1 ? "s" : ""}).`,
+        { id: "pauta-export" }
+      );
     } catch (e: any) {
       console.error("Error generating pauta:", e);
       toast.error("Erro ao exportar Pauta Consolidada", {
@@ -92,13 +110,18 @@ export function PautaConsolidadaExporter({
     }
   };
 
+  const disabled =
+    loading ||
+    ((!processoIds || processoIds.length === 0) &&
+      (!contractIds || contractIds.length === 0));
+
   return (
     <Button
       variant={variant}
       size={size}
       className={buttonClassName}
       onClick={handleGenerateXls}
-      disabled={loading || processoIds.length === 0}
+      disabled={disabled}
       title="Gerar planilha de Pauta Consolidada em formato Excel"
     >
       {loading ? (
