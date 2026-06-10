@@ -246,6 +246,8 @@ interface PautaColDef {
   isGeneralTotal?: boolean;
   sumCols?: number[];
   isCurrency?: boolean;
+  /** Quando true, as células de dados desta coluna herdam a cor da linha 2 do cabeçalho. */
+  fillRow2InData?: boolean;
 }
 
 // Cores GovTech (ARGB - prefixo FF)
