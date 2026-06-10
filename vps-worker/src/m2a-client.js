@@ -94,7 +94,17 @@ class M2aClient {
         $('input[name="csrfmiddlewaretoken"]').attr("value") ||
         $('input[name="_token"]').attr("value") ||
         "";
+      const profileOptions = $('input[name="perfil"]')
+        .map((_, el) => {
+          const value = $(el).attr("value") || "";
+          const label = $(el).closest("label").text().replace(/\s+/g, " ").trim();
+          const checked = $(el).is("[checked]") ? " checked" : "";
+          return `${value}:${label || "sem label"}${checked}`;
+        })
+        .get()
+        .join(" | ");
       console.log(`[m2a-login] csrf ${csrf ? `presente(len=${csrf.length})` : "AUSENTE"}`);
+      console.log(`[m2a-login] perfis no form: ${profileOptions || "(nenhum)"}; enviando perfil=${config.m2a.loginProfile}`);
       const cookieStr = await this.jar.getCookieString(config.m2a.baseUrl);
       console.log(`[m2a-login] cookies pré-POST: ${cookieStr || "(vazio)"}`);
 
@@ -102,10 +112,12 @@ class M2aClient {
       form.set("perfil", config.m2a.loginProfile);
       form.set("username", config.m2a.username);
       form.set("password", config.m2a.password);
+      form.set("login-form", "");
       if (csrf) {
         form.set("csrfmiddlewaretoken", csrf);
         form.set("_token", csrf);
       }
+      console.log(`[m2a-login] POST payload: perfil=${form.get("perfil")} username=${form.get("username")} password=(oculta) csrf=${csrf ? "sim" : "não"} login-form=sim`);
 
       let postRes;
       try {
@@ -135,7 +147,10 @@ class M2aClient {
           $$(".alert").first().text().trim() ||
           $$(".help-block").first().text().trim() ||
           "";
-        console.error(`[m2a-login] FALHOU — ainda na página de login. msg="${errMsg}"`);
+        console.error(`[m2a-login] FALHOU — ainda na página de login. perfil=${config.m2a.loginProfile} finalUrl=${finalUrl} msg="${errMsg}"`);
+        if (/portal de fornecedores/i.test(errMsg) && config.m2a.loginProfile !== "1") {
+          console.error(`[m2a-login] diagnóstico: portal respondeu como fornecedor; ajuste M2A_LOGIN_PROFILE=1 no .env da VPS e reinicie o PM2 com --update-env.`);
+        }
         const snippet = html.replace(/\s+/g, " ").slice(0, 400);
         console.error(`[m2a-login] snippet: ${snippet}`);
         throw new Error(
