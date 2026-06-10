@@ -158,8 +158,8 @@ function NavList({
                   className={`flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-[13px] font-medium transition-colors
                   ${
                     activeGroup
-                      ? "bg-sidebar-accent text-sidebar-primary-foreground"
-                      : "text-sidebar-foreground/55 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      ? "bg-slate-800/60 text-white"
+                      : "text-slate-400 hover:bg-slate-800/40 hover:text-slate-100"
                   } ${collapsed ? "justify-center px-2" : ""}`}
                   title={collapsed ? groupLabel : undefined}
                 >
@@ -193,8 +193,8 @@ function NavList({
                         className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-[13px] font-medium transition-colors
                         ${
                           active
-                            ? "bg-sidebar-primary/15 text-sidebar-primary-foreground border-l-2 border-sidebar-primary pl-[10px]"
-                            : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                            ? "bg-sidebar-primary/20 text-white border-l-2 border-sidebar-primary pl-[10px]"
+                            : "text-slate-300 hover:bg-slate-800/40 hover:text-white"
                         } ${collapsed ? "justify-center px-2" : ""}`}
                       >
                         <Icon className="size-4 shrink-0" />
@@ -220,8 +220,8 @@ function NavList({
             className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-[13px] font-medium transition-colors
               ${
                 active
-                  ? "bg-sidebar-primary/15 text-sidebar-primary-foreground border-l-2 border-sidebar-primary pl-[10px]"
-                  : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  ? "bg-sidebar-primary/20 text-white border-l-2 border-sidebar-primary pl-[10px]"
+                  : "text-slate-300 hover:bg-slate-800/40 hover:text-white"
               } ${collapsed ? "justify-center px-2" : ""}`}
           >
             <Icon className="size-4 shrink-0" />
