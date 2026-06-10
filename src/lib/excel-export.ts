@@ -216,7 +216,7 @@ export async function exportarRelatorioContratoExcel(contracts: ContractGroupedD
           cell.numFmt = '#,##0.00';
         }
         if ((colNumber === 7 || colNumber === 8) && typeof cell.value === 'number') {
-          cell.numFmt = 'R$ #,##0.00';
+          cell.numFmt = '"R$" #,##0.00';
         }
       });
     }
