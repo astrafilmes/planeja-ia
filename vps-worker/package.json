@@ -1,0 +1,24 @@
+{
+  "name": "planeja-m2a-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Worker HTTP que executa as requisições do Planeja contra o portal M2A.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "axios": "^1.7.7",
+    "axios-cookiejar-support": "^5.0.3",
+    "cheerio": "^1.0.0",
+    "dotenv": "^16.4.5",
+    "fastify": "^5.0.0",
+    "p-queue": "^8.0.1",
+    "pino": "^9.5.0",
+    "tough-cookie": "^5.0.0"
+  }
+}
