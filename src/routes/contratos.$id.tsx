@@ -179,7 +179,9 @@ function Page() {
           c.secretaria_id
             ? supabase
                 .from("secretarias")
-                .select("*")
+                .select(
+                  "id, numero, sigla, nome, ativa, m2a_orgao_id, m2a_dot_orgao_id, m2a_uo_id, m2a_dot_id, m2a_dotacao_default, m2a_ref_coluna, m2a_fiscal_codigo, m2a_fiscal_nome, m2a_gestor_codigo, m2a_gestor_nome",
+                )
                 .eq("id", c.secretaria_id)
                 .maybeSingle()
             : Promise.resolve({ data: null }),
