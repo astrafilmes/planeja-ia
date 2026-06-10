@@ -590,7 +590,11 @@ function Page() {
           parsed.refsIgnoradas,
         );
         toast.warning(
-          `Colunas ignoradas (não cadastradas): ${parsed.refsIgnoradas.join(", ")}`,
+          `Aviso: ${parsed.refsIgnoradas.length} coluna(s) da planilha foram ignoradas pois as secretarias/unidades não foram encontradas no cadastro.`,
+          {
+            description: `Colunas ignoradas: ${parsed.refsIgnoradas.join(", ")}`,
+            duration: 8000,
+          },
         );
       }
 
