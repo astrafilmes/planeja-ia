@@ -450,6 +450,7 @@ export async function exportarPautaConsolidadaExcel(
       });
 
       const row = ws.addRow(rowData);
+      row.height = 13;
 
       row.eachCell({ includeEmpty: true }, (cell: Cell, colNumber: number) => {
         const colConf = PAUTA_COLUMNS_CONFIG[colNumber - 1];
@@ -457,16 +458,15 @@ export async function exportarPautaConsolidadaExcel(
         cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
         cell.font = { bold: false, size: 9, color: { argb: 'FF000000' } };
 
-        // Alinhamentos
+        // Alinhamentos — sem quebra de linha em nenhuma célula de dados
         if (colNumber === 1) {
-          // Coluna A (EMPRESA) à esquerda a partir da linha 3
-          cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+          cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: false };
         } else if (colNumber === 5 || colNumber === 6) {
-          cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+          cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: false };
         } else if (colConf.isCurrency || typeof cell.value === 'number') {
-          cell.alignment = { horizontal: 'right', vertical: 'middle' };
+          cell.alignment = { horizontal: 'right', vertical: 'middle', wrapText: false };
         } else {
-          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+          cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: false };
         }
 
         // Formatos numéricos
