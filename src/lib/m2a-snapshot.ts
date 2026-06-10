@@ -1,10 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import {
-  createM2aProcessoSyncRequestId,
-  listenM2aProcessoSync,
-  postM2aProcessoSync,
-  type M2aSyncPayload,
-} from "@/lib/m2a-sync";
+import type { M2aSyncPayload } from "@/lib/m2a-sync";
 import { parseNumeroContrato } from "@/lib/numeracao-m2a";
 
 const LOG = "[m2a-sync]";
@@ -136,39 +131,3 @@ export async function persistM2ASnapshot(
   }
 }
 
-export function syncM2AProcessoOnce(
-  m2aProcessoUrl: string,
-  timeoutMs = 600_000, // 10 min: importações em lote podem demorar
-): Promise<M2aSyncPayload> {
-  return new Promise((resolve, reject) => {
-    const requestId = createM2aProcessoSyncRequestId();
-    let settled = false;
-
-    const finish = (callback: () => void) => {
-      if (settled) return;
-      settled = true;
-      off();
-      clearTimeout(timeout);
-      callback();
-    };
-
-    const off = listenM2aProcessoSync(requestId, (event) => {
-      if (event.type !== "M2A_SYNC_PROCESSO_COMPLETE") return;
-      finish(() => {
-        if (event.erro || !event.payload) {
-          reject(new Error(event.erro ?? "A extensão retornou payload vazio."));
-          return;
-        }
-        resolve(event.payload);
-      });
-    });
-
-    const timeout = setTimeout(() => {
-      finish(() =>
-        reject(new Error("Tempo esgotado aguardando a varredura do portal.")),
-      );
-    }, timeoutMs);
-
-    postM2aProcessoSync(requestId, m2aProcessoUrl);
-  });
-}

@@ -71,8 +71,9 @@ import { getNextContratoNumbers } from "@/lib/contrato-numbering";
 import { logAudit } from "@/lib/audit";
 import { Metric, ValorUnitInput } from "@/components/importar/ImportarHelpers";
 import { extractM2AProcessoId } from "@/lib/m2a";
-import { persistM2ASnapshot, syncM2AProcessoOnce } from "@/lib/m2a-snapshot";
+import { persistM2ASnapshot } from "@/lib/m2a-snapshot";
 import type { M2aSyncPayload } from "@/lib/m2a-sync";
+import { fetchProcessoFromWorker } from "@/lib/m2a-worker";
 
 export const Route = createFileRoute("/importar-contratos")({
   component: Page,
@@ -634,8 +635,34 @@ function Page() {
       toast.loading("Varrendo atas e itens do processo no portal...", {
         id: "m2a-import-sync",
       });
-      const snapshot = await syncM2AProcessoOnce(m2aUrl);
-      await persistM2ASnapshot(processoImportId, snapshot);
+      const snapshot = await (async () => {
+        const syncT0 = performance.now();
+        console.groupCollapsed("[m2a-import] Passo 4 — worker/VPS");
+        try {
+          console.log("[m2a-import] → fetchProcessoFromWorker", {
+            m2aUrl,
+            m2aProcessoId,
+          });
+          const workerSnapshot = await fetchProcessoFromWorker(m2aUrl);
+          console.log(
+            `[m2a-import] ✓ worker respondeu em ${(performance.now() - syncT0).toFixed(0)}ms`,
+            {
+              atas: workerSnapshot.atas?.length ?? 0,
+              itens: workerSnapshot.itens?.length ?? 0,
+              contratos: workerSnapshot.contratos_existentes?.length ?? 0,
+              resumo: workerSnapshot.resumo,
+            },
+          );
+          console.log("[m2a-import] → persistM2ASnapshot");
+          await persistM2ASnapshot(processoImportId, workerSnapshot);
+          console.log(
+            `[m2a-import] ✓ Passo 4 concluído em ${(performance.now() - syncT0).toFixed(0)}ms`,
+          );
+          return workerSnapshot;
+        } finally {
+          console.groupEnd();
+        }
+      })();
       toast.success(
         `Base externa sincronizada: ${snapshot.atas.length} ata(s), ${snapshot.itens.length} item(ns).`,
         { id: "m2a-import-sync" },
