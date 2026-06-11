@@ -371,7 +371,7 @@ export async function documentosRoutes(app) {
         (archive ? "documentos.zip" : documentos[0]?.nome || "documento"),
     );
 
-    const hrefMap = await buildHrefMap(documentos, app.log);
+    const hrefMap = new Map();
 
     if (!archive) {
       const doc = documentos[0];
