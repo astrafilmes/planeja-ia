@@ -9,8 +9,15 @@ import * as cheerio from "cheerio";
 import { m2a } from "../m2a-client.js";
 
 // Padrões conhecidos / palpites — usados como fallback quando o anchor real
-// não puder ser extraído da tabela de documentos do contrato.
+// não puder ser extraído da tabela de documentos do contrato. A rota
+// "configuracao" normalmente é uma página intermediária: o worker abre,
+// varre links/forms/scripts e só então baixa o arquivo final.
 const M2A_DOWNLOAD_PATH_FALLBACKS = [
+  (id) => `/contratos/documentos/configuracao/${id}/`,
+  (id) => `/contratos/documentos/gerar/${id}/`,
+  (id) => `/contratos/documentos/gerar_documento/${id}/`,
+  (id) => `/contratos/documentos/gerar_arquivo/${id}/`,
+  (id) => `/contratos/documentos/arquivo/${id}/`,
   (id) => `/contratos/documentos/baixar/${id}/`,
   (id) => `/contratos/documentos/download/${id}/`,
   (id) => `/contratos/documentos/visualizar/${id}/`,
@@ -70,13 +77,129 @@ function looksLikeBinary(r) {
   return false;
 }
 
+function decodeEntities(value) {
+  return String(value || "")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;|&#39;/g, "'");
+}
+
+function cleanPortalPath(raw) {
+  let href = decodeEntities(raw)
+    .replace(/\\n/g, "")
+    .replace(/\\r/g, "")
+    .trim()
+    .replace(/^["'`({\[\s]+|["'`)}\]\s]+$/g, "");
+  if (!href || href === "#" || /^javascript:/i.test(href)) return null;
+  try {
+    if (/^https?:\/\//i.test(href)) {
+      const u = new URL(href);
+      return `${u.pathname}${u.search || ""}`;
+    }
+  } catch {
+    return null;
+  }
+  if (!href.startsWith("/")) return null;
+  return href;
+}
+
+function scorePortalPath(path, meta = "") {
+  const hay = `${path} ${meta}`.toLowerCase();
+  let score = 1;
+  if (/baixar|download|arquivo|anexo|media|upload/.test(hay)) score += 10;
+  if (/gerar|gerar_arquivo|gerar_documento|pdf|docx|word/.test(hay)) score += 7;
+  if (/visualizar|imprimir|configuracao/.test(hay)) score += 4;
+  if (/excluir|remover|deletar|editar|atualizar_data/.test(hay)) score -= 20;
+  return score;
+}
+
+function addDownloadCandidate(into, raw, id, meta = "", method = "GET", body = null) {
+  const path = cleanPortalPath(raw);
+  if (!path) return;
+  const hay = `${path} ${meta}`;
+  if (!hay.includes(id) && !/baixar|download|arquivo|anexo|media|upload|gerar|pdf|docx|imprimir|visualizar/i.test(hay)) {
+    return;
+  }
+  const score = scorePortalPath(path, meta);
+  if (score < 0) return;
+  into.push({ method, path, body, score, meta });
+}
+
+function extractDownloadCandidatesFromHtml(html, id, currentPath = "") {
+  const $ = cheerio.load(html || "");
+  const out = [];
+  const attrs = ["href", "src", "data-url", "data-href", "data-download", "data-arquivo", "action", "formaction"];
+  $("a, button, iframe, embed, object, form, [data-url], [data-href], [onclick]").each((_, el) => {
+    const meta = [
+      $(el).attr("title"),
+      $(el).attr("data-original-title"),
+      $(el).attr("class"),
+      $(el).text(),
+      $(el).attr("onclick"),
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .replace(/\s+/g, " ")
+      .slice(0, 300);
+    for (const attr of attrs) addDownloadCandidate(out, $(el).attr(attr), id, meta);
+    const onclick = $(el).attr("onclick") || "";
+    for (const m of onclick.matchAll(/['"](\/[^'"]+)['"]/g)) {
+      addDownloadCandidate(out, m[1], id, meta);
+    }
+  });
+
+  $("form").each((_, form) => {
+    const action = $(form).attr("action") || currentPath;
+    const method = String($(form).attr("method") || "GET").toUpperCase();
+    if (method !== "POST") return;
+    const payload = new URLSearchParams();
+    $(form)
+      .find("input, select, textarea")
+      .each((__, field) => {
+        const name = $(field).attr("name");
+        if (!name) return;
+        const type = String($(field).attr("type") || "").toLowerCase();
+        if ((type === "checkbox" || type === "radio") && !$(field).is("[checked]")) return;
+        payload.set(name, $(field).attr("value") || $(field).text() || "");
+      });
+    const submits = $(form).find("button, input[type='submit'], input[type='button']").toArray();
+    const usefulSubmits = submits.filter((btn) => /baixar|download|gerar|imprimir|visualizar|arquivo|pdf|word/i.test(`${$(btn).attr("name") || ""} ${$(btn).attr("value") || ""} ${$(btn).text() || ""} ${$(btn).attr("class") || ""}`));
+    const variants = usefulSubmits.length ? usefulSubmits : [null];
+    for (const btn of variants) {
+      const body = new URLSearchParams(payload);
+      let meta = "form";
+      if (btn) {
+        const name = $(btn).attr("name");
+        const value = $(btn).attr("value") || $(btn).text() || "";
+        if (name) body.set(name, value);
+        meta = `${meta} ${name || ""} ${value}`;
+      }
+      addDownloadCandidate(out, action, id, meta, "POST", body.toString());
+    }
+  });
+
+  const raw = decodeEntities(html || "");
+  const escapedId = id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pathRe = new RegExp(`(?:https?:\\/\\/[^\\s"'()<>]+|\\/[A-Za-z0-9_./?=&%:-]*${escapedId}[A-Za-z0-9_./?=&%:-]*)`, "g");
+  for (const m of raw.matchAll(pathRe)) addDownloadCandidate(out, m[0], id, "raw-html");
+
+  const seen = new Set();
+  return out
+    .sort((a, b) => b.score - a.score)
+    .filter((c) => {
+      const key = `${c.method}:${c.path}:${c.body || ""}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
 /** Pesquisa, em um HTML, anchors cujo href referencie o id do documento. */
 function harvestHrefsForId($, id, into) {
   const re = new RegExp(`(^|[/=?&])${id}([/?&]|$)`);
   $("a[href]").each((_, a) => {
-    const href = ($(a).attr("href") || "").trim();
-    if (!href || href === "#" || href.startsWith("javascript:")) return;
-    if (!re.test(href)) return;
+    const href = cleanPortalPath($(a).attr("href"));
+    if (!href || !re.test(href)) return;
     if (/excluir|editar|atualizar|deletar/i.test(href)) return;
     const title = (
       $(a).attr("title") ||
@@ -85,10 +208,7 @@ function harvestHrefsForId($, id, into) {
       ""
     ).toLowerCase();
     const cls = ($(a).attr("class") || "").toLowerCase();
-    let score = 1;
-    if (/baixar|download|visualizar|imprimir|pdf|arquivo/i.test(href)) score += 6;
-    if (/baixar|download|visualizar|imprimir|pdf|arquivo/.test(title)) score += 3;
-    if (/baixar|download|visualizar|imprimir|pdf|arquivo/.test(cls)) score += 2;
+    let score = scorePortalPath(href, `${title} ${cls}`);
     into.push({ href, score });
   });
 }
