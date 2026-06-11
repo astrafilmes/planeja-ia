@@ -18,6 +18,7 @@ import {
   TrendingUp,
   Sparkles,
   ArrowRight,
+  BarChart3,
 } from "lucide-react";
 import { formatNumber } from "@/lib/normalize";
 import {
@@ -31,6 +32,8 @@ import {
 } from "recharts";
 import { HeroCard } from "@/components/dashboard/HeroCard";
 import { StatChip } from "@/components/dashboard/StatChip";
+import { ChartCard, ChartTooltip } from "@/components/dashboard/ChartCard";
+import { StatChipSkeleton } from "@/components/ui/loading";
 import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/dashboard")({
@@ -45,7 +48,7 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 function Dashboard() {
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["dashboard"],
     queryFn: async () => {
       const [p, c, s, j, contractsBySec] = await Promise.all([
@@ -84,6 +87,8 @@ function Dashboard() {
     },
   });
 
+  const chartData = data?.chart ?? [];
+
   return (
     <AppShell>
       <div className="flex flex-col gap-6">
@@ -109,109 +114,117 @@ function Dashboard() {
         />
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <StatChip
-            tone="indigo"
-            label="Processos ativos"
-            value={formatNumber(data?.processos ?? 0)}
-            icon={<FileText className="size-5" />}
-            hint="Total no banco"
-          />
-          <StatChip
-            tone="pink"
-            label="Contratos vigentes"
-            value={formatNumber(data?.contratos ?? 0)}
-            icon={<FileSignature className="size-5" />}
-            hint="Excluindo arquivados"
-          />
-          <StatChip
-            tone="green"
-            label="Secretarias ativas"
-            value={formatNumber(data?.secretarias ?? 0)}
-            icon={<Building2 className="size-5" />}
-          />
-          <StatChip
-            tone="amber"
-            label="Processamentos IRP"
-            value={formatNumber(data?.jobs ?? 0)}
-            icon={<FileSpreadsheet className="size-5" />}
-            hint="Histórico"
-          />
+          {isLoading ? (
+            <>
+              <StatChipSkeleton />
+              <StatChipSkeleton />
+              <StatChipSkeleton />
+              <StatChipSkeleton />
+            </>
+          ) : (
+            <>
+              <StatChip
+                tone="indigo"
+                label="Processos ativos"
+                value={formatNumber(data?.processos ?? 0)}
+                icon={<FileText className="size-5" aria-hidden="true" />}
+                hint="Total no banco"
+              />
+              <StatChip
+                tone="pink"
+                label="Contratos vigentes"
+                value={formatNumber(data?.contratos ?? 0)}
+                icon={<FileSignature className="size-5" aria-hidden="true" />}
+                hint="Excluindo arquivados"
+              />
+              <StatChip
+                tone="green"
+                label="Secretarias ativas"
+                value={formatNumber(data?.secretarias ?? 0)}
+                icon={<Building2 className="size-5" aria-hidden="true" />}
+              />
+              <StatChip
+                tone="amber"
+                label="Processamentos IRP"
+                value={formatNumber(data?.jobs ?? 0)}
+                icon={<FileSpreadsheet className="size-5" aria-hidden="true" />}
+                hint="Histórico"
+              />
+            </>
+          )}
         </div>
 
         <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
-          <Card className="overflow-hidden border-border/60 shadow-[var(--shadow-card)]">
-            <CardHeader className="flex flex-row items-start justify-between gap-4 border-b border-border/50 pb-4">
-              <div>
-                <CardTitle className="flex items-center gap-2 text-[15px]">
-                  <TrendingUp className="size-4 text-accent" /> Contratos por
-                  secretaria
-                </CardTitle>
-                <p className="mt-1 text-[12px] text-muted-foreground">
-                  Top 10 secretarias com mais contratos ativos
-                </p>
+          <ChartCard
+            title="Contratos por secretaria"
+            description="Top 10 secretarias com mais contratos ativos"
+            icon={<TrendingUp className="size-4 text-accent" aria-hidden="true" />}
+            loading={isLoading}
+            isEmpty={!isLoading && chartData.length === 0}
+            empty={
+              <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                <BarChart3 className="size-8 opacity-40" aria-hidden="true" />
+                <p className="text-[13px]">Nenhum contrato cadastrado ainda.</p>
               </div>
+            }
+            action={
               <Link
                 to="/contratos"
                 className="inline-flex items-center gap-1 rounded-full bg-accent-soft px-3 py-1.5 text-[11.5px] font-medium text-accent-strong transition-colors hover:bg-accent/15"
               >
                 Ver tudo
-                <ArrowRight className="size-3" />
+                <ArrowRight className="size-3" aria-hidden="true" />
               </Link>
-            </CardHeader>
-            <CardContent className="pt-5">
-              <div className="h-72">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={data?.chart ?? []}
-                    margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
-                  >
-                    <defs>
-                      <linearGradient id="barFill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="var(--accent)" />
-                        <stop
-                          offset="100%"
-                          stopColor="var(--accent)"
-                          stopOpacity={0.55}
-                        />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="var(--border)"
-                      vertical={false}
+            }
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={chartData}
+                margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
+              >
+                <defs>
+                  <linearGradient id="barFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--accent)" />
+                    <stop
+                      offset="100%"
+                      stopColor="var(--accent)"
+                      stopOpacity={0.45}
                     />
-                    <XAxis
-                      dataKey="sigla"
-                      tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis
-                      tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <Tooltip
-                      cursor={{ fill: "var(--muted)" }}
-                      contentStyle={{
-                        background: "var(--card)",
-                        border: "1px solid var(--border)",
-                        borderRadius: 12,
-                        fontSize: 12,
-                        boxShadow: "var(--shadow-elevated)",
-                      }}
-                    />
-                    <Bar
-                      dataKey="total"
-                      fill="url(#barFill)"
-                      radius={[8, 8, 0, 0]}
-                      maxBarSize={42}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="var(--border)"
+                  vertical={false}
+                />
+                <XAxis
+                  dataKey="sigla"
+                  tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                  tickLine={false}
+                  axisLine={false}
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  cursor={{ fill: "var(--muted)", opacity: 0.5 }}
+                  content={<ChartTooltip valueFormatter={(v) => `${v} contratos`} />}
+                />
+                <Bar
+                  dataKey="total"
+                  name="Contratos"
+                  fill="url(#barFill)"
+                  radius={[8, 8, 0, 0]}
+                  maxBarSize={42}
+                  animationDuration={650}
+                  animationEasing="ease-out"
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartCard>
 
           <Card className="border-border/60 shadow-[var(--shadow-card)]">
             <CardHeader className="pb-3">
