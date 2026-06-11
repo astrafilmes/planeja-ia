@@ -658,8 +658,7 @@ export function prepararDadosPautaConsolidada(dadosBrutos: any[]): Array<{ proce
     "0301.04.122.0021.2.012": columnMap.ADM,
     "0302.06.125.0021.2.019": columnMap.ADM_GM,
     "0101.04.124.0021.2.001": columnMap.CGM,
-    // OBS: 1101.13.122.0021.2.128 foi informado p/ CUT e SMA — mantemos SMA.
-    "1101.13.122.0021.2.128": columnMap.SMA,
+    "1101.13.122.0021.2.128": columnMap.CUT,
     "0501.20.122.0021.2.028": columnMap.DES,
     "0601.27.392.0021.2.042": columnMap.EJL,
     "9001.09.272.0100.2.136": columnMap.FPS_FUNDO,
