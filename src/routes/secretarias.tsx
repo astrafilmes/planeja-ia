@@ -509,17 +509,38 @@ function Page() {
  async function save() {
  if (!validateSecretaria(editing)) return;
 
- const payload = toSecretariaPayload(editing);
- const result = editing.id
- ? await supabase.from("secretarias").update(payload).eq("id", editing.id)
- : await supabase.from("secretarias").insert(payload);
+  const payload = toSecretariaPayload(editing);
+ let secretariaId = editing.id ?? null;
+ if (editing.id) {
+ const { error } = await supabase.from("secretarias").update(payload).eq("id", editing.id);
+ if (error) return toast.error(error.message);
+ } else {
+ const { data, error } = await supabase
+ .from("secretarias")
+ .insert(payload)
+ .select("id")
+ .single();
+ if (error) return toast.error(error.message);
+ secretariaId = data?.id ?? null;
+ }
 
- if (result.error) return toast.error(result.error.message);
+ if (secretariaId) {
+ try {
+ await syncSecretariaCpfs(secretariaId, {
+ fiscal: trimOrNull(editing.m2a_fiscal_cpf),
+ gestor: trimOrNull(editing.m2a_gestor_cpf),
+ });
+ } catch (e) {
+ toast.error("Secretaria salva, mas CPFs não foram atualizados.", {
+ description: (e as Error).message,
+ });
+ }
+ }
 
  await logAudit({
  action: editing.id ?"update" :"insert",
  entityType:"secretaria",
- entityId: editing.id ?? null,
+ entityId: secretariaId,
  payload,
  });
 
