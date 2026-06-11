@@ -307,17 +307,17 @@ export function AppShell({
   const extensionVersion = __EXT_VERSION__;
 
   const renderBrand = (compact = false) => (
-    <div className="border-b border-sidebar-border px-3 py-4">
+    <div className="px-4 pb-3 pt-5">
       <div className="flex items-center gap-2.5">
-        <div className="grid size-9 shrink-0 place-items-center rounded-md bg-sidebar-primary text-sm font-bold text-sidebar-primary-foreground">
+        <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-accent-strong to-accent text-sm font-bold text-white shadow-[0_6px_18px_-6px_rgb(108_92_231_/_0.6)]">
           P
         </div>
         {!compact && (
           <div className="min-w-0">
-            <div className="text-[15px] font-semibold tracking-tight leading-tight">
+            <div className="text-[15px] font-semibold tracking-tight leading-tight text-sidebar-foreground">
               Planejamento
             </div>
-            <div className="text-[11px] leading-tight text-sidebar-foreground/60">
+            <div className="text-[11px] leading-tight text-sidebar-foreground/55">
               Contratações Públicas
             </div>
           </div>
@@ -327,17 +327,19 @@ export function AppShell({
   );
 
   const renderUserBlock = (compact = false) => (
-    <div className="border-t border-sidebar-border px-3 py-3">
-      <div className="flex items-center gap-2.5 px-2 py-1.5">
-        <Avatar className="size-8">
-          <AvatarFallback className="bg-sidebar-primary/20 text-sidebar-primary-foreground text-xs">
+    <div className="mx-3 mb-3 mt-2 rounded-2xl border border-sidebar-border bg-sidebar-accent/30 p-2">
+      <div className="flex items-center gap-2.5">
+        <Avatar className="size-9">
+          <AvatarFallback className="bg-gradient-to-br from-accent to-accent-strong text-[11px] font-semibold text-white">
             {initials}
           </AvatarFallback>
         </Avatar>
         {!compact && (
           <div className="flex-1 min-w-0">
-            <div className="truncate text-xs font-medium">{user.email}</div>
-            <div className="text-[11px] text-sidebar-foreground/60">
+            <div className="truncate text-[12px] font-semibold text-sidebar-foreground">
+              {user.email}
+            </div>
+            <div className="text-[10.5px] uppercase tracking-wider text-sidebar-foreground/55">
               {roles[0] ?? "operador"}
             </div>
           </div>
@@ -345,7 +347,7 @@ export function AppShell({
         <Button
           variant="ghost"
           size="icon"
-          className="size-8 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+          className="size-8 text-sidebar-foreground/65 hover:bg-sidebar-accent hover:text-sidebar-foreground"
           onClick={() => signOut()}
           aria-label="Sair"
           title="Sair"
@@ -358,10 +360,10 @@ export function AppShell({
   );
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50 text-slate-950 dark:bg-[#0B0F19] dark:text-slate-50">
+    <div className="flex h-screen overflow-hidden bg-background text-foreground">
       <aside
-        className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-slate-800/60 bg-[#0B0F19] text-slate-100 transition-[width] duration-200 md:flex ${
-          sidebarCollapsed ? "w-[72px]" : "w-64"
+        className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 md:flex ${
+          sidebarCollapsed ? "w-[78px]" : "w-[260px]"
         }`}
       >
         {renderBrand(sidebarCollapsed)}
@@ -374,8 +376,8 @@ export function AppShell({
       </aside>
 
       <main className="flex h-screen min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="sticky top-0 z-20 shrink-0 border-b border-slate-200 bg-white/90 backdrop-blur dark:border-slate-800/60 dark:bg-[#0B0F19]/90">
-          <div className="flex items-center justify-between gap-3 px-4 py-3">
+        <header className="sticky top-0 z-20 shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-xl">
+          <div className="flex items-center justify-between gap-3 px-5 py-3">
             <div className="flex items-center gap-2 min-w-0">
               <Button
                 size="icon"
@@ -403,7 +405,7 @@ export function AppShell({
                 </SheetTrigger>
                 <SheetContent
                   side="left"
-                  className="flex w-72 flex-col border-slate-800/60 bg-[#0B0F19] p-0 text-slate-100"
+                  className="flex w-72 flex-col border-sidebar-border bg-sidebar p-0 text-sidebar-foreground"
                 >
                   <VisuallyHidden>
                     <SheetTitle>Menu de navegação</SheetTitle>
@@ -417,21 +419,20 @@ export function AppShell({
                   {renderUserBlock(false)}
                 </SheetContent>
               </Sheet>
-            </div>
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              
-              <ThemeToggle />
-              <Button
-                size="sm"
-                variant="outline"
-                className="hidden gap-2 sm:inline-flex"
+              <button
+                type="button"
                 onClick={() => setPaletteOpen(true)}
+                className="hidden h-9 items-center gap-2 rounded-full border border-border/70 bg-muted/60 px-3.5 text-[13px] text-muted-foreground transition-all hover:border-border hover:bg-muted hover:text-foreground sm:inline-flex"
               >
-                <Search className="size-3.5" /> Buscar
-                <kbd className="pointer-events-none ml-1 hidden h-5 select-none items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-1.5 font-mono text-[10px] font-medium text-slate-500 dark:border-slate-800/60 dark:bg-slate-900 dark:text-slate-400 md:inline-flex">
-                  CmdK
+                <Search className="size-3.5" />
+                <span>Buscar processos, contratos…</span>
+                <kbd className="ml-2 hidden h-5 select-none items-center gap-0.5 rounded-md border border-border/70 bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground md:inline-flex">
+                  ⌘K
                 </kbd>
-              </Button>
+              </button>
+            </div>
+            <div className="flex items-center justify-end gap-1.5">
+              <ThemeToggle />
               <Button
                 size="icon"
                 variant="ghost"
@@ -443,9 +444,8 @@ export function AppShell({
               </Button>
             </div>
           </div>
-          <Separator className="bg-slate-200 dark:bg-slate-800/60" />
         </header>
-        <div className="flex-1 overflow-y-auto px-4 py-6 lg:px-6">
+        <div className="flex-1 overflow-y-auto px-5 py-6 lg:px-8 lg:py-8">
           {(title || subtitle || actions) && (
             <PageHeader
               title={title ?? ""}
@@ -456,7 +456,7 @@ export function AppShell({
           )}
           {children}
         </div>
-        <footer className="shrink-0 border-t border-slate-200 bg-white px-4 py-2 text-[11px] text-slate-500 dark:border-slate-800/60 dark:bg-[#0B0F19] dark:text-slate-400">
+        <footer className="shrink-0 border-t border-border/60 bg-background/80 px-5 py-2 text-[11px] text-muted-foreground">
           <div className="flex items-center justify-end gap-3 font-mono">
             <span>SITE {siteVersion}</span>
             <span>EXTENSÃO {extensionVersion}</span>
