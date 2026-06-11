@@ -139,6 +139,13 @@ export function AgendaPanel({
           </ul>
         )}
       </div>
+
+      <ReminderDialog
+        isOpen={isReminderModalOpen}
+        onClose={() => setIsReminderModalOpen(false)}
+        date={selectedDate}
+        onSave={handleSaveReminder}
+      />
     </div>
   );
 }
