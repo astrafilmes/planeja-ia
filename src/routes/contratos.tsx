@@ -88,10 +88,9 @@ import { getNextContratoNumbers } from"@/lib/contrato-numbering";
 import { downloadCSV } from"@/lib/export";
 import { Skeleton } from"@/components/ui/skeleton";
 import {
- listenM2ABulkDownload,
- requestM2ABulkDownload,
  type M2ADocumentoGerado,
 } from"@/lib/m2a";
+import { downloadM2ADocuments } from"@/lib/m2a-documents";
 import { ContractReportGenerator } from"@/components/contratos/ContractReportGenerator";
 import { PautaConsolidadaExporter } from"@/components/contratos/PautaConsolidadaExporter";
 
