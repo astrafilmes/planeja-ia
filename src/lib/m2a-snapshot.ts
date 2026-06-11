@@ -119,6 +119,16 @@ export async function persistM2ASnapshot(
       console.warn(`${LOG} ⚠ datas de vigência não atualizadas:`, dateSyncError);
     }
 
+    const { data: ataFornData, error: ataFornError } = await (supabase.rpc as any)(
+      "sync_m2a_atas_fornecedor_from_snapshot",
+      { p_processo_id: processoId },
+    );
+    if (ataFornError) {
+      console.warn(`${LOG} ⚠ fornecedores das atas não atualizados:`, ataFornError);
+    } else {
+      console.log(`${LOG} ✓ ${ataFornData ?? 0} atas tiveram fornecedor preenchido`);
+    }
+
     const result = (data ?? {}) as Record<string, unknown>;
     const summary: M2aSyncSummary = {
       atas: Number(result.atas_upserted ?? 0),
