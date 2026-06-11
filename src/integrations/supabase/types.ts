@@ -1505,6 +1505,7 @@ export type Database = {
         }
         Returns: number
       }
+      normalize_m2a_text: { Args: { s: string }; Returns: string }
       normalize_numero_item: { Args: { s: string }; Returns: string }
       restore_soft_deleted_process: {
         Args: { p_processo_id: string }

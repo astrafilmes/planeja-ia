@@ -22,6 +22,7 @@ export interface M2aContratoExistenteSync {
 }
 
 export interface M2aSyncPayload {
+  processo_id?: string;
   atas: M2aAtaSync[];
   itens: M2aItemSync[];
   contratos_existentes: M2aContratoExistenteSync[];

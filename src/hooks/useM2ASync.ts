@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { persistM2ASnapshot } from "@/lib/m2a-snapshot";
 import { fetchProcessoFromWorker } from "@/lib/m2a-worker";
+import { extractM2AProcessoId } from "@/lib/m2a";
 
 interface UseM2aSyncOpts {
   processoId: string;
@@ -56,9 +57,12 @@ export function useM2ASync({
 
       console.log(`${LOG} → persistM2ASnapshot`);
       const summary = await persistM2ASnapshot(processoId, {
+        processo_id: payload.processo_id,
         atas: payload.atas ?? [],
         itens: payload.itens ?? [],
         contratos_existentes: payload.contratos_existentes ?? [],
+      }, {
+        expectedM2aProcessoId: extractM2AProcessoId(m2aProcessoUrl),
       });
 
       const partes: string[] = [];

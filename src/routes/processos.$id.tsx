@@ -194,6 +194,18 @@ type ProcessoAtaItem = {
  m2a_ata_id: string;
 };
 
+type ItemConsolidado = {
+ codigo: string;
+ descricao: string;
+ unidade: string | null;
+ quantidadeTotal: number | null;
+ quantidadeConsumida: number;
+ saldo: number | null;
+ valorDisponivel: number | null;
+ valorUnitario: number;
+ valorConsumido: number;
+};
+
 const BRL = new Intl.NumberFormat("pt-BR", {
  style:"currency",
  currency:"BRL",
@@ -644,9 +656,26 @@ function Page() {
  }
  }
 
+  const consumedItems = Array.from(consumedByKey.entries()).map(
+  ([codigo, item]): ItemConsolidado => ({
+  codigo,
+  descricao: item.descricao ??"Item sem descrição",
+  unidade: item.unidade ?? null,
+  quantidadeTotal: item.quantidade,
+  quantidadeConsumida: item.quantidade,
+  saldo: 0,
+  valorDisponivel: 0,
+  valorUnitario: item.valor_unitario ?? 0,
+  valorConsumido: item.quantidade * Number(item.valor_unitario ?? 0),
+  }),
+  );
+
  const ataItens = data?.ataItens ?? [];
+  const usarSnapshotPortal =
+  ataItens.length > 0 &&
+  (consumedByKey.size === 0 || ataItens.length >= consumedByKey.size * 0.8);
  const base =
- ataItens.length > 0
+  usarSnapshotPortal
  ? ataItens.map((item) => {
  const consumed = consumedByKey.get(item.m2a_item_id);
  const quantidadeConsumida = consumed?.quantidade ?? 0;
@@ -663,17 +692,7 @@ function Page() {
  valorConsumido: quantidadeConsumida * valorUnitario,
  };
  })
- : Array.from(consumedByKey.entries()).map(([codigo, item]) => ({
- codigo,
- descricao: item.descricao ??"Item sem descrição",
- unidade: item.unidade ?? null,
- quantidadeTotal: item.quantidade,
- quantidadeConsumida: item.quantidade,
- saldo: 0,
- valorDisponivel: 0,
- valorUnitario: item.valor_unitario ?? 0,
- valorConsumido: item.quantidade * Number(item.valor_unitario ?? 0),
- }));
+  : consumedItems;
 
  const q = itemSearch.trim().toLowerCase();
  if (!q) return base;

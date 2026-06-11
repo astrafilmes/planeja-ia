@@ -25,6 +25,10 @@ export interface M2aSyncSummary {
   warnings: string[];
 }
 
+export interface PersistM2ASnapshotOptions {
+  expectedM2aProcessoId?: string | null;
+}
+
 /**
  * Persiste o snapshot do portal M2A no banco local.
  *
@@ -46,16 +50,31 @@ export interface M2aSyncSummary {
 export async function persistM2ASnapshot(
   processoId: string,
   payload: M2aSyncPayload,
+  options: PersistM2ASnapshotOptions = {},
 ): Promise<M2aSyncSummary> {
   console.groupCollapsed(`${LOG} persistM2ASnapshot processo=${processoId}`);
   const tStart = performance.now();
+  const actualM2aProcessoId = String(payload.processo_id ?? "").trim();
+  const expectedM2aProcessoId = String(options.expectedM2aProcessoId ?? "").trim();
   console.log(`${LOG} payload:`, {
+    processo_id: actualM2aProcessoId || null,
+    expected_processo_id: expectedM2aProcessoId || null,
     atas: payload.atas?.length ?? 0,
     itens: payload.itens?.length ?? 0,
     contratos_existentes: payload.contratos_existentes?.length ?? 0,
   });
 
   try {
+    if (
+      actualM2aProcessoId &&
+      expectedM2aProcessoId &&
+      actualM2aProcessoId !== expectedM2aProcessoId
+    ) {
+      throw new Error(
+        `O portal retornou dados do processo M2A ${actualM2aProcessoId}, mas este cadastro está configurado para o processo ${expectedM2aProcessoId}. Sincronização cancelada para evitar itens incorretos.`,
+      );
+    }
+
     // Enriquecer contratos com sigla/ano/sequencia para a função SQL
     const contratosEnriched = (payload.contratos_existentes ?? []).map((c) => {
       const parts = parseNumeroContrato(c.numero_contrato);
@@ -68,6 +87,8 @@ export async function persistM2ASnapshot(
     });
 
     const rpcPayload = {
+      processo_id: actualM2aProcessoId || null,
+      expected_m2a_processo_id: expectedM2aProcessoId || null,
       atas: payload.atas ?? [],
       itens: payload.itens ?? [],
       contratos_existentes: contratosEnriched,
