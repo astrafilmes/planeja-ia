@@ -99,7 +99,7 @@ export function DocumentosEditor({
             detalhe:"Documento do portal",
             m2a: {
               id_m2a,
-              nome: `${contratoNumero ?? contratoId} - ${nomeDoc}`,
+              nome: `${nomeDoc} - ${contratoNumero ?? contratoId}`,
               contratoId,
               contratoNumero,
               m2aContratoId: m2aContratoId ?? undefined,
