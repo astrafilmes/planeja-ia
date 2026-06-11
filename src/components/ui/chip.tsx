@@ -11,7 +11,7 @@ const chipVariants = cva(
         neutral:
           "bg-muted text-foreground/75 hover:bg-muted/80",
         indigo:
-          "bg-[#EEEAFE] text-[#5848d6] hover:bg-[#e3ddfc] dark:bg-[#2a2256] dark:text-[#b9adff]",
+          "bg-[#DDF4F4] text-[#007879] hover:bg-[#c9eded] dark:bg-[#0e3a3b] dark:text-[#5ee2e3]",
         pink: "bg-[#FCE7F0] text-[#B83260] hover:bg-[#f9d8e5] dark:bg-[#4a1f36] dark:text-[#f7a8c8]",
         blue: "bg-[#E3F0FF] text-[#1d4ed8] hover:bg-[#d3e6ff] dark:bg-[#172a48] dark:text-[#8fb8ff]",
         green:

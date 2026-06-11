@@ -8,9 +8,9 @@ const toneMap: Record<
   { surface: string; icon: string; ring: string }
 > = {
   indigo: {
-    surface: "bg-[#EEEAFE] dark:bg-[#2a2256]",
-    icon: "text-[#6C5CE7] dark:text-[#b9adff]",
-    ring: "ring-[#6C5CE7]/15",
+    surface: "bg-[#DDF4F4] dark:bg-[#0e3a3b]",
+    icon: "text-[#00a7a8] dark:text-[#5ee2e3]",
+    ring: "ring-[#00a7a8]/20",
   },
   pink: {
     surface: "bg-[#FCE7F0] dark:bg-[#4a1f36]",

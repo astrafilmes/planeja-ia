@@ -200,7 +200,7 @@ function Login() {
         />
 
         <div className="relative flex items-center gap-3 animate-fade-in">
-          <div className="grid size-11 place-items-center rounded-xl bg-gradient-to-br from-accent-strong to-accent font-semibold text-white shadow-[0_8px_24px_-8px_rgb(108_92_231_/_0.6)]">
+          <div className="grid size-11 place-items-center rounded-xl bg-gradient-to-br from-accent-strong to-accent font-semibold text-white shadow-[0_8px_24px_-8px_rgb(0_167_168_/_0.55)]">
             P
           </div>
           <div className="leading-tight">
@@ -287,7 +287,7 @@ function Login() {
         />
 
         <div className="mb-7 flex items-center gap-2.5 lg:hidden">
-          <div className="grid size-9 place-items-center rounded-lg bg-gradient-to-br from-accent-strong to-accent text-white shadow-[0_6px_18px_-6px_rgb(108_92_231_/_0.6)]">
+          <div className="grid size-9 place-items-center rounded-lg bg-gradient-to-br from-accent-strong to-accent text-white shadow-[0_6px_18px_-6px_rgb(0_167_168_/_0.55)]">
             <Building2 className="size-4" />
           </div>
           <span className="font-semibold tracking-tight">Planejamento</span>
