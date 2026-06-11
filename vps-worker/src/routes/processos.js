@@ -532,11 +532,38 @@ function extractContratosFromDoc($, ataId) {
   return out;
 }
 
-async function fetchContratosDaAta(ata) {
+async function fetchContratosDaAta(ata, trace) {
+  const url = `/ata_registro_precos/tabela_contratos/${ata.id_ata}?page_size=1000`;
   try {
-    const $ = await fetchDoc(`/ata_registro_precos/tabela_contratos/${ata.id_ata}?page_size=1000`);
-    return extractContratosFromDoc($, ata.id_ata);
-  } catch {
+    const doc = await fetchDocDetailed(url);
+    const contratos = extractContratosFromDoc(doc.$, ata.id_ata);
+    traceStep(trace, {
+      fase: "contratos",
+      label: "contratos da ata",
+      id_ata: ata.id_ata,
+      numero_ata: ata.numero_ata,
+      url,
+      status: doc.status,
+      finalUrl: doc.finalUrl,
+      bytes: doc.bytes,
+      decodedBytes: doc.decodedBytes,
+      encontrados: { contratos: contratos.length },
+      amostra: contratos.slice(0, 5).map((contrato) => ({
+        numero_contrato: contrato.numero_contrato,
+        id_contrato_m2a: contrato.id_contrato_m2a,
+        secretaria_nome: contrato.secretaria_nome,
+      })),
+    });
+    return contratos;
+  } catch (err) {
+    traceStep(trace, {
+      fase: "contratos",
+      label: "contratos da ata",
+      id_ata: ata.id_ata,
+      numero_ata: ata.numero_ata,
+      url,
+      erro: String(err?.message ?? err),
+    });
     return [];
   }
 }
