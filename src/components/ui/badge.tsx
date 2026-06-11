@@ -4,29 +4,36 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1",
   {
     variants: {
       variant: {
         default:
           "border-primary/20 bg-primary/10 text-primary hover:bg-primary/15",
         secondary:
-          "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800",
+          "border-border/60 bg-muted text-muted-foreground hover:bg-muted/80",
         destructive:
-          "border-red-200 bg-red-50 text-red-600 hover:bg-red-100 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/15",
-        outline:
-          "border-slate-200 bg-transparent text-slate-600 dark:border-slate-800 dark:text-slate-400",
+          "border-transparent bg-[#FEE2E2] text-[#B91C1C] hover:bg-[#FECACA] dark:bg-[#3a1414] dark:text-[#fca5a5]",
+        outline: "border-border bg-transparent text-muted-foreground",
+        // Pastel tonal presets
+        indigo:
+          "border-transparent bg-[#EEEAFE] text-[#5848d6] dark:bg-[#2a2256] dark:text-[#b9adff]",
+        pink: "border-transparent bg-[#FCE7F0] text-[#B83260] dark:bg-[#4a1f36] dark:text-[#f7a8c8]",
+        blue: "border-transparent bg-[#E3F0FF] text-[#1d4ed8] dark:bg-[#172a48] dark:text-[#8fb8ff]",
+        green:
+          "border-transparent bg-[#DCF6E6] text-[#0F8a3d] dark:bg-[#0f3b2a] dark:text-[#7be0a4]",
+        amber:
+          "border-transparent bg-[#FFF1D6] text-[#B45309] dark:bg-[#3d2f10] dark:text-[#f7c277]",
+        slate:
+          "border-transparent bg-slate-100 text-slate-600 dark:bg-slate-800/70 dark:text-slate-300",
       },
     },
-    defaultVariants: {
-      variant: "default",
-    },
+    defaultVariants: { variant: "default" },
   },
 );
 
 export interface BadgeProps
-  extends
-    React.HTMLAttributes<HTMLDivElement>,
+  extends React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof badgeVariants> {}
 
 function Badge({ className, variant, ...props }: BadgeProps) {
