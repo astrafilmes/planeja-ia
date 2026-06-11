@@ -71,7 +71,7 @@ export function WorkflowGuide({
  </div>
  </div>
 
- <div className="grid gap-2 md:grid-cols-2 xl:min-w-[720px] xl:grid-cols-4">
+ <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
  {steps.map((step, index) => {
  const Icon = step.icon ?? FileText;
  const isActive = step.state ==="active";
