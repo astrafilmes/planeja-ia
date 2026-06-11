@@ -65,8 +65,10 @@ import {
  FileUp,
  RefreshCw,
  Settings2,
- Info,
- Send as SendIcon,
+  Info,
+  Printer,
+  Megaphone,
+  Send as SendIcon,
 } from"lucide-react";
 import { toast } from"sonner";
 import { logAudit } from"@/lib/audit";
@@ -167,9 +169,11 @@ type ContratoRow = {
  ultimo_erro_m2a: string | null;
  m2a_contrato_id: string | null;
  m2a_documentos_gerados: unknown;
- enviado_m2a_em: string | null;
- valor_total: number;
- itens: ContratoItemM2A[];
+  enviado_m2a_em: string | null;
+  impresso_assinado: boolean;
+  publicado: boolean;
+  valor_total: number;
+  itens: ContratoItemM2A[];
 };
 
 type ContratoItemM2A = {
@@ -202,8 +206,9 @@ type ItemConsolidado = {
  quantidadeConsumida: number;
  saldo: number | null;
  valorDisponivel: number | null;
- valorUnitario: number;
- valorConsumido: number;
+  valorUnitario: number;
+  valorUnitarioContratado: number;
+  valorConsumido: number;
 };
 
 const BRL = new Intl.NumberFormat("pt-BR", {
@@ -340,7 +345,7 @@ function Page() {
  .maybeSingle(),
  supabase
  .from("contratos")
- .select("id, numero_contrato, dotacao, secretaria_sigla, secretaria_id, preposto, objeto, status, data, data_texto_legado, status_envio_m2a, ultimo_erro_m2a, m2a_contrato_id, m2a_documentos_gerados, m2a_ata_id, m2a_ata_numero, fornecedor_nome, enviado_m2a_em, secretarias:secretaria_id(sigla, nome, m2a_orgao_id, m2a_dot_orgao_id, m2a_uo_id, m2a_dot_id, m2a_fiscal_codigo, m2a_fiscal_nome, m2a_gestor_codigo, m2a_gestor_nome)",
+ .select("id, numero_contrato, dotacao, secretaria_sigla, secretaria_id, preposto, objeto, status, data, data_texto_legado, status_envio_m2a, ultimo_erro_m2a, m2a_contrato_id, m2a_documentos_gerados, m2a_ata_id, m2a_ata_numero, fornecedor_nome, enviado_m2a_em, impresso_assinado, publicado, secretarias:secretaria_id(sigla, nome, m2a_orgao_id, m2a_dot_orgao_id, m2a_uo_id, m2a_dot_id, m2a_fiscal_codigo, m2a_fiscal_nome, m2a_gestor_codigo, m2a_gestor_nome)",
  )
  .eq("processo_id", id)
  .is("deleted_at", null)
@@ -442,9 +447,11 @@ function Page() {
  ultimo_erro_m2a: c.ultimo_erro_m2a,
  m2a_contrato_id: c.m2a_contrato_id,
  m2a_documentos_gerados: c.m2a_documentos_gerados,
- enviado_m2a_em: c.enviado_m2a_em,
- valor_total: valorByContrato[c.id] ?? 0,
- itens: itensByContrato[c.id] ?? [],
+          enviado_m2a_em: c.enviado_m2a_em,
+          impresso_assinado: !!c.impresso_assinado,
+          publicado: !!c.publicado,
+          valor_total: valorByContrato[c.id] ?? 0,
+          itens: itensByContrato[c.id] ?? [],
  }));
  return {
  processo: proc.data as Processo | null,
@@ -684,43 +691,46 @@ function Page() {
  }
  }
 
-  const consumedItems = Array.from(consumedByKey.entries()).map(
-  ([codigo, item]): ItemConsolidado => ({
-  codigo,
-  descricao: item.descricao ??"Item sem descrição",
-  unidade: item.unidade ?? null,
-  quantidadeTotal: item.quantidade,
-  quantidadeConsumida: item.quantidade,
-  saldo: 0,
-  valorDisponivel: 0,
-  valorUnitario: item.valor_unitario ?? 0,
-  valorConsumido: item.quantidade * Number(item.valor_unitario ?? 0),
-  }),
-  );
+    const consumedItems = Array.from(consumedByKey.entries()).map(
+      ([codigo, item]): ItemConsolidado => ({
+        codigo,
+        descricao: item.descricao ??"Item sem descrição",
+        unidade: item.unidade ?? null,
+        quantidadeTotal: item.quantidade,
+        quantidadeConsumida: item.quantidade,
+        saldo: 0,
+        valorDisponivel: 0,
+        valorUnitario: item.valor_unitario ?? 0,
+        valorUnitarioContratado: item.valor_unitario ?? 0,
+        valorConsumido: item.quantidade * Number(item.valor_unitario ?? 0),
+      }),
+    );
 
- const ataItens = data?.ataItens ?? [];
-  const usarSnapshotPortal =
-  ataItens.length > 0 &&
-  (consumedByKey.size === 0 || ataItens.length >= consumedByKey.size * 0.8);
- const base =
-  usarSnapshotPortal
- ? ataItens.map((item) => {
- const consumed = consumedByKey.get(item.m2a_item_id);
- const quantidadeConsumida = consumed?.quantidade ?? 0;
- const valorUnitario = Number(item.valor_unitario ?? 0);
- return {
- codigo: item.codigo,
- descricao: item.descricao,
- unidade: item.unidade,
- quantidadeTotal: null as number | null,
- quantidadeConsumida,
- saldo: null as number | null,
- valorDisponivel: null as number | null,
- valorUnitario,
- valorConsumido: quantidadeConsumida * valorUnitario,
- };
- })
-  : consumedItems;
+   const ataItens = data?.ataItens ?? [];
+    const usarSnapshotPortal =
+      ataItens.length > 0 &&
+      (consumedByKey.size === 0 || ataItens.length >= consumedByKey.size * 0.8);
+   const base =
+      usarSnapshotPortal
+        ? ataItens.map((item) => {
+            const consumed = consumedByKey.get(item.m2a_item_id);
+            const quantidadeConsumida = consumed?.quantidade ?? 0;
+            const valorUnitario = Number(item.valor_unitario ?? 0);
+            const valorUnitarioContratado = Number(consumed?.valor_unitario ?? 0) || valorUnitario;
+            return {
+              codigo: item.codigo,
+              descricao: item.descricao,
+              unidade: item.unidade,
+              quantidadeTotal: null as number | null,
+              quantidadeConsumida,
+              saldo: null as number | null,
+              valorDisponivel: null as number | null,
+              valorUnitario,
+              valorUnitarioContratado,
+              valorConsumido: quantidadeConsumida * valorUnitarioContratado,
+            };
+          })
+        : consumedItems;
 
  const sortedBase = [...base].sort((a, b) =>
   compareStrictItemOrder(a, b, (item) => item.codigo),
@@ -788,9 +798,36 @@ function Page() {
  toast.success("Processo excluído");
  qc.invalidateQueries({ queryKey: ["processos"] });
  navigate({ to:"/processos" });
- }
+  }
 
- const deleteContratos = useMutation({
+  async function toggleImpresso(c: ContratoRow) {
+    const next = !c.impresso_assinado;
+    const { error } = await supabase
+      .from("contratos")
+      .update({ impresso_assinado: next })
+      .eq("id", c.id);
+    if (error) return toast.error(error.message);
+    toast.success(next ?"Marcado como impresso/assinado" :"Desmarcado");
+    qc.invalidateQueries({ queryKey: ["processo-detail", id] });
+    qc.invalidateQueries({ queryKey: ["contratos"] });
+  }
+
+  async function togglePublicado(c: ContratoRow) {
+    const next = !c.publicado;
+    const { error } = await supabase
+      .from("contratos")
+      .update({
+        publicado: next,
+        publicado_at: next ? new Date().toISOString() : null,
+      })
+      .eq("id", c.id);
+    if (error) return toast.error(error.message);
+    toast.success(next ?"Marcado como publicado" :"Desmarcado");
+    qc.invalidateQueries({ queryKey: ["processo-detail", id] });
+    qc.invalidateQueries({ queryKey: ["contratos"] });
+  }
+
+  const deleteContratos = useMutation({
  mutationFn: async (ids: string[]) => {
  const { error } = await supabase
  .from("contratos")
@@ -1138,13 +1175,28 @@ function Page() {
  title={`Processo ${p.numero_processo ??"sem número"}`}
  subtitle={p.objeto}
  onBack={() => window.history.back()}
- secondaryActions={
- <>
- <PautaConsolidadaExporter 
- processoIds={[id]} 
- variant="outline" 
- size="sm" 
- />
+          secondaryActions={
+            <>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={isSyncing || !form.m2a_url}
+                onClick={() => syncM2A()}
+                title="Sincronizar dados do processo com o M2A"
+              >
+                {isSyncing ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="size-4" />
+                )}
+                Sincronizar M2A
+              </Button>
+              <PautaConsolidadaExporter 
+                processoIds={[id]} 
+                variant="outline" 
+                size="sm" 
+              />
  {objetoLongo && (
  <Dialog>
  <DialogTrigger asChild>
@@ -1276,31 +1328,14 @@ function Page() {
  onChange={(e) => update("data_abertura", e.target.value)}
  />
  </div>
- <div className="flex flex-col gap-2">
- <Label>URL do processo no portal</Label>
- <div className="flex gap-2">
- <Input
- className="font-mono text-xs"
- value={form.m2a_url ??""}
- onChange={(e) => update("m2a_url", e.target.value)}
- placeholder="http://.../processo_administrativo/36002/"
- />
- <Button
- type="button"
- size="icon"
- variant="outline"
- disabled={isSyncing || !form.m2a_url}
- onClick={() => syncM2A()}
- title="Sincronizar dados do portal"
- >
- {isSyncing ? (
- <Loader2 className="size-4 animate-spin" />
- ) : (
- <RefreshCw className="size-4" />
- )}
- </Button>
- </div>
- </div>
+                <div className="flex flex-col gap-2">
+                  <Label>URL do processo no portal</Label>
+                  <Input
+                    value={form.m2a_url ??""}
+                    onChange={(e) => update("m2a_url", e.target.value)}
+                    placeholder="http://.../processo_administrativo/36002/"
+                  />
+                </div>
  <div className="flex flex-col gap-2 md:col-span-2">
  <Label>Observações</Label>
  <Textarea
@@ -1326,14 +1361,6 @@ function Page() {
  icon={<Info className="size-4" />}
  >
  <div className="flex flex-col gap-4 text-sm">
- <div className="flex flex-col gap-1">
- <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
- Código externo
- </p>
- <p className="font-mono text-xs">
- {p.m2a_processo_id ??"Pendente"}
- </p>
- </div>
  <div className="flex flex-col gap-1">
  <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
  Última sincronização
@@ -1463,13 +1490,14 @@ function Page() {
   <TableHead className="w-32">Início vigência</TableHead>
  <TableHead className="w-72">Empresa</TableHead>
  <TableHead>Objeto</TableHead>
- <TableHead className="text-right">Valor</TableHead>
- <TableHead>Status</TableHead>
- <TableHead className="text-right pr-4 w-32">
- Ações
- </TableHead>
- </TableRow>
- </TableHeader>
+                       <TableHead className="w-[1%] whitespace-nowrap text-right">Valor</TableHead>
+                       <TableHead className="w-[1%] whitespace-nowrap">Status</TableHead>
+                       <TableHead className="w-[1%] whitespace-nowrap text-center">Marcadores</TableHead>
+                       <TableHead className="text-right pr-4 w-32">
+                         Ações
+                       </TableHead>
+                     </TableRow>
+                   </TableHeader>
  <TableBody>
  {contratos.map((c) => {
  const effectiveStatus =
@@ -1517,12 +1545,34 @@ function Page() {
  {c.objeto}
  </div>
  </TableCell>
- <TableCell className="py-2 text-right tabular-nums font-medium">
- {BRL.format(c.valor_total)}
- </TableCell>
- <TableCell className="py-2">
- <M2AStatusBadge status={effectiveStatus} />
- </TableCell>
+                          <TableCell className="py-2 text-right tabular-nums font-medium whitespace-nowrap">
+                            {BRL.format(c.valor_total)}
+                          </TableCell>
+                          <TableCell className="py-2 whitespace-nowrap">
+                            <M2AStatusBadge status={effectiveStatus} />
+                          </TableCell>
+                          <TableCell className="py-2 whitespace-nowrap text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className={`size-7 ${c.impresso_assinado ?"text-emerald-600 hover:text-emerald-700" :"text-muted-foreground/50 hover:text-foreground"}`}
+                                title={c.impresso_assinado ?"Impresso/Assinado — clique para desmarcar" :"Marcar como impresso/assinado"}
+                                onClick={() => toggleImpresso(c)}
+                              >
+                                <Printer className="size-4" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className={`size-7 ${c.publicado ?"text-emerald-600 hover:text-emerald-700" :"text-muted-foreground/50 hover:text-foreground"}`}
+                                title={c.publicado ?"Publicado — clique para desmarcar" :"Marcar como publicado"}
+                                onClick={() => togglePublicado(c)}
+                              >
+                                <Megaphone className="size-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
  <TableCell className="py-2 text-right pr-4">
  <div className="flex justify-end gap-1">
  <Button
@@ -1580,7 +1630,7 @@ function Page() {
  )}
  </TableCell>
  <TableCell
- colSpan={2}
+ colSpan={3}
  className="py-2 pr-4 text-right text-[13px] text-muted-foreground"
  >
  {selectionStats.count > 0
@@ -1602,10 +1652,10 @@ function Page() {
  <div className="flex flex-wrap items-center gap-3">
  <div className="min-w-0 flex-1">
  <CardTitle>Itens consolidados</CardTitle>
- <p className="mt-1 text-[13px] text-muted-foreground">
- Itens importados e consumidos pelos contratos deste
- processo.
- </p>
+                  <p className="mt-1 text-[13px] text-muted-foreground">
+                    Itens importados da ata e quantidades contratadas neste
+                    processo.
+                  </p>
  </div>
  <div className="flex-1" />
  <div className="relative w-full sm:w-80">
@@ -1622,80 +1672,63 @@ function Page() {
  <CardContent className="p-0">
  <Table>
  <TableHeader>
- <TableRow>
- <TableHead className="w-24">Código</TableHead>
- <TableHead>Descrição</TableHead>
- <TableHead className="w-24">Unidade</TableHead>
- <TableHead className="w-32 text-right">
- Valor unit.
- </TableHead>
- <TableHead className="w-32 text-right">
- Qtd. total
- </TableHead>
- <TableHead className="w-36 text-right">Consumida</TableHead>
- <TableHead className="w-40 text-right">
- Valor consumido
- </TableHead>
- <TableHead className="w-40 text-right">
- Saldo restante
- </TableHead>
- </TableRow>
- </TableHeader>
- <TableBody>
- {itensConsolidados.length === 0 ? (
- <TableRow>
- <TableCell colSpan={8}>
- <EmptyState
- icon={FileText}
- title="Nenhum item encontrado"
- description={
- itemSearch
- ?"Ajuste a busca para localizar outros itens."
- :"Os itens importados da ata aparecerão aqui."
- }
- />
- </TableCell>
- </TableRow>
- ) : (
- itensConsolidados.map((item) => (
- <TableRow key={`${item.codigo}-${item.descricao}`}>
- <TableCell className="font-mono text-xs">
- {item.codigo}
- </TableCell>
- <TableCell className="min-w-0">
- <div className="line-clamp-2 text-sm font-medium text-foreground">
- {item.descricao}
- </div>
- </TableCell>
- <TableCell className="text-xs">
- {item.unidade ??"—"}
- </TableCell>
- <TableCell className="text-right font-mono text-xs">
- {BRL.format(item.valorUnitario ?? 0)}
- </TableCell>
- <TableCell className="text-right font-mono text-xs">
- {formatQuantidade(item.quantidadeTotal)}
- </TableCell>
- <TableCell className="text-right font-mono text-xs">
- {formatQuantidade(item.quantidadeConsumida)}
- </TableCell>
- <TableCell className="text-right font-mono text-xs font-medium">
- {BRL.format(item.valorConsumido ?? 0)}
- </TableCell>
- <TableCell className="text-right">
- <div className="font-mono text-xs">
- {formatQuantidade(item.saldo)}
- </div>
- <div className="text-[13px] text-muted-foreground">
- {item.valorDisponivel === null
- ?"Valor indisponível"
- : BRL.format(item.valorDisponivel)}
- </div>
- </TableCell>
- </TableRow>
- ))
- )}
- </TableBody>
+              <TableRow>
+                <TableHead className="w-24">Código</TableHead>
+                <TableHead>Descrição</TableHead>
+                <TableHead className="w-24">Unidade</TableHead>
+                <TableHead className="w-28 text-right">
+                  Quantidade
+                </TableHead>
+                <TableHead className="w-40 text-right">
+                  Valor unit. inicial
+                </TableHead>
+                <TableHead className="w-40 text-right">
+                  Valor contratado
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {itensConsolidados.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6}>
+                    <EmptyState
+                      icon={FileText}
+                      title="Nenhum item encontrado"
+                      description={
+                        itemSearch
+                          ?"Ajuste a busca para localizar outros itens."
+                          :"Os itens importados da ata aparecerão aqui."
+                      }
+                    />
+                  </TableCell>
+                </TableRow>
+              ) : (
+                itensConsolidados.map((item) => (
+                  <TableRow key={`${item.codigo}-${item.descricao}`}>
+                    <TableCell className="text-xs">
+                      {item.codigo}
+                    </TableCell>
+                    <TableCell className="min-w-0">
+                      <div className="line-clamp-2 text-sm font-medium text-foreground">
+                        {item.descricao}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      {item.unidade ??"—"}
+                    </TableCell>
+                    <TableCell className="text-right text-xs">
+                      {formatQuantidade(item.quantidadeConsumida)}
+                    </TableCell>
+                    <TableCell className="text-right text-xs">
+                      {BRL.format(item.valorUnitario ?? 0)}
+                    </TableCell>
+                    <TableCell className="text-right text-xs font-medium">
+                      {BRL.format(item.valorUnitarioContratado ?? 0)}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
  </Table>
  </CardContent>
  </Card>
