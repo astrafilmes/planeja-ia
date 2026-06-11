@@ -78,7 +78,7 @@
   --secondary: oklch(0.96 0.008 240);
   --secondary-foreground: oklch(0.25 0.03 240);
   --muted: oklch(0.965 0.006 240);
-  --muted-foreground: oklch(0.52 0.025 240);
+  --muted-foreground: oklch(0.46 0.025 240);
   --accent: oklch(0.6 0.18 285);
   --accent-foreground: oklch(0.99 0 0);
   --accent-soft: oklch(0.95 0.04 285);
@@ -125,7 +125,7 @@
   --secondary: oklch(0.24 0.03 240);
   --secondary-foreground: oklch(0.96 0.008 240);
   --muted: oklch(0.22 0.025 240);
-  --muted-foreground: oklch(0.7 0.025 240);
+  --muted-foreground: oklch(0.76 0.025 240);
   --accent: oklch(0.7 0.17 285);
   --accent-foreground: oklch(0.99 0 0);
   --accent-soft: oklch(0.32 0.12 285);
@@ -179,6 +179,26 @@
   h4,
   h5 {
     letter-spacing: -0.01em;
+  }
+  /* WCAG: keyboard focus ring — visible on every interactive element */
+  :where(a, button, [role="button"], input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  /* Respect reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+  /* Selection color */
+  ::selection {
+    background: color-mix(in oklch, var(--color-accent) 30%, transparent);
+    color: var(--color-foreground);
   }
 }
 
