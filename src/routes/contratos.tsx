@@ -405,6 +405,34 @@ function Page() {
  qc.invalidateQueries({ queryKey: ["contratos"] });
  }
 
+ async function handleTogglePublicado(c: any) {
+ setTogglingPub(c.id);
+ try {
+ const isPub = !!c.publicado_at;
+ const { data: userData } = await supabase.auth.getUser();
+ const uid = userData.user?.id ?? null;
+ const { error } = await supabase
+ .from("contratos")
+ .update(
+ isPub
+ ? { publicado_at: null, publicado_por: null }
+ : { publicado_at: new Date().toISOString(), publicado_por: uid },
+ )
+ .eq("id", c.id);
+ if (error) return toast.error(error.message);
+ await logAudit({
+ action: isPub ?"update" :"update",
+ entityType:"contrato",
+ entityId: c.id,
+ metadata: { publicado: !isPub },
+ });
+ toast.success(isPub ?"Marcado como não publicado" :"Marcado como publicado");
+ qc.invalidateQueries({ queryKey: ["contratos"] });
+ } finally {
+ setTogglingPub(null);
+ }
+ }
+
  async function handleBulkDelete() {
  const ids = Array.from(selected);
  if (!ids.length) return;
