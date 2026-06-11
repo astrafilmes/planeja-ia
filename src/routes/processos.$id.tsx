@@ -1263,6 +1263,12 @@ function Page() {
  </div>
  </FormSection>
 
+ <div className="flex flex-col gap-4">
+ <SectionNav
+ sections={SECTIONS}
+ activeId={activeSection}
+ className="!block w-full lg:!block"
+ />
  <FormSection
  id="metadados"
  title="Metadados"
