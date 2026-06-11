@@ -1616,80 +1616,63 @@ function Page() {
  <CardContent className="p-0">
  <Table>
  <TableHeader>
- <TableRow>
- <TableHead className="w-24">Código</TableHead>
- <TableHead>Descrição</TableHead>
- <TableHead className="w-24">Unidade</TableHead>
- <TableHead className="w-32 text-right">
- Valor unit.
- </TableHead>
- <TableHead className="w-32 text-right">
- Qtd. total
- </TableHead>
- <TableHead className="w-36 text-right">Consumida</TableHead>
- <TableHead className="w-40 text-right">
- Valor consumido
- </TableHead>
- <TableHead className="w-40 text-right">
- Saldo restante
- </TableHead>
- </TableRow>
- </TableHeader>
- <TableBody>
- {itensConsolidados.length === 0 ? (
- <TableRow>
- <TableCell colSpan={8}>
- <EmptyState
- icon={FileText}
- title="Nenhum item encontrado"
- description={
- itemSearch
- ?"Ajuste a busca para localizar outros itens."
- :"Os itens importados da ata aparecerão aqui."
- }
- />
- </TableCell>
- </TableRow>
- ) : (
- itensConsolidados.map((item) => (
- <TableRow key={`${item.codigo}-${item.descricao}`}>
- <TableCell className="font-mono text-xs">
- {item.codigo}
- </TableCell>
- <TableCell className="min-w-0">
- <div className="line-clamp-2 text-sm font-medium text-foreground">
- {item.descricao}
- </div>
- </TableCell>
- <TableCell className="text-xs">
- {item.unidade ??"—"}
- </TableCell>
- <TableCell className="text-right font-mono text-xs">
- {BRL.format(item.valorUnitario ?? 0)}
- </TableCell>
- <TableCell className="text-right font-mono text-xs">
- {formatQuantidade(item.quantidadeTotal)}
- </TableCell>
- <TableCell className="text-right font-mono text-xs">
- {formatQuantidade(item.quantidadeConsumida)}
- </TableCell>
- <TableCell className="text-right font-mono text-xs font-medium">
- {BRL.format(item.valorConsumido ?? 0)}
- </TableCell>
- <TableCell className="text-right">
- <div className="font-mono text-xs">
- {formatQuantidade(item.saldo)}
- </div>
- <div className="text-[13px] text-muted-foreground">
- {item.valorDisponivel === null
- ?"Valor indisponível"
- : BRL.format(item.valorDisponivel)}
- </div>
- </TableCell>
- </TableRow>
- ))
- )}
- </TableBody>
+              <TableRow>
+                <TableHead className="w-24">Código</TableHead>
+                <TableHead>Descrição</TableHead>
+                <TableHead className="w-24">Unidade</TableHead>
+                <TableHead className="w-28 text-right">
+                  Quantidade
+                </TableHead>
+                <TableHead className="w-40 text-right">
+                  Valor unit. inicial
+                </TableHead>
+                <TableHead className="w-40 text-right">
+                  Valor contratado
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {itensConsolidados.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6}>
+                    <EmptyState
+                      icon={FileText}
+                      title="Nenhum item encontrado"
+                      description={
+                        itemSearch
+                          ?"Ajuste a busca para localizar outros itens."
+                          :"Os itens importados da ata aparecerão aqui."
+                      }
+                    />
+                  </TableCell>
+                </TableRow>
+              ) : (
+                itensConsolidados.map((item) => (
+                  <TableRow key={`${item.codigo}-${item.descricao}`}>
+                    <TableCell className="text-xs">
+                      {item.codigo}
+                    </TableCell>
+                    <TableCell className="min-w-0">
+                      <div className="line-clamp-2 text-sm font-medium text-foreground">
+                        {item.descricao}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      {item.unidade ??"—"}
+                    </TableCell>
+                    <TableCell className="text-right text-xs">
+                      {formatQuantidade(item.quantidadeConsumida)}
+                    </TableCell>
+                    <TableCell className="text-right text-xs">
+                      {BRL.format(item.valorUnitario ?? 0)}
+                    </TableCell>
+                    <TableCell className="text-right text-xs font-medium">
+                      {BRL.format(item.valorUnitarioContratado ?? 0)}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
  </Table>
  </CardContent>
  </Card>
