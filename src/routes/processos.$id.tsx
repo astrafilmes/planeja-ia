@@ -7,7 +7,7 @@ import { PageHeader } from"@/components/layout/PageHeader";
 import { WorkflowGuide } from"@/components/layout/WorkflowGuide";
 import { EmptyState } from"@/components/layout/EmptyState";
 import { FormSection } from"@/components/layout/FormSection";
-import { StickyActionBar } from"@/components/layout/StickyActionBar";
+import { StickyActionBar, SectionNav } from"@/components/layout/StickyActionBar";
 import { useProgress } from"@/contexts/ProgressContext";
 import { supabase } from"@/integrations/supabase/client";
 import { Button } from"@/components/ui/button";
