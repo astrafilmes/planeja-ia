@@ -653,75 +653,49 @@ function Page() {
  className="mb-3"
  >
  <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-x-4 gap-y-3 text-xs md:grid-cols-[repeat(4,minmax(0,1fr))] lg:grid-cols-[repeat(6,minmax(0,1fr))]">
- <Field label="Nº contrato" mono>
- {c.numero_contrato}
- </Field>
- <Field label="Secretaria">
- {c.secretaria_sigla} — {c.secretaria_nome}
- </Field>
- <Field label="Início vigência">{contratoDataLabel}</Field>
- <Field label="Preposto">{c.preposto}</Field>
- <Field label="Fiscal">{c.fiscal}</Field>
- <Field label="Link / código" mono>
- {c.link_contrato}
- </Field>
- <Field label="Dotação" mono>
- {c.dotacao ??"—"}
- </Field>
- <Field label="Ata" mono>
- {c.m2a_ata_numero ?? c.m2a_ata_id ??"—"}
- </Field>
- <Field label="Código externo" mono>
- {c.m2a_contrato_id ??"—"}
- </Field>
- <div className="col-span-2 min-w-0 rounded-xl border border-border/60 bg-muted/40 p-3 dark:bg-muted/30 md:col-span-4 lg:col-span-6">
- <div className="grid gap-3 md:grid-cols-[minmax(180px,240px)_minmax(260px,1fr)_auto] md:items-end">
- <div className="flex min-w-0 flex-col gap-1.5">
- <Label>Nº do contrato</Label>
- <Input
- className="font-mono text-[13px]"
- value={editNumeroContrato}
- onChange={(event) =>
- setEditNumeroContrato(event.target.value)
- }
- />
- </div>
- <div className="flex min-w-0 flex-col gap-1.5">
- <Label>Ata correta para este contrato</Label>
- <Select value={editAtaId} onValueChange={setEditAtaId}>
- <SelectTrigger className="min-w-0">
- <SelectValue placeholder="Selecione a ata" />
- </SelectTrigger>
- <SelectContent>
- {contrato.m2aAtas.map((ata: any) => (
- <SelectItem key={ata.m2a_ata_id} value={ata.m2a_ata_id}>
- {ata.numero_ata ?? `Ata ${ata.m2a_ata_id}`} ·{""}
- {ata.fornecedor_nome ??"Fornecedor sem nome"} · #
- {ata.m2a_ata_id}
- </SelectItem>
- ))}
- </SelectContent>
- </Select>
- </div>
- <Button
- size="sm"
- className="w-full md:w-auto"
- onClick={handleSalvarContratoM2AConfig}
- disabled={salvandoM2AConfig || contrato.m2aAtas.length === 0}
- >
- {salvandoM2AConfig ? (
- <Loader2 className="size-3.5 animate-spin" />
- ) : (
- <Save className="size-3.5" />
- )}
- Salvar ajuste
- </Button>
- </div>
- <p className="mt-2 text-[13px] text-muted-foreground">
- A automação usa esta ata gravada no contrato. Não há fallback
- para a primeira ata do processo.
- </p>
- </div>
+          <Field label="Nº contrato" mono>
+           {c.numero_contrato}
+          </Field>
+          <Field label="Início vigência">{contratoDataLabel}</Field>
+          <Field label="Preposto">{c.preposto}</Field>
+          <Field label="Fiscal">{c.fiscal}</Field>
+          <Field label="Ata" mono>
+           {c.m2a_ata_numero ?? c.m2a_ata_id ??"—"}
+          </Field>
+          <div className="col-span-2 min-w-0 rounded-xl border border-border/60 bg-muted/40 p-3 dark:bg-muted/30 md:col-span-4 lg:col-span-6">
+            <div className="grid gap-3 md:grid-cols-[minmax(260px,1fr)_auto] md:items-end">
+              <div className="flex min-w-0 flex-col gap-1.5">
+                <Label>Ata correta para este contrato</Label>
+                <Select value={editAtaId} onValueChange={setEditAtaId}>
+                  <SelectTrigger className="min-w-0">
+                    <SelectValue placeholder="Selecione a ata" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {contrato.m2aAtas.map((ata: any) => (
+                      <SelectItem key={ata.m2a_ata_id} value={ata.m2a_ata_id}>
+                        {ata.numero_ata ?? `Ata ${ata.m2a_ata_id}`} ·{""}
+                        {ata.fornecedor_nome ??"Fornecedor sem nome"} · #
+                        {ata.m2a_ata_id}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                size="sm"
+                className="w-full md:w-auto"
+                onClick={handleSalvarContratoM2AConfig}
+                disabled={salvandoM2AConfig || contrato.m2aAtas.length === 0}
+              >
+                {salvandoM2AConfig ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <Save className="size-3.5" />
+                )}
+               Salvar ajuste
+              </Button>
+            </div>
+          </div>
  <div className="col-span-2 md:col-span-4 lg:col-span-6">
  <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
  Objeto
