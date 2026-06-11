@@ -48,7 +48,29 @@ import {
  Loader2,
  Clock,
  Save,
+ Pencil,
+ Trash2,
 } from"lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import {
  ETAPAS_ORDEM,
  ETAPA_LABEL,
@@ -148,6 +170,74 @@ function Page() {
  const [editNumeroContrato, setEditNumeroContrato] = useState("");
  const [editAtaId, setEditAtaId] = useState("");
  const [salvandoM2AConfig, setSalvandoM2AConfig] = useState(false);
+ const [warnPending, setWarnPending] = useState<null | { kind: "edit" | "delete"; item: any }>(null);
+ const [warnDontShow, setWarnDontShow] = useState(false);
+ const [editingItem, setEditingItem] = useState<any | null>(null);
+ const [editForm, setEditForm] = useState({ descricao: "", unidade: "", quantidade: "", valor_unitario: "" });
+ const [deletingItem, setDeletingItem] = useState<any | null>(null);
+ const [savingItem, setSavingItem] = useState(false);
+
+ const ITEM_WARN_KEY = "warn-edit-item";
+ function requestItemAction(kind: "edit" | "delete", item: any) {
+   const skip = typeof window !== "undefined" && window.localStorage.getItem(ITEM_WARN_KEY) === "off";
+   if (skip) return proceedItemAction(kind, item);
+   setWarnDontShow(false);
+   setWarnPending({ kind, item });
+ }
+ function proceedItemAction(kind: "edit" | "delete", item: any) {
+   if (kind === "edit") {
+     setEditForm({
+       descricao: item.descricao ?? "",
+       unidade: item.unidade ?? "",
+       quantidade: String(item.quantidade ?? ""),
+       valor_unitario: String(item.valor_unitario ?? ""),
+     });
+     setEditingItem(item);
+   } else {
+     setDeletingItem(item);
+   }
+ }
+ function confirmWarn() {
+   if (warnDontShow && typeof window !== "undefined") {
+     window.localStorage.setItem(ITEM_WARN_KEY, "off");
+   }
+   if (warnPending) proceedItemAction(warnPending.kind, warnPending.item);
+   setWarnPending(null);
+ }
+ async function saveItemEdit() {
+   if (!editingItem) return;
+   setSavingItem(true);
+   const qtd = Number(editForm.quantidade.replace(",", ".")) || 0;
+   const vu = Number(editForm.valor_unitario.replace(",", ".")) || 0;
+   const { error } = await supabase
+     .from("contrato_itens")
+     .update({
+       descricao: editForm.descricao,
+       unidade: editForm.unidade || null,
+       quantidade: qtd,
+       valor_unitario: vu,
+       valor_total: qtd * vu,
+     })
+     .eq("id", editingItem.id);
+   setSavingItem(false);
+   if (error) return toast.error(error.message);
+   toast.success("Item atualizado");
+   setEditingItem(null);
+   refetch();
+ }
+ async function deleteItemConfirmed() {
+   if (!deletingItem) return;
+   setSavingItem(true);
+   const { error } = await supabase
+     .from("contrato_itens")
+     .delete()
+     .eq("id", deletingItem.id);
+   setSavingItem(false);
+   if (error) return toast.error(error.message);
+   toast.success("Item removido");
+   setDeletingItem(null);
+   refetch();
+ }
  const { connected, ensureConnected } = useM2AConnection();
  const { startTask, updateProgress, finishTask, failTask } = useProgress();
 
@@ -577,92 +667,44 @@ function Page() {
  <Card className="mb-3 overflow-hidden border-border/60">
  <div className="grid gap-0 lg:grid-cols-[1fr_auto]">
  <div className="flex flex-col gap-2 p-4">
- <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px]">
- <div className="rounded-xl border border-border/60 bg-muted/40 p-3 dark:bg-muted/30">
- <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
- Número do contrato
- </p>
- <p className="mt-1 truncate font-mono text-2xl font-semibold tracking-tight text-foreground">
- {c.numero_contrato}
- </p>
- </div>
- <div className="rounded-xl border border-border/60 bg-muted/40 p-3 dark:bg-muted/30">
- <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
-  Início vigência
- </p>
- <p className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
- {contratoDataLabel}
- </p>
- </div>
- </div>
- <div className="flex flex-wrap items-center gap-2">
- <Badge variant="secondary" className="text-xs">
- {c.secretaria_sigla}
- </Badge>
- <M2AStatusBadge status={statusM2A} />
- {c.m2a_contrato_id && (
- <Badge variant="outline" className="font-mono text-[10px]">
- Código externo #{c.m2a_contrato_id}
- </Badge>
- )}
- {contrato.processo && (
- <Button
- asChild
- size="sm"
- variant="outline"
- className="h-7 gap-1.5 px-2 text-[11px] font-medium"
- title="Abrir processo no sistema"
- >
- <Link
- to="/processos/$id"
- params={{ id: contrato.processo.id }}
- >
- <FileText className="size-3.5" />
- Ir para o processo {contrato.processo.numero_processo ??""}
- <ExternalLink className="size-3" />
- </Link>
- </Button>
- )}
- <Button
- size="sm"
- variant={c.publicado_at ?"default" :"outline"}
- className={`h-7 gap-1.5 px-2 text-[11px] font-medium ${c.publicado_at ?"bg-emerald-600 text-white hover:bg-emerald-700" :"text-muted-foreground"}`}
- onClick={async () => {
- const isPub = !!c.publicado_at;
- const { data: u } = await supabase.auth.getUser();
- const { error } = await supabase
- .from("contratos")
- .update(
- isPub
- ? { publicado_at: null, publicado_por: null }
- : { publicado_at: new Date().toISOString(), publicado_por: u.user?.id ?? null },
- )
- .eq("id", c.id);
- if (error) return toast.error(error.message);
- toast.success(isPub ?"Marcado como não publicado" :"Marcado como publicado");
- qc.invalidateQueries({ queryKey: ["contrato-full", id] });
- qc.invalidateQueries({ queryKey: ["contratos"] });
- }}
- title={
- c.publicado_at
- ? `Publicado em ${formatDateBR(c.publicado_at)} — clique para desmarcar`
- :"Marcar como publicado"
- }
- >
- {c.publicado_at ? (
- <>
- <CheckCircle2 className="size-3.5" /> Publicado
- </>
- ) : (
- <>Marcar como publicado</>
- )}
- </Button>
- </div>
- <p className="text-[13px] text-muted-foreground">
- Preposto: <span className="text-foreground">{c.preposto}</span> ·
- Fiscal: <span className="text-foreground">{c.fiscal}</span>
- </p>
- </div>
+        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px]">
+          <div className="rounded-xl border border-border/60 bg-muted/40 p-3 dark:bg-muted/30">
+            <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
+             Número do contrato
+            </p>
+            <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <p className="truncate font-mono text-2xl font-semibold tracking-tight text-foreground">
+               {c.numero_contrato}
+              </p>
+              {contrato.processo && (
+                <Link
+                  to="/processos/$id"
+                  params={{ id: contrato.processo.id }}
+                  className="font-mono text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                  title="Abrir processo"
+                >
+                  Processo {contrato.processo.numero_processo ?? ""}
+                </Link>
+              )}
+            </div>
+          </div>
+          <div className="rounded-xl border border-border/60 bg-muted/40 p-3 dark:bg-muted/30">
+            <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Início vigência
+            </p>
+            <p className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
+             {contratoDataLabel}
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <M2AStatusBadge status={statusM2A} />
+        </div>
+        <p className="text-[13px] text-muted-foreground">
+          Preposto: <span className="text-foreground">{c.preposto}</span> ·
+          Fiscal: <span className="text-foreground">{c.fiscal}</span>
+        </p>
+      </div>
  <div className="grid grid-cols-3 border-t border-border/60 bg-muted/40 dark:bg-muted/30 lg:grid-cols-3 lg:border-l lg:border-t-0">
  <div className="border-r border-border/60 px-4 py-3 ">
  <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -701,75 +743,49 @@ function Page() {
  className="mb-3"
  >
  <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-x-4 gap-y-3 text-xs md:grid-cols-[repeat(4,minmax(0,1fr))] lg:grid-cols-[repeat(6,minmax(0,1fr))]">
- <Field label="Nº contrato" mono>
- {c.numero_contrato}
- </Field>
- <Field label="Secretaria">
- {c.secretaria_sigla} — {c.secretaria_nome}
- </Field>
- <Field label="Início vigência">{contratoDataLabel}</Field>
- <Field label="Preposto">{c.preposto}</Field>
- <Field label="Fiscal">{c.fiscal}</Field>
- <Field label="Link / código" mono>
- {c.link_contrato}
- </Field>
- <Field label="Dotação" mono>
- {c.dotacao ??"—"}
- </Field>
- <Field label="Ata" mono>
- {c.m2a_ata_numero ?? c.m2a_ata_id ??"—"}
- </Field>
- <Field label="Código externo" mono>
- {c.m2a_contrato_id ??"—"}
- </Field>
- <div className="col-span-2 min-w-0 rounded-xl border border-border/60 bg-muted/40 p-3 dark:bg-muted/30 md:col-span-4 lg:col-span-6">
- <div className="grid gap-3 md:grid-cols-[minmax(180px,240px)_minmax(260px,1fr)_auto] md:items-end">
- <div className="flex min-w-0 flex-col gap-1.5">
- <Label>Nº do contrato</Label>
- <Input
- className="font-mono text-[13px]"
- value={editNumeroContrato}
- onChange={(event) =>
- setEditNumeroContrato(event.target.value)
- }
- />
- </div>
- <div className="flex min-w-0 flex-col gap-1.5">
- <Label>Ata correta para este contrato</Label>
- <Select value={editAtaId} onValueChange={setEditAtaId}>
- <SelectTrigger className="min-w-0">
- <SelectValue placeholder="Selecione a ata" />
- </SelectTrigger>
- <SelectContent>
- {contrato.m2aAtas.map((ata: any) => (
- <SelectItem key={ata.m2a_ata_id} value={ata.m2a_ata_id}>
- {ata.numero_ata ?? `Ata ${ata.m2a_ata_id}`} ·{""}
- {ata.fornecedor_nome ??"Fornecedor sem nome"} · #
- {ata.m2a_ata_id}
- </SelectItem>
- ))}
- </SelectContent>
- </Select>
- </div>
- <Button
- size="sm"
- className="w-full md:w-auto"
- onClick={handleSalvarContratoM2AConfig}
- disabled={salvandoM2AConfig || contrato.m2aAtas.length === 0}
- >
- {salvandoM2AConfig ? (
- <Loader2 className="size-3.5 animate-spin" />
- ) : (
- <Save className="size-3.5" />
- )}
- Salvar ajuste
- </Button>
- </div>
- <p className="mt-2 text-[13px] text-muted-foreground">
- A automação usa esta ata gravada no contrato. Não há fallback
- para a primeira ata do processo.
- </p>
- </div>
+          <Field label="Nº contrato" mono>
+           {c.numero_contrato}
+          </Field>
+          <Field label="Início vigência">{contratoDataLabel}</Field>
+          <Field label="Preposto">{c.preposto}</Field>
+          <Field label="Fiscal">{c.fiscal}</Field>
+          <Field label="Ata" mono>
+           {c.m2a_ata_numero ?? c.m2a_ata_id ??"—"}
+          </Field>
+          <div className="col-span-2 min-w-0 rounded-xl border border-border/60 bg-muted/40 p-3 dark:bg-muted/30 md:col-span-4 lg:col-span-6">
+            <div className="grid gap-3 md:grid-cols-[minmax(260px,1fr)_auto] md:items-end">
+              <div className="flex min-w-0 flex-col gap-1.5">
+                <Label>Ata correta para este contrato</Label>
+                <Select value={editAtaId} onValueChange={setEditAtaId}>
+                  <SelectTrigger className="min-w-0">
+                    <SelectValue placeholder="Selecione a ata" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {contrato.m2aAtas.map((ata: any) => (
+                      <SelectItem key={ata.m2a_ata_id} value={ata.m2a_ata_id}>
+                        {ata.numero_ata ?? `Ata ${ata.m2a_ata_id}`} ·{""}
+                        {ata.fornecedor_nome ??"Fornecedor sem nome"} · #
+                        {ata.m2a_ata_id}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                size="sm"
+                className="w-full md:w-auto"
+                onClick={handleSalvarContratoM2AConfig}
+                disabled={salvandoM2AConfig || contrato.m2aAtas.length === 0}
+              >
+                {salvandoM2AConfig ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <Save className="size-3.5" />
+                )}
+               Salvar ajuste
+              </Button>
+            </div>
+          </div>
  <div className="col-span-2 md:col-span-4 lg:col-span-6">
  <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
  Objeto
@@ -882,9 +898,10 @@ function Page() {
  <TableHead className="hidden w-32 text-right sm:table-cell">
  Vlr unit.
  </TableHead>
- <TableHead className="hidden w-32 text-right pr-4 sm:table-cell">
+ <TableHead className="hidden w-32 text-right sm:table-cell">
  Vlr total
  </TableHead>
+ <TableHead className="w-20 pr-4 text-right">Ações</TableHead>
  </TableRow>
  </TableHeader>
  <TableBody>
@@ -932,8 +949,30 @@ function Page() {
  <TableCell className="hidden py-2 text-right text-xs tabular-nums sm:table-cell">
  {BRL.format(Number(it.valor_unitario ?? 0))}
  </TableCell>
- <TableCell className="hidden py-2 text-right pr-4 text-xs tabular-nums font-medium sm:table-cell">
+ <TableCell className="hidden py-2 text-right text-xs tabular-nums font-medium sm:table-cell">
  {BRL.format(total)}
+ </TableCell>
+ <TableCell className="py-2 pr-4 text-right">
+   <div className="inline-flex items-center gap-1">
+     <Button
+       size="icon"
+       variant="ghost"
+       className="size-7"
+       title="Editar item"
+       onClick={() => requestItemAction("edit", it)}
+     >
+       <Pencil className="size-3.5" />
+     </Button>
+     <Button
+       size="icon"
+       variant="ghost"
+       className="size-7 text-red-600 hover:text-red-700"
+       title="Excluir item"
+       onClick={() => requestItemAction("delete", it)}
+     >
+       <Trash2 className="size-3.5" />
+     </Button>
+   </div>
  </TableCell>
  </TableRow>
  );
@@ -976,9 +1015,10 @@ function Page() {
  <TableCell className="py-2 text-right text-[11px] text-muted-foreground">
  Total
  </TableCell>
- <TableCell className="text-right pr-4 py-2 tabular-nums font-semibold">
+ <TableCell className="text-right py-2 tabular-nums font-semibold">
  {BRL.format(valorTotal)}
  </TableCell>
+ <TableCell className="pr-4" />
  </TableRow>
  </TableFooter>
  </Table>
@@ -1037,6 +1077,115 @@ function Page() {
  </Card>
  </TabsContent>
  </Tabs>
+
+ {/* Aviso opt-out para edição/exclusão de itens */}
+ <AlertDialog open={!!warnPending} onOpenChange={(o) => !o && setWarnPending(null)}>
+   <AlertDialogContent>
+     <AlertDialogHeader>
+       <AlertDialogTitle>Atenção</AlertDialogTitle>
+       <AlertDialogDescription>
+         Esta alteração pode interferir na sincronização com a M2A. Deseja continuar?
+       </AlertDialogDescription>
+     </AlertDialogHeader>
+     <div className="flex items-center gap-2 pt-1">
+       <Checkbox
+         id="warn-edit-item-dontshow"
+         checked={warnDontShow}
+         onCheckedChange={(v) => setWarnDontShow(v === true)}
+       />
+       <Label htmlFor="warn-edit-item-dontshow" className="cursor-pointer text-sm font-normal">
+         Não mostrar este aviso novamente
+       </Label>
+     </div>
+     <AlertDialogFooter>
+       <AlertDialogCancel>Cancelar</AlertDialogCancel>
+       <AlertDialogAction onClick={confirmWarn}>Continuar</AlertDialogAction>
+     </AlertDialogFooter>
+   </AlertDialogContent>
+ </AlertDialog>
+
+ {/* Editar item */}
+ <Dialog open={!!editingItem} onOpenChange={(o) => !o && setEditingItem(null)}>
+   <DialogContent>
+     <DialogHeader>
+       <DialogTitle>Editar item</DialogTitle>
+       <DialogDescription>
+         Alterações afetam apenas este contrato. Sincronização posterior pode ser necessária.
+       </DialogDescription>
+     </DialogHeader>
+     <div className="grid gap-3">
+       <div className="grid gap-1.5">
+         <Label htmlFor="edit-descricao">Descrição</Label>
+         <Textarea
+           id="edit-descricao"
+           rows={3}
+           value={editForm.descricao}
+           onChange={(e) => setEditForm((f) => ({ ...f, descricao: e.target.value }))}
+         />
+       </div>
+       <div className="grid grid-cols-3 gap-3">
+         <div className="grid gap-1.5">
+           <Label htmlFor="edit-unidade">Unidade</Label>
+           <Input
+             id="edit-unidade"
+             value={editForm.unidade}
+             onChange={(e) => setEditForm((f) => ({ ...f, unidade: e.target.value }))}
+           />
+         </div>
+         <div className="grid gap-1.5">
+           <Label htmlFor="edit-qtd">Quantidade</Label>
+           <Input
+             id="edit-qtd"
+             inputMode="decimal"
+             value={editForm.quantidade}
+             onChange={(e) => setEditForm((f) => ({ ...f, quantidade: e.target.value }))}
+           />
+         </div>
+         <div className="grid gap-1.5">
+           <Label htmlFor="edit-vu">Valor unit.</Label>
+           <Input
+             id="edit-vu"
+             inputMode="decimal"
+             value={editForm.valor_unitario}
+             onChange={(e) => setEditForm((f) => ({ ...f, valor_unitario: e.target.value }))}
+           />
+         </div>
+       </div>
+     </div>
+     <DialogFooter>
+       <Button variant="outline" onClick={() => setEditingItem(null)} disabled={savingItem}>
+         Cancelar
+       </Button>
+       <Button onClick={saveItemEdit} disabled={savingItem}>
+         {savingItem ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+         Salvar
+       </Button>
+     </DialogFooter>
+   </DialogContent>
+ </Dialog>
+
+ {/* Excluir item */}
+ <AlertDialog open={!!deletingItem} onOpenChange={(o) => !o && setDeletingItem(null)}>
+   <AlertDialogContent>
+     <AlertDialogHeader>
+       <AlertDialogTitle>Excluir item</AlertDialogTitle>
+       <AlertDialogDescription>
+         {deletingItem ? `"${deletingItem.descricao}" será removido deste contrato. Esta ação não pode ser desfeita.` : ""}
+       </AlertDialogDescription>
+     </AlertDialogHeader>
+     <AlertDialogFooter>
+       <AlertDialogCancel disabled={savingItem}>Cancelar</AlertDialogCancel>
+       <AlertDialogAction
+         onClick={(e) => { e.preventDefault(); deleteItemConfirmed(); }}
+         disabled={savingItem}
+         className="bg-red-600 text-white hover:bg-red-700"
+       >
+         {savingItem ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
+         Excluir
+       </AlertDialogAction>
+     </AlertDialogFooter>
+   </AlertDialogContent>
+ </AlertDialog>
  </AppShell>
  );
 }
