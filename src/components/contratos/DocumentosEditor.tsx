@@ -63,12 +63,14 @@ type DocumentoLista =
 export function DocumentosEditor({
  contratoId,
  contratoNumero,
+ m2aContratoId,
  documentos,
  documentosM2A,
  onChange,
 }: {
  contratoId: string;
  contratoNumero?: string;
+ m2aContratoId?: string | null;
  documentos: Doc[];
  documentosM2A?: unknown;
  onChange: () => void;
@@ -100,11 +102,12 @@ export function DocumentosEditor({
               nome: `${contratoNumero ?? contratoId} - ${nomeDoc}`,
               contratoId,
               contratoNumero,
+              m2aContratoId: m2aContratoId ?? undefined,
             },
           };
  })
  .filter(Boolean) as DocumentoLista[];
- }, [contratoId, contratoNumero, documentosM2A]);
+ }, [contratoId, contratoNumero, m2aContratoId, documentosM2A]);
 
  const docsLocais = useMemo(
  () =>

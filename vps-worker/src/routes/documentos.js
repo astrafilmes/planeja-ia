@@ -5,20 +5,29 @@
 // Quando archive=true OU múltiplos documentos, devolve um .zip; senão devolve o arquivo cru.
 
 import archiver from "archiver";
+import * as cheerio from "cheerio";
 import { m2a } from "../m2a-client.js";
 
-const M2A_DOWNLOAD_PATHS = [
+// Padrões conhecidos / palpites — usados como fallback quando o anchor real
+// não puder ser extraído da tabela de documentos do contrato.
+const M2A_DOWNLOAD_PATH_FALLBACKS = [
   (id) => `/contratos/documentos/baixar/${id}/`,
   (id) => `/contratos/documentos/download/${id}/`,
+  (id) => `/contratos/documentos/visualizar/${id}/`,
+  (id) => `/contratos/documentos/imprimir/${id}/`,
+  (id) => `/contratos/documentos/exportar/${id}/`,
+  (id) => `/contratos/documentos/gerar_pdf/${id}/`,
   (id) => `/documentos/baixar/${id}/`,
 ];
 
 function safeName(s) {
-  return String(s || "documento")
-    .replace(/[\\/:*?"<>|\r\n]+/g, "_")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 180) || "documento";
+  return (
+    String(s || "documento")
+      .replace(/[\\/:*?"<>|\r\n]+/g, "_")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 180) || "documento"
+  );
 }
 
 function extFromContentType(ct) {
@@ -48,21 +57,106 @@ function filenameFromHeader(headerValue) {
   }
 }
 
-async function fetchFromM2A(id) {
-  let lastErr = null;
-  for (const buildPath of M2A_DOWNLOAD_PATHS) {
-    const path = buildPath(id);
-    try {
-      const r = await m2a.request("GET", path, { responseType: "arraybuffer" });
-      if (r.status >= 200 && r.status < 300 && r.bytes && r.bytes.length > 0) {
-        return r;
+function looksLikeBinary(r) {
+  if (!r || !r.bytes || r.bytes.length === 0) return false;
+  const ct = (r.contentType || "").toLowerCase();
+  if (ct && !ct.includes("text/html") && !ct.includes("application/json")) {
+    return true;
+  }
+  // Heurística: HTML curto = página de erro/login; PDF começa com %PDF.
+  const head = r.bytes.toString("utf8", 0, Math.min(r.bytes.length, 8));
+  if (head.startsWith("%PDF")) return true;
+  if (head.startsWith("PK\u0003\u0004")) return true; // zip/docx/xlsx
+  return false;
+}
+
+/** Tenta extrair, da página do contrato, o href real para baixar cada documento. */
+async function discoverDownloadUrlMap(contratoId, log) {
+  const tabelaUrl = `/contratos/documentos/tabela/${contratoId}/`;
+  const map = new Map();
+  try {
+    const r = await m2a.request("GET", tabelaUrl, {
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+    });
+    if (!r.html) return map;
+    const $ = cheerio.load(r.html);
+    $("tr.tr_contrato_documento, tr[id_item]").each((_, row) => {
+      const $row = $(row);
+      const id =
+        $row.attr("id_item") ||
+        $row.find("[id_item]").first().attr("id_item") ||
+        "";
+      if (!/^\d+$/.test(id)) return;
+      // Procura todos os anchors da linha — escolhe o mais provável de download.
+      const candidates = [];
+      $row.find("a[href]").each((__, a) => {
+        const href = ($(a).attr("href") || "").trim();
+        if (!href || href === "#" || href.startsWith("javascript:")) return;
+        const title = (
+          $(a).attr("title") ||
+          $(a).attr("data-original-title") ||
+          $(a).text() ||
+          ""
+        ).toLowerCase();
+        const cls = ($(a).attr("class") || "").toLowerCase();
+        let score = 0;
+        if (/baixar|download|visualizar|imprimir|pdf/i.test(href)) score += 5;
+        if (/baixar|download|visualizar|imprimir|pdf/.test(title)) score += 3;
+        if (/baixar|download|visualizar|imprimir|pdf/.test(cls)) score += 2;
+        if (href.includes(`/${id}/`) || href.includes(`/${id}?`) || href.endsWith(`/${id}`)) {
+          score += 4;
+        }
+        if (/excluir|editar|atualizar/.test(href)) score -= 10;
+        candidates.push({ href, score });
+      });
+      candidates.sort((a, b) => b.score - a.score);
+      if (candidates.length && candidates[0].score > 0) {
+        map.set(id, candidates[0].href);
       }
-      lastErr = new Error(`HTTP ${r.status} em ${path}`);
+    });
+    log?.info?.(
+      { contratoId, encontrados: map.size, total_linhas: $("tr.tr_contrato_documento").length },
+      "documentos: discoverDownloadUrlMap",
+    );
+  } catch (err) {
+    log?.warn?.({ err: err.message, contratoId }, "falha ao varrer tabela de documentos");
+  }
+  return map;
+}
+
+async function tryDownload(path) {
+  const r = await m2a.request("GET", path, { responseType: "arraybuffer" });
+  return r;
+}
+
+async function fetchFromM2A(id, hrefHint, log) {
+  const tried = [];
+  // 1) anchor real, se descoberto.
+  if (hrefHint) {
+    try {
+      const r = await tryDownload(hrefHint);
+      tried.push(`${hrefHint} → ${r.status} ${r.contentType || ""}`);
+      if (r.status >= 200 && r.status < 300 && looksLikeBinary(r)) return r;
     } catch (err) {
-      lastErr = err;
+      tried.push(`${hrefHint} → ERR ${err.message}`);
     }
   }
-  throw lastErr ?? new Error(`Não foi possível baixar documento ${id}`);
+  // 2) palpites conhecidos.
+  for (const buildPath of M2A_DOWNLOAD_PATH_FALLBACKS) {
+    const path = buildPath(id);
+    if (path === hrefHint) continue;
+    try {
+      const r = await tryDownload(path);
+      tried.push(`${path} → ${r.status} ${r.contentType || ""}`);
+      if (r.status >= 200 && r.status < 300 && looksLikeBinary(r)) return r;
+    } catch (err) {
+      tried.push(`${path} → ERR ${err.message}`);
+    }
+  }
+  log?.warn?.({ id, tried }, "documento M2A: nenhum endpoint retornou binário");
+  throw new Error(
+    `Não foi possível baixar documento ${id}. Tentativas: ${tried.join(" | ")}`,
+  );
 }
 
 async function fetchFromUrl(url) {
@@ -76,7 +170,7 @@ async function fetchFromUrl(url) {
   };
 }
 
-async function fetchOne(doc) {
+async function fetchOne(doc, hrefMap, log) {
   if (doc?.source === "url" || doc?.origem === "url") {
     return fetchFromUrl(doc.url);
   }
@@ -84,7 +178,27 @@ async function fetchOne(doc) {
   if (!/^\d+$/.test(id)) {
     throw new Error(`id_m2a inválido em documento "${doc?.nome ?? "?"}"`);
   }
-  return fetchFromM2A(id);
+  return fetchFromM2A(id, hrefMap.get(id) || null, log);
+}
+
+/** Pré-resolve, agrupado por contrato_id, o href real de cada documento M2A. */
+async function buildHrefMap(documentos, log) {
+  const map = new Map();
+  const porContrato = new Map();
+  for (const d of documentos) {
+    if (d?.source !== "m2a") continue;
+    const cId = String(d.contrato_id ?? "").trim();
+    if (!/^\d+$/.test(cId)) continue;
+    if (!porContrato.has(cId)) porContrato.set(cId, []);
+    porContrato.get(cId).push(String(d.id_m2a));
+  }
+  for (const [cId, ids] of porContrato) {
+    const m = await discoverDownloadUrlMap(cId, log);
+    for (const id of ids) {
+      if (m.has(id)) map.set(id, m.get(id));
+    }
+  }
+  return map;
 }
 
 export async function documentosRoutes(app) {
@@ -96,13 +210,16 @@ export async function documentosRoutes(app) {
     }
     const archive = Boolean(body.archive) || documentos.length > 1;
     const filename = safeName(
-      body.filename || (archive ? "documentos.zip" : documentos[0]?.nome || "documento"),
+      body.filename ||
+        (archive ? "documentos.zip" : documentos[0]?.nome || "documento"),
     );
+
+    const hrefMap = await buildHrefMap(documentos, app.log);
 
     if (!archive) {
       const doc = documentos[0];
       try {
-        const r = await fetchOne(doc);
+        const r = await fetchOne(doc, hrefMap, app.log);
         const headerName =
           filenameFromHeader(r.contentDisposition) ||
           safeName(doc.nome || filename) + extFromContentType(r.contentType);
@@ -154,9 +271,10 @@ export async function documentosRoutes(app) {
 
     for (const doc of documentos) {
       try {
-        const r = await fetchOne(doc);
+        const r = await fetchOne(doc, hrefMap, app.log);
         const ext = extFromContentType(r.contentType);
-        let nome = doc.nome || filenameFromHeader(r.contentDisposition) || "documento";
+        let nome =
+          doc.nome || filenameFromHeader(r.contentDisposition) || "documento";
         if (ext && !nome.toLowerCase().endsWith(ext)) nome += ext;
         zip.append(r.bytes, { name: safeUnique(nome) });
       } catch (err) {

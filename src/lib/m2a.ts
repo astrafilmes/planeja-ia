@@ -51,6 +51,8 @@ export interface M2ADocumentoGerado {
   nome: string;
   contratoId?: string;
   contratoNumero?: string;
+  // ID do contrato no portal M2A (necessário p/ descobrir a URL real do download).
+  m2aContratoId?: string;
 }
 
 export interface M2AUrlDocumento {

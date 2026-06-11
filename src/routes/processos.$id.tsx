@@ -284,6 +284,7 @@ function getContratoDocumentos(contrato: ContratoRow): M2ADocumentoGerado[] {
  nome: `${contrato.numero_contrato} - ${String(doc.nome ?? `Documento ${id_m2a}`).trim()}`,
  contratoId: contrato.id,
  contratoNumero: contrato.numero_contrato,
+ m2aContratoId: contrato.m2a_contrato_id ?? undefined,
  };
  })
  .filter(Boolean) as M2ADocumentoGerado[];

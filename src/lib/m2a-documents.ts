@@ -14,7 +14,7 @@ export interface DownloadProgress {
 }
 
 type WorkerDoc =
-  | { source: "m2a"; id_m2a: string; nome: string }
+  | { source: "m2a"; id_m2a: string; nome: string; contrato_id?: string }
   | { source: "url"; url: string; nome: string };
 
 function toWorkerDocs(documentos: M2ABulkDownloadDocumento[]): WorkerDoc[] {
@@ -25,7 +25,15 @@ function toWorkerDocs(documentos: M2ABulkDownloadDocumento[]): WorkerDoc[] {
       }
       const id = String((d as { id_m2a?: string }).id_m2a ?? "").trim();
       if (!/^\d+$/.test(id)) return null;
-      return { source: "m2a" as const, id_m2a: id, nome: d.nome };
+      const contratoId = String(
+        (d as { m2aContratoId?: string }).m2aContratoId ?? "",
+      ).trim();
+      return {
+        source: "m2a" as const,
+        id_m2a: id,
+        nome: d.nome,
+        ...(contratoId ? { contrato_id: contratoId } : {}),
+      };
     })
     .filter((x): x is WorkerDoc => x !== null);
 }
