@@ -20,11 +20,18 @@ const buttonVariants = cva(
         ghost:
           "text-slate-700 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-slate-50",
         link: "text-primary underline-offset-4 hover:underline",
+        cta:
+          "bg-cta text-cta-foreground shadow-[0_8px_24px_-8px_rgb(15_23_42_/_0.45)] hover:translate-y-[-1px] hover:shadow-[0_12px_28px_-10px_rgb(15_23_42_/_0.55)]",
+        soft:
+          "bg-accent-soft text-accent-strong hover:bg-accent-soft/80 dark:bg-accent-soft dark:text-accent-foreground",
+        accent:
+          "bg-accent text-accent-foreground shadow-[0_8px_24px_-8px_rgb(108_92_231_/_0.5)] hover:bg-accent-strong hover:translate-y-[-1px]",
       },
       size: {
         default: "h-10 px-4 py-2",
         sm: "h-9 min-h-9 rounded-md px-3 text-xs",
         lg: "h-11 rounded-lg px-8",
+        pill: "h-11 rounded-full px-6 text-[13px]",
         icon: "h-9 min-h-9 w-9 min-w-9 rounded-md",
       },
     },
