@@ -653,7 +653,7 @@ function RecoverPanel({
         </p>
       </header>
 
-      <div className="rounded-2xl border border-border/70 bg-card/80 p-6 shadow-[0_30px_80px_-30px_rgba(15,23,42,0.25)] backdrop-blur-xl dark:shadow-[0_30px_80px_-30px_rgba(0,0,0,0.6)]">
+      <div className="rounded-2xl border border-border/70 bg-card/80 p-6 shadow-[var(--shadow-card)] backdrop-blur-xl">
         <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
           <Field
             id="rc-email"
