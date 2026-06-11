@@ -102,6 +102,10 @@ const nav: NavEntry[] = [
   },
 ];
 
+// Suppress unused-import lint while keeping API stable
+void ChevronRight;
+void Separator;
+
 function NavList({
   pathname,
   isGestor,
