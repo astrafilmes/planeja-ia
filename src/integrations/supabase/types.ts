@@ -1517,6 +1517,10 @@ export type Database = {
         Args: { p_processo_id: string }
         Returns: undefined
       }
+      sync_m2a_contract_dates_from_snapshot: {
+        Args: { p_processo_id: string }
+        Returns: number
+      }
       sync_m2a_snapshot: {
         Args: { p_payload: Json; p_processo_id: string }
         Returns: Json
