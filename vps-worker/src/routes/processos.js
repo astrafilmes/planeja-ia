@@ -940,6 +940,30 @@ async function runCascata(processoId) {
     return { ata, vinculos, contratos };
   });
 
+  // Enriquecimento de fornecedor: contratos no portal M2A são listados POR ata,
+  // então herdamos o fornecedor da ata sempre que o contrato não trouxer coluna própria.
+  // Se a própria ata estiver sem fornecedor, buscamos a página de detalhe da ata
+  // (/ata_registro_precos/{id}) para tentar extrair nome e CNPJ.
+  for (const r of resultados) {
+    if (!r.ata.fornecedor) r.ata.fornecedor = { nome: "", cnpj: undefined };
+    const nomeAta = (r.ata.fornecedor?.nome || "").trim();
+    const cnpjAta = (r.ata.fornecedor?.cnpj || "").trim?.() || r.ata.fornecedor?.cnpj || "";
+    const algumContratoSemForn = r.contratos.some((c) => !(c.fornecedor_nome || "").trim());
+    if (!nomeAta || (algumContratoSemForn && !cnpjAta)) {
+      const detalhe = await fetchAtaFornecedorFromDetail(r.ata.id_ata, trace);
+      if (detalhe?.nome && !nomeAta) r.ata.fornecedor.nome = detalhe.nome;
+      if (detalhe?.cnpj && !cnpjAta) r.ata.fornecedor.cnpj = detalhe.cnpj;
+    }
+    const nomeFinal = (r.ata.fornecedor?.nome || "").trim();
+    const cnpjFinal = (r.ata.fornecedor?.cnpj || "").trim?.() || r.ata.fornecedor?.cnpj || "";
+    if (nomeFinal || cnpjFinal) {
+      for (const c of r.contratos) {
+        if (!(c.fornecedor_nome || "").trim() && nomeFinal) c.fornecedor_nome = nomeFinal;
+        if (!c.fornecedor_cnpj && cnpjFinal) c.fornecedor_cnpj = cnpjFinal;
+      }
+    }
+  }
+
   // Payload compatível com sync_m2a_snapshot:
   // 1 item ÚNICO por ordem da tabela mestra, atrelado à primeira ata válida onde aparece.
   // Isso evita duplicação. O id_item é determinístico = id_item_mestre.
