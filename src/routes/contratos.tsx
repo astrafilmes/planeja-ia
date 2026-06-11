@@ -421,10 +421,10 @@ function Page() {
  .eq("id", c.id);
  if (error) return toast.error(error.message);
  await logAudit({
- action: isPub ?"update" :"update",
+ action:"update",
  entityType:"contrato",
  entityId: c.id,
- metadata: { publicado: !isPub },
+ payload: { publicado: !isPub },
  });
  toast.success(isPub ?"Marcado como não publicado" :"Marcado como publicado");
  qc.invalidateQueries({ queryKey: ["contratos"] });
