@@ -177,21 +177,21 @@ function Login() {
   }
 
   return (
-    <div className="relative grid min-h-screen overflow-hidden bg-[#f6f5f1] text-slate-900 lg:grid-cols-[1.05fr_1fr] dark:bg-[#0a0d14] dark:text-slate-100">
+    <div className="relative grid min-h-screen overflow-hidden bg-background text-foreground lg:grid-cols-[1.05fr_1fr]">
       {/* ───── Brand panel ───── */}
-      <aside className="relative hidden flex-col justify-between overflow-hidden bg-[#0a0d14] p-12 text-slate-100 lg:flex">
+      <aside className="relative hidden flex-col justify-between overflow-hidden p-12 text-slate-100 lg:flex" style={{ background: "#0c1020" }}>
         {/* layered ambient gradients */}
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 opacity-90"
           style={{
             background:
-              "radial-gradient(120% 80% at 110% -10%, oklch(0.5 0.14 195 / 0.45) 0%, transparent 55%), radial-gradient(90% 80% at -10% 110%, oklch(0.45 0.16 260 / 0.35) 0%, transparent 60%)",
+              "radial-gradient(120% 80% at 110% -10%, oklch(0.55 0.22 285 / 0.45) 0%, transparent 55%), radial-gradient(90% 80% at -10% 110%, oklch(0.45 0.18 260 / 0.4) 0%, transparent 60%)",
           }}
         />
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-[0.04]"
+          className="pointer-events-none absolute inset-0 opacity-[0.05]"
           style={{
             backgroundImage:
               "linear-gradient(to right, white 1px, transparent 1px), linear-gradient(to bottom, white 1px, transparent 1px)",
@@ -199,32 +199,32 @@ function Login() {
           }}
         />
 
-        <div className="relative flex items-center gap-3">
-          <div className="grid size-11 place-items-center rounded-xl bg-gradient-to-br from-cyan-400 to-sky-600 font-semibold text-slate-950 shadow-lg shadow-cyan-500/20">
+        <div className="relative flex items-center gap-3 animate-fade-in">
+          <div className="grid size-11 place-items-center rounded-xl bg-gradient-to-br from-accent-strong to-accent font-semibold text-white shadow-[0_8px_24px_-8px_rgb(108_92_231_/_0.6)]">
             P
           </div>
           <div className="leading-tight">
             <div className="text-[15px] font-semibold tracking-tight">
               Planejamento
             </div>
-            <div className="text-[12px] text-slate-400">
+            <div className="text-[12px] text-white/55">
               Contratações Públicas
             </div>
           </div>
         </div>
 
-        <div className="relative flex max-w-lg flex-col gap-7">
-          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-slate-300 backdrop-blur">
-            <Sparkles className="size-3 text-cyan-300" /> Plataforma institucional
+        <div className="relative flex max-w-lg flex-col gap-7 animate-fade-in">
+          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-white/75 backdrop-blur">
+            <Sparkles className="size-3 text-accent-strong" /> Plataforma institucional
           </span>
           <h1
             className="text-balance text-[44px] leading-[1.05] tracking-tight"
             style={{ fontFamily: "var(--font-serif)" }}
           >
             Onde processos, contratos e o{" "}
-            <em className="text-cyan-300">fluxo IRP</em> convergem com clareza.
+            <em className="bg-gradient-to-r from-accent-strong to-accent bg-clip-text text-transparent not-italic">fluxo IRP</em> convergem com clareza.
           </h1>
-          <p className="max-w-md text-[15px] leading-relaxed text-slate-400">
+          <p className="max-w-md text-[15px] leading-relaxed text-white/65">
             Importação automática de planilhas, geração por secretaria,
             numeração transacional e auditoria completa — em uma única
             plataforma elegante e segura.
@@ -235,10 +235,10 @@ function Login() {
               { n: "16", l: "Unidades IRP" },
               { n: "11", l: "Secretarias" },
               { n: "100%", l: "Auditado" },
-            ].map((s) => (
+            ].map((s, i) => (
               <div
                 key={s.l}
-                className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 backdrop-blur"
+                className={`rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 backdrop-blur transition-all hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.07] animate-fade-in stagger-${i + 1}`}
               >
                 <div
                   className="text-2xl tracking-tight"
@@ -246,28 +246,28 @@ function Login() {
                 >
                   {s.n}
                 </div>
-                <div className="mt-0.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                <div className="mt-0.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-white/45">
                   {s.l}
                 </div>
               </div>
             ))}
           </div>
 
-          <ul className="mt-2 grid gap-2 text-[13px] text-slate-300">
+          <ul className="mt-2 grid gap-2 text-[13px] text-white/75">
             {[
               "Integração com o portal M2A via extensão Chrome",
               "Numeração transacional por secretaria e ano",
               "Trilha de auditoria em todas as operações",
             ].map((t) => (
               <li key={t} className="flex items-start gap-2">
-                <CheckCircle2 className="mt-0.5 size-4 text-cyan-300" />
+                <CheckCircle2 className="mt-0.5 size-4 text-accent-strong" />
                 <span>{t}</span>
               </li>
             ))}
           </ul>
         </div>
 
-        <div className="relative flex items-center justify-between text-[11.5px] uppercase tracking-[0.2em] text-slate-500">
+        <div className="relative flex items-center justify-between text-[11.5px] uppercase tracking-[0.2em] text-white/45">
           <span>© {new Date().getFullYear()} Setor de Planejamento</span>
           <span className="inline-flex items-center gap-1.5">
             <ShieldCheck className="size-3.5 text-emerald-400" /> Conexão segura
