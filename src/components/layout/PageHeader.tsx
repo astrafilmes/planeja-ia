@@ -40,27 +40,31 @@ export function PageHeader({
   ) : null;
 
   return (
-    <div className="mx-auto mb-6 flex w-full flex-col gap-4">
+    <div className="mx-auto mb-7 flex w-full flex-col gap-4">
       {(breadcrumb || topRightIndicators) && (
-        <div className="flex min-h-7 items-center justify-between gap-3 text-[13px] text-slate-500 dark:text-slate-400">
+        <div className="flex min-h-7 items-center justify-between gap-3 text-[12px] text-muted-foreground">
           <div className="flex min-w-0 items-center gap-2">
-            {breadcrumb && <div className="min-w-0 truncate">{breadcrumb}</div>}
+            {breadcrumb && (
+              <div className="min-w-0 truncate rounded-full bg-muted/70 px-2.5 py-1 font-medium text-foreground/70">
+                {breadcrumb}
+              </div>
+            )}
           </div>
           {topRightIndicators && (
             <div className="shrink-0">{topRightIndicators}</div>
           )}
         </div>
       )}
-      <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="flex items-center gap-3">
-            <h1 className="truncate text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+            <h1 className="truncate text-[28px] font-semibold tracking-tight text-foreground">
               {title}
             </h1>
             {statusBadge}
           </div>
           {subtitle && (
-            <p className="mt-1 line-clamp-2 max-w-3xl text-[13px] text-slate-500 dark:text-slate-400">
+            <p className="mt-2 line-clamp-2 max-w-3xl text-[13.5px] leading-relaxed text-muted-foreground">
               {subtitle}
             </p>
           )}
