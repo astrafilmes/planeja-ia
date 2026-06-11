@@ -1,20 +1,39 @@
 import * as React from "react";
+import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
 
-const Card = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      "rounded-xl border border-slate-200 bg-white text-slate-950 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50",
-      className,
-    )}
-    {...props}
-  />
-));
+const cardVariants = cva(
+  "rounded-2xl border bg-card text-card-foreground transition-all",
+  {
+    variants: {
+      variant: {
+        default: "border-border/60 shadow-sm",
+        elevated:
+          "border-border/40 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-elevated)] hover:-translate-y-0.5",
+        flat: "border-border/40 shadow-none",
+        accent:
+          "border-transparent bg-accent-soft text-accent-strong shadow-[0_8px_24px_-12px_rgb(108_92_231_/_0.35)]",
+        outline: "border-border/70 bg-transparent shadow-none",
+      },
+    },
+    defaultVariants: { variant: "default" },
+  },
+);
+
+export interface CardProps
+  extends React.HTMLAttributes<HTMLDivElement>,
+    VariantProps<typeof cardVariants> {}
+
+const Card = React.forwardRef<HTMLDivElement, CardProps>(
+  ({ className, variant, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn(cardVariants({ variant }), className)}
+      {...props}
+    />
+  ),
+);
 Card.displayName = "Card";
 
 const CardHeader = React.forwardRef<
@@ -36,7 +55,7 @@ const CardTitle = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "text-lg font-semibold leading-none tracking-tight text-slate-800 dark:text-slate-100",
+      "text-[15px] font-semibold leading-none tracking-tight text-foreground",
       className,
     )}
     {...props}
@@ -50,7 +69,7 @@ const CardDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("text-[13px] text-slate-500 dark:text-slate-400", className)}
+    className={cn("text-[13px] text-muted-foreground", className)}
     {...props}
   />
 ));
@@ -83,4 +102,5 @@ export {
   CardTitle,
   CardDescription,
   CardContent,
+  cardVariants,
 };
