@@ -583,7 +583,7 @@ async function mapWithConcurrency(items, limit, mapper) {
 }
 
 // ---------- cascata completa ----------
-async function fetchAtasDoProcesso(processoId) {
+async function fetchAtasDoProcesso(processoId, trace) {
   // Endpoints reais usados pelo portal (descobertos via inspeção da página
   // /processo_administrativo/{id}/).
   const attempts = [
@@ -596,11 +596,37 @@ async function fetchAtasDoProcesso(processoId) {
   let lastErr = null;
   for (const url of attempts) {
     try {
-      const $ = await fetchDoc(url);
-      const atas = extractAtasFromDoc($);
+      const doc = await fetchDocDetailed(url);
+      const atas = extractAtasFromDoc(doc.$);
+      traceStep(trace, {
+        fase: "atas",
+        label: "buscar atas do processo",
+        processo_id: processoId,
+        url,
+        status: doc.status,
+        finalUrl: doc.finalUrl,
+        bytes: doc.bytes,
+        decodedBytes: doc.decodedBytes,
+        encontrados: { atas: atas.length },
+        amostra: atas.slice(0, 5).map((ata) => ({
+          id_ata: ata.id_ata,
+          id_licitacao_ata_contrato: ata.id_licitacao_ata_contrato,
+          numero_ata: ata.numero_ata,
+          fornecedor: ata.fornecedor?.nome,
+          detail_url: ata.detail_url,
+        })),
+        selecionado: atas.length > 0,
+      });
       if (atas.length) return atas;
     } catch (err) {
       lastErr = err;
+      traceStep(trace, {
+        fase: "atas",
+        label: "buscar atas do processo",
+        processo_id: processoId,
+        url,
+        erro: String(err?.message ?? err),
+      });
     }
   }
   if (lastErr) throw lastErr;
@@ -608,10 +634,12 @@ async function fetchAtasDoProcesso(processoId) {
 }
 
 async function runCascata(processoId) {
-  const atas = await fetchAtasDoProcesso(processoId);
+  const trace = [];
+  traceStep(trace, { fase: "inicio", label: "iniciar sincronização", processo_id: processoId, url: `/processo_administrativo/${processoId}/` });
+  const atas = await fetchAtasDoProcesso(processoId, trace);
 
   const resultados = await mapWithConcurrency(atas, SYNC_CONCURRENCY, async (ata) => {
-    const [itens, contratos] = await Promise.all([fetchItensDaAta(ata), fetchContratosDaAta(ata)]);
+    const [itens, contratos] = await Promise.all([fetchItensDaAta(ata, trace), fetchContratosDaAta(ata, trace)]);
     return { ata, itens, contratos };
   });
 
@@ -630,7 +658,14 @@ async function runCascata(processoId) {
     if (c.sequencial > atual) resumo.ultimo_numero_por_secretaria[sec] = c.sequencial;
   }
 
-  return { atas, itens, contratos_existentes: contratos, resumo };
+  traceStep(trace, {
+    fase: "fim",
+    label: "sincronização finalizada",
+    processo_id: processoId,
+    encontrados: { atas: atas.length, itens: itens.length, contratos: contratos.length },
+  });
+
+  return { atas, itens, contratos_existentes: contratos, resumo, trace };
 }
 
 // ---------- helpers de URL ----------
