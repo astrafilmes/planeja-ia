@@ -499,6 +499,13 @@ async function fetchItensDaAta(ata, trace) {
 }
 
 // ---------- contratos ----------
+// Extrai TODOS os campos disponíveis na linha do contrato no portal M2A.
+// Layout típico (kt-datatable tr.tr_contrato):
+//   td vazio (details) | th checkbox | td(nº contrato a>span) | td(processo a>span)
+//   | td.text-left (secretaria) | td.text-left (FORNECEDOR)
+//   | td.text-center (vigência início) | td.text-center (vigência fim)
+//   | td.text-right (valor) | td hidden status | td hidden modalidade
+//   | td ações | td hidden objeto
 function extractContratosFromDoc($, ataId) {
   const out = [];
   const seen = new Set();
@@ -512,32 +519,77 @@ function extractContratosFromDoc($, ataId) {
     seen.add(contratoId);
     const numero = txt($, $a.find("span").first()) || txt($, $a);
     const tr = $a.closest("tr");
+
     let secretaria = "";
-    let valor_total = 0;
+    let fornecedor = "";
+    let vigencia_inicio = "";
+    let vigencia_fim = "";
     let vigencia = "";
+    let valor_total = 0;
+    let objeto = "";
+    let cnpj;
+
     if (tr.length) {
-      secretaria = txt($, tr.find("td.text-left").first());
+      // Captura TODAS as células incluindo as ocultas (display:none).
+      const tds = tr.find("td").toArray().map((td) => $(td));
+      const tdText = (i) => (tds[i] ? cleanTextValue(tds[i].find("span").first().text() || tds[i].text()) : "");
+
+      // text-left: 1ª = secretaria, 2ª = fornecedor.
+      const textLeft = tr.find("td.text-left").toArray().map((td) => $(td));
+      secretaria = textLeft[0] ? cleanTextValue(textLeft[0].find("span").first().text() || textLeft[0].text()) : "";
+      fornecedor = textLeft[1] ? cleanTextValue(textLeft[1].find("span").first().text() || textLeft[1].text()) : "";
+
+      // text-center com formato de data → vigência (1ª = início, 2ª = fim).
+      const datas = [];
+      tr.find("td.text-center").each((__, td) => {
+        const t = cleanTextValue($(td).find("span").first().text() || $(td).text());
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(t)) datas.push(t);
+      });
+      vigencia_inicio = datas[0] || "";
+      vigencia_fim = datas[1] || "";
+      vigencia = vigencia_inicio && vigencia_fim ? `${vigencia_inicio} - ${vigencia_fim}` : (vigencia_inicio || vigencia_fim);
+
+      // text-right (ou qualquer td) com R$ → valor.
       tr.find("td").each((__, td) => {
-        const t = txt($, $(td));
+        const t = cleanTextValue($(td).text());
         if (!valor_total && /R\$/.test(t)) {
           const v = parseValor(t);
           if (v > 0) valor_total = v;
         }
-        if (!vigencia && /\d{2}\/\d{2}\/\d{4}/.test(t)) vigencia = t;
       });
+
+      // Objeto: normalmente último td oculto (display:none) com texto longo.
+      const hiddenTds = tr.find('td[style*="display: none"], td[style*="display:none"]').toArray();
+      for (const td of hiddenTds) {
+        const t = cleanTextValue($(td).text());
+        if (t.length > 30 && !/R\$/.test(t) && !/^\d{2}\/\d{2}\/\d{4}/.test(t) && !/^(ativo|manual|finalizado|cancelado)/i.test(t)) {
+          objeto = t;
+          break;
+        }
+      }
+
+      const cnpjMatch = cleanTextValue(tr.text()).match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/);
+      if (cnpjMatch) cnpj = cnpjMatch[0];
     }
+
     out.push({
       id_contrato_m2a: contratoId,
       numero_contrato: numero,
       sequencial: extrairNumeroSequencial(numero),
       id_ata: ataId,
       secretaria_nome: secretaria || "",
-      valor_total,
+      fornecedor_nome: fornecedor || "",
+      fornecedor_cnpj: cnpj,
+      vigencia_inicio,
+      vigencia_fim,
       vigencia,
+      valor_total,
+      objeto,
     });
   });
   return out;
 }
+
 
 async function fetchContratosDaAta(ata, trace) {
   const url = `/ata_registro_precos/tabela_contratos/${ata.id_ata}?page_size=1000`;
