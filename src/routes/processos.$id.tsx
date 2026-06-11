@@ -343,7 +343,7 @@ function Page() {
  .maybeSingle(),
  supabase
  .from("contratos")
- .select("id, numero_contrato, dotacao, secretaria_sigla, secretaria_id, preposto, objeto, status, data, data_texto_legado, status_envio_m2a, ultimo_erro_m2a, m2a_contrato_id, m2a_documentos_gerados, m2a_ata_id, m2a_ata_numero, fornecedor_nome, enviado_m2a_em, secretarias:secretaria_id(sigla, nome, m2a_orgao_id, m2a_dot_orgao_id, m2a_uo_id, m2a_dot_id, m2a_fiscal_codigo, m2a_fiscal_nome, m2a_gestor_codigo, m2a_gestor_nome)",
+ .select("id, numero_contrato, dotacao, secretaria_sigla, secretaria_id, preposto, objeto, status, data, data_texto_legado, status_envio_m2a, ultimo_erro_m2a, m2a_contrato_id, m2a_documentos_gerados, m2a_ata_id, m2a_ata_numero, fornecedor_nome, enviado_m2a_em, impresso_assinado, publicado, secretarias:secretaria_id(sigla, nome, m2a_orgao_id, m2a_dot_orgao_id, m2a_uo_id, m2a_dot_id, m2a_fiscal_codigo, m2a_fiscal_nome, m2a_gestor_codigo, m2a_gestor_nome)",
  )
  .eq("processo_id", id)
  .is("deleted_at", null)
