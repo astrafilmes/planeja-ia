@@ -139,12 +139,16 @@ export function DocumentosEditor({
  todosDocumentos.every((doc) => selected.has(doc.key));
  const someSelected = selectedDocs.length > 0 && !allSelected;
 
+ function downloadName(nome: string) {
+ return appendContratoToFileName(nome, contratoNumero ?? contratoId);
+ }
+
  async function baixar(d: Doc) {
  const { data, error } = await supabase.storage
  .from("contrato-documentos")
  .createSignedUrl(d.storage_path, 60);
  if (error || !data) return toast.error(error?.message ??"Falha");
- triggerUrlDownload(data.signedUrl, d.nome);
+ triggerUrlDownload(data.signedUrl, downloadName(d.nome));
  }
 
  async function baixarDocumento(doc: DocumentoLista) {
@@ -198,7 +202,7 @@ export function DocumentosEditor({
  throw new Error(`HTTP ${response.status} ao baixar ${doc.nome}`);
  }
  zip.file(
- safeFileName(doc.nome || doc.local.storage_path),
+ safeFileName(downloadName(doc.nome || doc.local.storage_path)),
  await response.arrayBuffer(),
  );
  }
@@ -217,7 +221,7 @@ export function DocumentosEditor({
  externos.push({
  origem:"url",
  url: data.signedUrl,
- nome: doc.nome || doc.local.storage_path,
+ nome: downloadName(doc.nome || doc.local.storage_path),
  mimeType: doc.local.mime_type ?? undefined,
  });
  }
@@ -428,9 +432,20 @@ function safeFileName(value: string) {
  .normalize("NFKD")
  .replace(/[\u0300-\u036f]/g,"")
  .replace(/[\\/:*?"<>|]+/g,"")
- .replace(/\s+/g,"")
+ .replace(/\s+/g," ")
  .trim()
  .slice(0, 140);
+}
+
+function appendContratoToFileName(nome: string, contrato: string) {
+ const raw = String(nome ||"documento").trim();
+ const numero = String(contrato ||"").trim();
+ if (!numero) return raw;
+ const dot = raw.match(/^(.*?)(\.[A-Za-z0-9]{1,8})$/);
+ const base = (dot?.[1] ?? raw).trim();
+ const ext = dot?.[2] ??"";
+ if (base.endsWith(` - ${numero}`)) return raw;
+ return `${base} - ${numero}${ext}`;
 }
 
 function triggerUrlDownload(url: string, filename: string) {
