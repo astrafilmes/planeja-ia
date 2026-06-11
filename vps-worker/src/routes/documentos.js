@@ -355,47 +355,8 @@ async function fetchOne(doc, _hrefMap, log) {
   return fetchFromM2A(id, null, log, contratoId);
 }
 
-async function fetchFromUrl(url) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status} ao baixar ${url}`);
-  const buf = Buffer.from(await res.arrayBuffer());
-  return {
-    bytes: buf,
-    contentType: res.headers.get("content-type") || "application/octet-stream",
-    contentDisposition: res.headers.get("content-disposition") || null,
-  };
-}
 
-async function fetchOne(doc, hrefMap, log) {
-  if (doc?.source === "url" || doc?.origem === "url") {
-    return fetchFromUrl(doc.url);
-  }
-  const id = String(doc?.id_m2a ?? doc?.id ?? "").trim();
-  if (!/^\d+$/.test(id)) {
-    throw new Error(`id_m2a inválido em documento "${doc?.nome ?? "?"}"`);
-  }
-  return fetchFromM2A(id, hrefMap.get(id) || null, log);
-}
 
-/** Pré-resolve, agrupado por contrato_id, o href real de cada documento M2A. */
-async function buildHrefMap(documentos, log) {
-  const map = new Map();
-  const porContrato = new Map();
-  for (const d of documentos) {
-    if (d?.source !== "m2a") continue;
-    const cId = String(d.contrato_id ?? "").trim();
-    if (!/^\d+$/.test(cId)) continue;
-    if (!porContrato.has(cId)) porContrato.set(cId, []);
-    porContrato.get(cId).push(String(d.id_m2a));
-  }
-  for (const [cId, ids] of porContrato) {
-    const m = await discoverDownloadUrlMap(cId, ids, log);
-    for (const id of ids) {
-      if (m.has(id)) map.set(id, m.get(id));
-    }
-  }
-  return map;
-}
 
 export async function documentosRoutes(app) {
   app.post("/documentos/baixar", async (req, reply) => {
