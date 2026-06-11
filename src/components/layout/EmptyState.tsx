@@ -21,19 +21,17 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "mx-auto flex max-w-sm flex-col items-center justify-center gap-3 px-4 py-10 text-center",
+        "mx-auto flex max-w-md flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-border bg-muted/30 px-6 py-12 text-center",
         className,
       )}
     >
-      <div className="grid size-10 place-items-center rounded-xl border border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
-        <Icon className="size-5" />
+      <div className="grid size-14 place-items-center rounded-2xl bg-accent-soft text-accent-strong ring-1 ring-accent/15">
+        <Icon className="size-6" />
       </div>
-      <div className="flex flex-col gap-1">
-        <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
-          {title}
-        </h3>
+      <div className="flex flex-col gap-1.5">
+        <h3 className="text-[15px] font-semibold text-foreground">{title}</h3>
         {description && (
-          <p className="text-[13px] text-slate-500 dark:text-slate-400">
+          <p className="text-[13px] leading-relaxed text-muted-foreground">
             {description}
           </p>
         )}
