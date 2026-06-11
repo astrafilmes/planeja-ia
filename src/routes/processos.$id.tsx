@@ -1630,7 +1630,7 @@ function Page() {
  )}
  </TableCell>
  <TableCell
- colSpan={2}
+ colSpan={3}
  className="py-2 pr-4 text-right text-[13px] text-muted-foreground"
  >
  {selectionStats.count > 0
