@@ -183,13 +183,13 @@ export function AtoresEditor({
  </div>
  )}
 
- {/* Servidores adicionais */}
+    {/* Servidores adicionais */}
  <div className="flex flex-col gap-2">
  <div className="flex items-center justify-between">
  <div className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
- Servidores adicionais ({atores.length})
+ Servidores ({defaults.length + atores.length})
  </div>
- {!showForm && (
+ {!showForm && !locked && (
  <Button
  size="sm"
  variant="outline"
