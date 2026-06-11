@@ -279,7 +279,7 @@ export function ServidoresCatalogPage({
         </div>
       </div>
 
-      <Card className="overflow-hidden border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+      <Card className="overflow-hidden border-border/60 bg-card">
         <div>
           <Table>
             <TableHeader>
