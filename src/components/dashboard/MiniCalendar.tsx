@@ -5,7 +5,13 @@ import { cn } from "@/lib/utils";
  * Read-only compact calendar with dots on flagged dates.
  * @param markedDates - ISO date strings (YYYY-MM-DD) to render a dot under.
  */
-export function MiniCalendar({ markedDates = [] }: { markedDates?: string[] }) {
+export function MiniCalendar({
+  markedDates = [],
+  onDayClick,
+}: {
+  markedDates?: string[];
+  onDayClick?: (date: Date) => void;
+}) {
   const today = new Date();
   const year = today.getFullYear();
   const month = today.getMonth();
