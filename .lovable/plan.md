@@ -1,88 +1,110 @@
-# Plano de implementação
+## Diagnóstico (resumo)
 
-## 1. Confiar neste dispositivo (token longo)
+O subagente mapeou seis defeitos reais em `src/lib/m2a-snapshot.ts` + schema:
 
-**Backend (migration)**
-- Nova tabela `public.trusted_devices`:
-  - `user_id uuid` (FK auth.users), `token_hash text` (SHA-256 do token), `device_label text`, `user_agent text`, `last_ip inet`, `created_at`, `last_used_at`, `expires_at` (default `now() + 60 days`), `revoked_at`.
-- GRANTs para `authenticated` e `service_role`; RLS:
-  - SELECT/UPDATE/DELETE só do próprio `user_id`.
-  - INSERT restrita a edge function (via service_role).
-- Função `consume_trusted_device(token text)` SECURITY DEFINER que valida hash, atualiza `last_used_at`, retorna `user_id` se válido.
+1. **DELETE + INSERT** total em `m2a_itens`/`m2a_atas`/`m2a_contratos_snapshot` a cada sync — IDs internos mudam, links por `id` quebram silenciosamente.
+2. Reconciliação de `contrato_itens` **só atua quando `m2a_item_id` já está preenchido** → itens legados, importados sem match, ou criados manualmente nunca são re-ligados.
+3. Dedupe em memória por `numero_item` descarta o registro errado quando há colisão entre atas distintas → contratos apontando para o item descartado ficam órfãos.
+4. `numero_item` / `lote` / `descricao` em `contrato_itens` não são atualizados quando estão vazios e o portal tem o valor.
+5. Sem UNIQUE / FK em `m2a_itens(processo_id, m2a_item_id)` nem índice em `contrato_itens.m2a_item_id` — corrupção silenciosa possível.
+6. `contrato_item_dotacoes.quantidade_alocada` nunca é re-validado contra o portal (risco controlado: usuário pode ter alocado manualmente).
 
-**Edge function `trusted-device`**
-- `POST /issue` — gera token aleatório (32 bytes hex), grava hash, devolve token bruto + expiração.
-- `POST /revoke` — marca `revoked_at = now()` para o token atual.
-- `POST /validate` — usada no boot; se válido e sessão expirou, mantém usuário logado refrescando a sessão.
+## Objetivo
 
-**Frontend**
-- Checkbox **“Confiar neste dispositivo por 60 dias”** em `src/routes/login.tsx`.
-- Ao logar com sucesso e checkbox marcado → chama `trusted-device/issue`, salva token em `localStorage` (`pj_trusted_token`).
-- `useAuth` no boot: se não há sessão, chama `/validate`. Se válido, mantém a UI logada (o token age como “lembrar”, não substitui a sessão — apenas evita exigir senha imediatamente; o usuário só precisará re-autenticar quando o token expirar).
-- Botão **“Sair de todos os dispositivos confiáveis”** no menu de conta (revoga todos os tokens do user).
+Sincronização **idempotente, determinística, sem perda de relação**: re-roda 100x → mesmo estado. Itens antigos (mesmo sem `m2a_item_id`) são re-ligados quando o portal os identifica.
 
-> Limitação: como o Supabase JWT tem TTL próprio, o token de dispositivo serve para pular o formulário de senha — apresenta tela mínima “Continuar como Fulano” e refresca a sessão automaticamente via fluxo de refresh do Supabase quando possível.
+## Plano de execução
 
-## 2. Sincronização reforçada do processo
+### 1. Migração SQL (estrutura defensiva)
 
-Em `src/lib/m2a-snapshot.ts` (persistência) e `useM2ASync`:
+```text
+- ALTER m2a_itens: UNIQUE (processo_id, m2a_item_id)
+- CREATE INDEX contrato_itens_m2a_item_id_idx ON contrato_itens(m2a_item_id)
+                WHERE m2a_item_id IS NOT NULL
+- Função helper normalize_numero_item(text) -> text
+  (lower + trim + strip leading zeros + strip non-alphanumeric exceto "/" e "-")
+```
 
-- **Upsert estável** por chaves:
-  - Atas: `(processo_id, m2a_ata_id)`.
-  - Itens M2A: `(processo_id, lote_norm, numero_item_norm)` — dedupe ao gravar.
-  - Contratos: `(processo_id, m2a_contrato_id)` ou `numero_contrato` normalizado.
-- **Reconciliação**:
-  - Para cada contrato existente, atualiza: `fornecedor_nome`, `fornecedor_cnpj`, `valor_global`, `vigencia_*`, datas, `m2a_ata_numero`.
-  - Para cada item de contrato existente, atualiza `valor_unitario`, `valor_total`, `quantidade`, `unidade`, `descricao`, `especificacao` quando o portal trouxer novidade (sem apagar campos preenchidos manualmente — política: portal vence em campos M2A).
-- **Dedupe pós-sync** (SQL helper `dedupe_m2a_itens(p_processo_id uuid)`): mantém a linha mais recente por `(processo_id, lower(trim(lote)), lower(trim(numero_item)))` e remove as demais.
-- **Stream de progresso** já existe; adicionar contadores: `atualizados`, `criados`, `duplicatas_removidas` e expor no toast final.
+Sem FK física entre `contrato_itens.m2a_item_id` e `m2a_itens.m2a_item_id` porque o item M2A pode ser removido do portal e o contrato local precisa sobreviver — a integridade fica em código + UNIQUE.
 
-## 3. Aba de itens sem duplicatas
+### 2. Reescrita de `persistM2ASnapshot` (`src/lib/m2a-snapshot.ts`)
 
-- Migration: índice único parcial `UNIQUE (processo_id, lower(trim(lote)), lower(trim(numero_item)))` em `m2a_itens` (após dedupe inicial via helper acima).
-- Listagem em `src/routes/processos.$id.tsx`: ordenar por `lote, numero_item::int`, deduplicar defensivamente no cliente também.
+Passo a passo, dentro de uma única transação RPC (ver §3):
 
-## 4. Correções de segurança e otimização
+a. **Snapshot pré-sync**: ler estado atual de `m2a_atas`, `m2a_itens`, `contrato_itens` do processo (contém id local + m2a_item_id + numero_item normalizado). Usado para diffing e logging.
 
-- Revisar `get_pauta_consolidada_data`: já filtra `deleted_at IS NULL`; adicionar `SECURITY INVOKER` explícito e `STABLE`.
-- Adicionar índices: `contrato_itens(contrato_id)`, `contrato_item_dotacoes(item_id)`, `m2a_itens(processo_id, lote, numero_item)`.
-- `useAuth`: trocar `getSession()` por `getUser()` na verificação inicial (já validado server-side), conforme regra de segurança.
-- Lint Supabase ao final; corrigir avisos críticos da migração.
+b. **Normalização do payload**:
+   - Construir mapa `byPortalId: Map<m2a_item_id, item>` (chave primária, sem perda).
+   - Construir mapa `byNumero: Map<normalized_numero_item, item[]>` (lista — não descartar duplicatas).
+   - Se houver colisão real de `numero_item` em atas diferentes, **manter todos** e logar `m2a_envio_logs` como warning estruturado.
 
-## 5. XLSX consolidada — todos os itens do processo
+c. **UPSERT m2a_atas / m2a_itens / m2a_contratos_snapshot** usando `onConflict: "processo_id,m2a_item_id"` (atas: `processo_id,m2a_ata_id`). Sem DELETE prévio.
 
-- Nova RPC `get_pauta_consolidada_full(p_processo_id, p_contrato_ids uuid[])`:
-  - Retorna **união** de:
-    - itens de contratos filtrados (com `secretaria_sigla`, `dotacao`, `quantidade_alocada`);
-    - **todos os itens do processo** vindos de `m2a_itens` (ou `contrato_itens` agregado por `processo_id`) que **não** estão nos contratos selecionados → com `quantidade_alocada = 0`, `secretaria_sigla = NULL`.
-- `prepararDadosPautaConsolidada` (em `excel-export.ts`):
-  - Agrupa por `lote|numero_item`.
-  - **Ordenação**: `lote ASC, numero_item ASC (numérico), ordem ASC`.
-  - Linhas “sem contrato selecionado” aparecem com colunas de secretaria vazias e total = 0.
-  - Mantém `=SUM()` em TOTAL/AZ.
-- `PautaConsolidadaExporter`: passa `contractIds` para a nova RPC; mantém multi-abas por processo; nome do arquivo/aba/footer continua via `buildProcessoNome`.
-- Excel: ativa **AutoFilter** em `A2:AZ2` para permitir filtrar por empresa/secretaria.
+d. **Cleanup**: `DELETE FROM m2a_itens WHERE processo_id = X AND m2a_item_id NOT IN (...payload)` — só remove o que o portal removeu de verdade. Idem atas.
 
-## Detalhes técnicos / arquivos
+e. **Reconciliação de `contrato_itens`** em três passes ordenados:
+   1. **Match por `m2a_item_id` existente** → atualiza valores (já existia).
+   2. **Match por `(numero_item normalizado, contrato.fornecedor_nome)`** para linhas com `m2a_item_id IS NULL` → preenche `m2a_item_id`, `numero_item`, `lote`, `descricao`, `unidade`, `valor_unitario`. Só roda se a chave for unívoca no escopo do processo+fornecedor.
+   3. **Match por `(numero_item normalizado)` puro** → fallback, apenas se houver exatamente 1 candidato. Caso contrário, registra ambiguidade em `m2a_envio_logs` e mantém `m2a_item_id = NULL`.
 
-- **Migrations** (uma única):
-  - `trusted_devices` + RLS + GRANTs + função `consume_trusted_device`.
-  - `dedupe_m2a_itens(uuid)`, índice único parcial.
-  - Novos índices.
-  - `get_pauta_consolidada_full(uuid, uuid[])`.
-- **Edge function**: `supabase/functions/trusted-device/index.ts`.
-- **Edits**:
-  - `src/routes/login.tsx` (+ checkbox + chamada).
-  - `src/hooks/useAuth.tsx` (boot validate + signOutAllTrusted).
-  - `src/lib/m2a-snapshot.ts` (upsert + reconciliação + chamar dedupe).
-  - `src/hooks/useM2ASync.ts` (contadores no toast).
-  - `src/routes/processos.$id.tsx` (ordenação/dedupe de exibição).
-  - `src/lib/excel-export.ts` (todos itens + autofilter + ordenação).
-  - `src/components/contratos/PautaConsolidadaExporter.tsx` (RPC nova).
+f. **Re-validação de `contrato_item_dotacoes`**:
+   - Recalcular `valor_total = quantidade * valor_unitario` para itens cujo `valor_unitario` mudou.
+   - **Não** sobrescrever `quantidade_alocada` (preserva ajuste manual).
+   - Se a soma das alocações > quantidade total do item após sync, gerar warning em `m2a_envio_logs` (não bloqueia).
 
-## Fora de escopo (confirmar se quer agora)
-- 2FA real.
-- Reescrita do worker M2A.
-- Reorganização visual da aba de itens.
+g. **Retorno estruturado**: `{ insertedAtas, insertedItens, updatedItens, relinkedItens, removedItens, ambiguousItens[], warnings[] }`. UI exibe banner com resumo.
 
-Aprovar para eu começar a executar?
+### 3. Atomicidade
+
+Encapsular passos (c)–(f) em RPC PostgreSQL `sync_m2a_snapshot(p_processo_id uuid, p_payload jsonb)` `SECURITY DEFINER` — garante rollback se qualquer etapa falhar. O client continua chamando `persistM2ASnapshot`, mas internamente é um único `supabase.rpc(...)`.
+
+### 4. Suíte de testes (Vitest)
+
+Arquivo `src/lib/__tests__/m2a-snapshot.test.ts` cobrindo:
+
+| # | Cenário | Asserção |
+|---|---------|----------|
+| 1 | Sync inicial vazio | insere atas/itens, contrato_itens não tocado |
+| 2 | Re-sync idêntico | zero updates, zero inserts (idempotência) |
+| 3 | Item removido do portal | item removido de `m2a_itens`, contrato_item permanece com `m2a_item_id` órfão + warning |
+| 4 | Item legado sem `m2a_item_id`, numero bate | relinka corretamente |
+| 5 | Numero ambíguo entre dois fornecedores | desempata por fornecedor, sem relinkagem cruzada |
+| 6 | Numero ambíguo dentro do mesmo fornecedor | não relinka, gera warning |
+| 7 | Colisão de `numero_item` entre duas atas | mantém os dois m2a_itens, dedupe não descarta |
+| 8 | `valor_unitario` mudou no portal | atualiza contrato_item + recalcula valor_total das dotações |
+| 9 | Alocação manual em dotações preservada após sync | quantidade_alocada inalterada |
+| 10 | Sync 100 vezes em loop (fuzz idempotência) | estado final estável |
+| 11 | Payload com 5 mil itens | performance < 5s (smoke test) |
+| 12 | RPC falha no meio | rollback completo, processos.m2a_sync_at não atualizado |
+
+Mocks: `supabase` client com `@supabase/supabase-js` driver memória (ou mock manual com tabelas em `Map`). Banco real **não** é usado nos testes unitários.
+
+### 5. Verificação manual pós-deploy
+
+- Rodar sync em 1 processo conhecido com itens legados.
+- Conferir no banco: `SELECT count(*) FROM contrato_itens WHERE m2a_item_id IS NULL AND contrato_id IN (...)` → deve cair para zero (ou número esperado de itens manuais).
+- Conferir `m2a_envio_logs` para warnings.
+
+### 6. Não-objetivos (fora do escopo desta entrega)
+
+- UI para resolver ambiguidades manualmente (fica para próxima fase).
+- Migração retroativa de dados já corrompidos: o primeiro sync após o deploy já corrige naturalmente via passe 2/3.
+- Alterar fluxo de `importar-contratos.tsx` — usa o mesmo `persistM2ASnapshot`, então herda a correção automaticamente.
+
+## Entregáveis
+
+1. `supabase/migrations/<ts>_m2a_sync_hardening.sql` — UNIQUE + índice + função `normalize_numero_item` + RPC `sync_m2a_snapshot`.
+2. `src/lib/m2a-snapshot.ts` reescrito (UPSERT + 3 passes + retorno estruturado).
+3. `src/lib/normalize.ts` — exporta `normalizeNumeroItem` espelhando a função SQL para consistência client/server.
+4. `src/hooks/useM2ASync.ts` — exibe toast com resumo `{ relinked, ambiguous, removed }`.
+5. `src/lib/__tests__/m2a-snapshot.test.ts` — 12 cenários acima.
+6. Atualização mínima de `src/routes/processos.$id.tsx` para mostrar warnings de ambiguidade no card de sync (se houver).
+
+## Riscos e mitigações
+
+| Risco | Mitigação |
+|-------|-----------|
+| Match por número errado em fornecedores diferentes | Passe 2 exige fornecedor; passe 3 só roda se candidato único |
+| Quantidade alocada divergente após mudança no portal | Warning, nunca sobrescrita silenciosa |
+| RPC com payload grande estoura limite | Chunking por ata (já existe) + payload reduzido antes do RPC (sem campos não usados) |
+| Regressão em fluxo de importação | Testes 1–8 também executados via path da importação |

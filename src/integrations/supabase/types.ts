@@ -1505,9 +1505,14 @@ export type Database = {
         }
         Returns: number
       }
+      normalize_numero_item: { Args: { s: string }; Returns: string }
       restore_soft_deleted_process: {
         Args: { p_processo_id: string }
         Returns: undefined
+      }
+      sync_m2a_snapshot: {
+        Args: { p_payload: Json; p_processo_id: string }
+        Returns: Json
       }
     }
     Enums: {
