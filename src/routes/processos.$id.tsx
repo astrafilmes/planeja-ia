@@ -78,11 +78,10 @@ import {
  ETAPAS_ORDEM,
  extractM2AProcessoId,
  listenAllM2AProgress,
- listenM2ABulkDownload,
- requestM2ABulkDownload,
  sendToM2A,
  type M2ADocumentoGerado,
 } from"@/lib/m2a";
+import { downloadM2ADocuments } from"@/lib/m2a-documents";
 import { useM2AConnection } from"@/contexts/M2AConnectionProvider";
 import { useM2APreferences } from"@/hooks/useM2APreferences";
 import {
