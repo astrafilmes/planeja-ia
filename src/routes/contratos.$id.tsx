@@ -170,6 +170,74 @@ function Page() {
  const [editNumeroContrato, setEditNumeroContrato] = useState("");
  const [editAtaId, setEditAtaId] = useState("");
  const [salvandoM2AConfig, setSalvandoM2AConfig] = useState(false);
+ const [warnPending, setWarnPending] = useState<null | { kind: "edit" | "delete"; item: any }>(null);
+ const [warnDontShow, setWarnDontShow] = useState(false);
+ const [editingItem, setEditingItem] = useState<any | null>(null);
+ const [editForm, setEditForm] = useState({ descricao: "", unidade: "", quantidade: "", valor_unitario: "" });
+ const [deletingItem, setDeletingItem] = useState<any | null>(null);
+ const [savingItem, setSavingItem] = useState(false);
+
+ const ITEM_WARN_KEY = "warn-edit-item";
+ function requestItemAction(kind: "edit" | "delete", item: any) {
+   const skip = typeof window !== "undefined" && window.localStorage.getItem(ITEM_WARN_KEY) === "off";
+   if (skip) return proceedItemAction(kind, item);
+   setWarnDontShow(false);
+   setWarnPending({ kind, item });
+ }
+ function proceedItemAction(kind: "edit" | "delete", item: any) {
+   if (kind === "edit") {
+     setEditForm({
+       descricao: item.descricao ?? "",
+       unidade: item.unidade ?? "",
+       quantidade: String(item.quantidade ?? ""),
+       valor_unitario: String(item.valor_unitario ?? ""),
+     });
+     setEditingItem(item);
+   } else {
+     setDeletingItem(item);
+   }
+ }
+ function confirmWarn() {
+   if (warnDontShow && typeof window !== "undefined") {
+     window.localStorage.setItem(ITEM_WARN_KEY, "off");
+   }
+   if (warnPending) proceedItemAction(warnPending.kind, warnPending.item);
+   setWarnPending(null);
+ }
+ async function saveItemEdit() {
+   if (!editingItem) return;
+   setSavingItem(true);
+   const qtd = Number(editForm.quantidade.replace(",", ".")) || 0;
+   const vu = Number(editForm.valor_unitario.replace(",", ".")) || 0;
+   const { error } = await supabase
+     .from("contrato_itens")
+     .update({
+       descricao: editForm.descricao,
+       unidade: editForm.unidade || null,
+       quantidade: qtd,
+       valor_unitario: vu,
+       valor_total: qtd * vu,
+     })
+     .eq("id", editingItem.id);
+   setSavingItem(false);
+   if (error) return toast.error(error.message);
+   toast.success("Item atualizado");
+   setEditingItem(null);
+   refetch();
+ }
+ async function deleteItemConfirmed() {
+   if (!deletingItem) return;
+   setSavingItem(true);
+   const { error } = await supabase
+     .from("contrato_itens")
+     .delete()
+     .eq("id", deletingItem.id);
+   setSavingItem(false);
+   if (error) return toast.error(error.message);
+   toast.success("Item removido");
+   setDeletingItem(null);
+   refetch();
+ }
  const { connected, ensureConnected } = useM2AConnection();
  const { startTask, updateProgress, finishTask, failTask } = useProgress();
 
