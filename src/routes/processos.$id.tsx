@@ -202,8 +202,9 @@ type ItemConsolidado = {
  quantidadeConsumida: number;
  saldo: number | null;
  valorDisponivel: number | null;
- valorUnitario: number;
- valorConsumido: number;
+  valorUnitario: number;
+  valorUnitarioContratado: number;
+  valorConsumido: number;
 };
 
 const BRL = new Intl.NumberFormat("pt-BR", {
