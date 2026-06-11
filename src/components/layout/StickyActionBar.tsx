@@ -32,6 +32,7 @@ export function StickyActionBar({ children, status, className }: StickyActionBar
 interface SectionNavProps {
   sections: { id: string; label: string }[];
   activeId?: string;
+  className?: string;
 }
 
 /**
