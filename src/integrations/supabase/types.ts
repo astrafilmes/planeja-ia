@@ -537,6 +537,7 @@ export type Database = {
           fornecedor_nome: string | null
           id: string
           import_job_id: string | null
+          impresso_assinado: boolean
           legacy_id: number | null
           link_contrato: string
           m2a_ata_id: string | null
@@ -547,6 +548,7 @@ export type Database = {
           objeto: string
           preposto: string
           processo_id: string | null
+          publicado: boolean
           publicado_at: string | null
           publicado_por: string | null
           secretaria_id: string | null
@@ -571,6 +573,7 @@ export type Database = {
           fornecedor_nome?: string | null
           id?: string
           import_job_id?: string | null
+          impresso_assinado?: boolean
           legacy_id?: number | null
           link_contrato: string
           m2a_ata_id?: string | null
@@ -581,6 +584,7 @@ export type Database = {
           objeto: string
           preposto: string
           processo_id?: string | null
+          publicado?: boolean
           publicado_at?: string | null
           publicado_por?: string | null
           secretaria_id?: string | null
@@ -605,6 +609,7 @@ export type Database = {
           fornecedor_nome?: string | null
           id?: string
           import_job_id?: string | null
+          impresso_assinado?: boolean
           legacy_id?: number | null
           link_contrato?: string
           m2a_ata_id?: string | null
@@ -615,6 +620,7 @@ export type Database = {
           objeto?: string
           preposto?: string
           processo_id?: string | null
+          publicado?: boolean
           publicado_at?: string | null
           publicado_por?: string | null
           secretaria_id?: string | null
