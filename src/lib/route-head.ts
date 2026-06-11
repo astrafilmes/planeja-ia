@@ -2,7 +2,7 @@
 // canonical, og:*, twitter:*) for TanStack Start routes.
 
 const SITE_URL = "https://planeja-ia.lovable.app";
-const BRAND = "Planeja IA";
+const BRAND = "PLANEJA-IA";
 
 export interface RouteHeadInput {
   title: string;
