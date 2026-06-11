@@ -59,7 +59,7 @@ export function WorkflowGuide({
 }: WorkflowGuideProps) {
 	const wrapperClass = compact
 		? "flex flex-col gap-3"
-		: "mb-6 rounded-xl border border-border/60 bg-card p-4 shadow-sm";
+		: "mb-6 rounded-xl border border-border/60 bg-card p-4";
 	const innerClass = compact
 		? "flex flex-col gap-3"
 		: "flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between";
@@ -100,15 +100,15 @@ export function WorkflowGuide({
  :"border-border/60 bg-muted/40 text-foreground/85 hover:border-primary/30 hover:bg-primary/5 dark:bg-muted/30 "
  }`}
  >
- <div
- className={`grid size-8 shrink-0 place-items-center rounded-md ${
- isActive
- ?"bg-primary text-primary-foreground"
- : isDone
- ?"bg-primary text-primary-foreground"
- :"bg-card text-muted-foreground shadow-sm "
- }`}
- >
+  <div
+  className={`grid size-8 shrink-0 place-items-center rounded-md border ${
+  isActive
+  ?"border-primary bg-primary text-primary-foreground"
+  : isDone
+  ?"border-primary bg-primary text-primary-foreground"
+  :"border-border/60 bg-card text-muted-foreground "
+  }`}
+  >
  {isDone ? (
  <CheckCircle2 className="size-4" />
  ) : (

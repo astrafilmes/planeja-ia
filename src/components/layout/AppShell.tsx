@@ -157,11 +157,11 @@ function NavList({
                       to={to}
                       onClick={onNavigate}
                       title={label}
-                      className={`group relative flex h-10 items-center justify-center rounded-xl transition-all
+                      className={`group relative flex h-10 items-center justify-center rounded-xl border transition-colors
                         ${
                           active
-                            ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-[0_4px_14px_-4px_rgb(108_92_231_/_0.4)]"
-                            : "text-sidebar-foreground/70 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
+                            ? "border-sidebar-border bg-sidebar-accent/60 text-sidebar-accent-foreground"
+                            : "border-transparent text-sidebar-foreground/70 hover:bg-sidebar-accent/30 hover:text-sidebar-foreground"
                         }`}
                     >
                       <Icon className="size-[18px]" />
@@ -207,11 +207,11 @@ function NavList({
                         key={to}
                         to={to}
                         onClick={onNavigate}
-                        className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-all
+                        className={`group relative flex items-center gap-3 rounded-xl border px-3 py-2.5 text-[13px] font-medium transition-colors
                           ${
                             active
-                              ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-[0_6px_20px_-8px_rgb(108_92_231_/_0.45)]"
-                              : "text-sidebar-foreground/75 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
+                              ? "border-sidebar-border bg-sidebar-accent/60 text-sidebar-accent-foreground"
+                              : "border-transparent text-sidebar-foreground/75 hover:bg-sidebar-accent/30 hover:text-sidebar-foreground"
                           }`}
                       >
                         <Icon
@@ -242,11 +242,11 @@ function NavList({
             to={to}
             onClick={onNavigate}
             title={collapsed ? label : undefined}
-            className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-all
+            className={`group flex items-center gap-3 rounded-xl border px-3 py-2.5 text-[13px] font-medium transition-colors
               ${
                 active
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-[0_6px_20px_-8px_rgb(108_92_231_/_0.45)]"
-                  : "text-sidebar-foreground/75 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
+                  ? "border-sidebar-border bg-sidebar-accent/60 text-sidebar-accent-foreground"
+                  : "border-transparent text-sidebar-foreground/75 hover:bg-sidebar-accent/30 hover:text-sidebar-foreground"
               } ${collapsed ? "justify-center px-2" : ""}`}
           >
             <Icon className="size-[17px] shrink-0" />
@@ -309,7 +309,7 @@ export function AppShell({
   const renderBrand = (compact = false) => (
     <div className="px-4 pb-3 pt-5">
       <div className="flex items-center gap-2.5">
-        <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-accent-strong to-accent text-sm font-bold text-white shadow-[0_6px_18px_-6px_rgb(108_92_231_/_0.6)]">
+        <div className="grid size-9 shrink-0 place-items-center rounded-xl border border-sidebar-border bg-sidebar-accent/40 text-sm font-bold text-sidebar-accent-foreground">
           P
         </div>
         {!compact && (
