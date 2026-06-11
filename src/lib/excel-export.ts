@@ -223,8 +223,8 @@ export async function exportarRelatorioContratoExcel(contracts: ContractGroupedD
       const row = ws.addRow([
         forceNumber(it.item_ordem),
         forceNumber(it.item_lote),
-        formatTechnicalDesc(it.item_descricao),
         formatTechnicalDesc(it.item_especificacao),
+        formatTechnicalDesc(it.item_descricao),
         safeText(it.item_unidade),
         it.item_quantidade ?? null,
         it.item_valor_unitario ?? null,
