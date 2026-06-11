@@ -1009,6 +1009,7 @@ function Page() {
  </>
  )}
  </Button>
+ </TableCell>
  <TableCell
  className="pr-3 py-2 text-right whitespace-nowrap sm:pr-4"
  onClick={(e) => e.stopPropagation()}
