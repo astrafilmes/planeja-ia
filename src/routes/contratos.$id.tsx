@@ -949,8 +949,30 @@ function Page() {
  <TableCell className="hidden py-2 text-right text-xs tabular-nums sm:table-cell">
  {BRL.format(Number(it.valor_unitario ?? 0))}
  </TableCell>
- <TableCell className="hidden py-2 text-right pr-4 text-xs tabular-nums font-medium sm:table-cell">
+ <TableCell className="hidden py-2 text-right text-xs tabular-nums font-medium sm:table-cell">
  {BRL.format(total)}
+ </TableCell>
+ <TableCell className="py-2 pr-4 text-right">
+   <div className="inline-flex items-center gap-1">
+     <Button
+       size="icon"
+       variant="ghost"
+       className="size-7"
+       title="Editar item"
+       onClick={() => requestItemAction("edit", it)}
+     >
+       <Pencil className="size-3.5" />
+     </Button>
+     <Button
+       size="icon"
+       variant="ghost"
+       className="size-7 text-red-600 hover:text-red-700"
+       title="Excluir item"
+       onClick={() => requestItemAction("delete", it)}
+     >
+       <Trash2 className="size-3.5" />
+     </Button>
+   </div>
  </TableCell>
  </TableRow>
  );
