@@ -308,7 +308,7 @@ function Login() {
                 </p>
               </header>
 
-              <div className="rounded-2xl border border-border/70 bg-card/80 p-1.5 shadow-[0_30px_80px_-30px_rgba(15,23,42,0.25)] backdrop-blur-xl dark:shadow-[0_30px_80px_-30px_rgba(0,0,0,0.6)]">
+              <div className="rounded-2xl border border-border/70 bg-card/80 p-1.5 shadow-[var(--shadow-card)] backdrop-blur-xl">
                 <Tabs defaultValue="login">
                   <TabsList className="grid w-full grid-cols-2 rounded-xl bg-muted/60 p-1">
                     <TabsTrigger value="login" className="rounded-lg">
