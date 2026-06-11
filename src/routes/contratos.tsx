@@ -862,7 +862,7 @@ function Page() {
  ))}
  {!isLoading && (contratos?.length ?? 0) === 0 && (
  <TableRow>
- <TableCell colSpan={8}>
+ <TableCell colSpan={9}>
  <EmptyState
  icon={FileSignature}
  title={
