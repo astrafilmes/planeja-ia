@@ -146,7 +146,22 @@ function buildAjaxHeaders(path) {
   };
 }
 
-async function fetchDoc(path, extraHeaders) {
+function traceStep(trace, event) {
+  if (!trace) return;
+  const step = {
+    seq: trace.length + 1,
+    ts: new Date().toISOString(),
+    ...event,
+  };
+  trace.push(step);
+  const status = step.status ? ` status=${step.status}` : "";
+  const counts = step.encontrados ? ` encontrados=${JSON.stringify(step.encontrados)}` : "";
+  const selected = step.selecionado ? " selecionado=true" : "";
+  const blocked = step.bloqueado ? " bloqueado=true" : "";
+  console.log(`[m2a-trace] #${step.seq} ${step.fase || ""} ${step.label || ""} ${step.url || ""}${status}${counts}${selected}${blocked}`);
+}
+
+async function fetchDocDetailed(path, extraHeaders) {
   const headers = { ...(buildAjaxHeaders(path) || {}), ...(extraHeaders || {}) };
   const r = await m2a.get(path, Object.keys(headers).length ? { headers } : undefined);
   if (r.status >= 400) {
@@ -155,7 +170,18 @@ async function fetchDoc(path, extraHeaders) {
     throw err;
   }
   const html = coerceHtmlPayload(r.html);
-  return cheerio.load(html);
+  return {
+    $: cheerio.load(html),
+    status: r.status,
+    finalUrl: r.finalUrl || "",
+    bytes: String(r.html ?? "").length,
+    decodedBytes: html.length,
+  };
+}
+
+async function fetchDoc(path, extraHeaders) {
+  const doc = await fetchDocDetailed(path, extraHeaders);
+  return doc.$;
 }
 
 export function parseM2aHtmlPayloadForTest(rawPayload) {
