@@ -103,12 +103,30 @@ export const groupContractData = (data: ContractReportData[]): ContractGroupedDa
   return Array.from(contractsMap.values());
 };
 
-const safeText = (v?: string | null) => (v ? String(v).replace(/\s+/g, ' ').trim() : '');
+/**
+ * safeText: preserva o conteúdo ORIGINAL do texto. Apenas normaliza quebras de
+ * linha duplicadas (\r\n, \n\n+) em um único espaço, sem cortar, truncar ou
+ * remover caracteres do início/fim do conteúdo (não faz trim agressivo, não
+ * colapsa espaços internos — espaços entre palavras e siglas são preservados).
+ */
+const safeText = (v?: string | null) => {
+  if (v === null || v === undefined) return '';
+  return String(v).replace(/\r\n/g, '\n').replace(/\n{2,}/g, '\n').replace(/\n/g, ' ');
+};
 
 /**
- * Força descrições técnicas para CAIXA ALTA e parágrafo único.
+ * Força descrições técnicas para CAIXA ALTA, preservando o texto na íntegra.
+ * Não trunca, não corta o início, não remove palavras — apenas normaliza
+ * quebras de linha duplicadas e aplica uppercase.
  */
-const formatTechnicalDesc = (v?: string | null) => (v ? String(v).replace(/\n+/g, ' ').trim().toUpperCase() : '');
+const formatTechnicalDesc = (v?: string | null) => {
+  if (v === null || v === undefined) return '';
+  return String(v)
+    .replace(/\r\n/g, '\n')
+    .replace(/\n{2,}/g, '\n')
+    .replace(/\n/g, ' ')
+    .toUpperCase();
+};
 
 export async function exportarRelatorioContratoExcel(contracts: ContractGroupedData[], isBatch: boolean = false): Promise<void> {
   if (!contracts || contracts.length === 0) return;
@@ -146,10 +164,16 @@ export async function exportarRelatorioContratoExcel(contracts: ContractGroupedD
 
     ws.pageSetup.margins = { left: 0.4, right: 0.4, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 };
 
+    const secretariaNome = safeText(contract.header.secretaria_nome);
+    const secretariaSigla = safeText(contract.header.secretaria_sigla);
+    const secretariaTexto = secretariaSigla
+      ? `${secretariaNome} (${secretariaSigla})`
+      : secretariaNome;
+
     const headerRows: Array<[string, string]> = [
       ['Tipo de Relatório:', 'Relatório de Contrato'],
       ['Número do Contrato:', safeText(contract.header.numero_contrato)],
-      ['Secretaria:', `${safeText(contract.header.secretaria_nome)}${contract.header.secretaria_sigla ? ` (${safeText(contract.header.secretaria_sigla)})` : ''}`.trim()],
+      ['Secretaria:', secretariaTexto],
       ['Fornecedor:', safeText(contract.header.fornecedor_nome)],
       ['Objeto:', safeText(contract.header.objeto)],
       ['Dotação:', safeText(contract.header.dotacao)],
