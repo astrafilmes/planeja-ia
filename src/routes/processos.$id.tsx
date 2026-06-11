@@ -64,6 +64,8 @@ import {
  FileText,
  FileUp,
  RefreshCw,
+ Settings2,
+ Info,
  Send as SendIcon,
 } from"lucide-react";
 import { toast } from"sonner";
