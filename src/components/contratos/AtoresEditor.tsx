@@ -73,11 +73,13 @@ export function AtoresEditor({
  atores,
  onChange,
  defaults = [],
+ locked = false,
 }: {
  contratoId: string;
  atores: Ator[];
  onChange: () => void;
  defaults?: DefaultServidor[];
+ locked?: boolean;
 }) {
  const [form, setForm] = useState({
  tipo:"fiscal_suplente",
