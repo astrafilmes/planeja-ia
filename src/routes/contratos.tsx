@@ -511,45 +511,45 @@ function Page() {
  <AppShell
  title="Contratos"
  subtitle="Cadastro, numeração automática e consulta"
- actions={
- <>
- {selected.size > 0 && (
- <Button
- size="sm"
- variant="outline"
- onClick={handleBulkDownloadDocumentos}
- disabled={downloadingDocs}
- >
- <Download className="size-4" /> Baixar convocação e contrato
- </Button>
- )}
- {selected.size > 0 && (
- <Button
- size="sm"
- variant="destructive"
- onClick={() => setBulkOpen(true)}
- >
- <Trash2 className="size-4" /> Excluir ({selected.size})
- </Button>
- )}
- {selected.size > 0 ? (
- <>
- <ContractReportGenerator contractIds={Array.from(selected)} isBatch={true} />
- <PautaConsolidadaExporter
- contractIds={Array.from(selected)}
- label="Pauta Consolidada (XLSX)"
- />
- </>
- ) : (
- <Button
- size="sm"
- variant="outline"
- onClick={exportarCSV}
- disabled={!contratos?.length}
- >
- <Download className="size-4" /> CSV Simples
- </Button>
- )}
+        actions={
+          <>
+            {selected.size > 0 && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleBulkDownloadDocumentos}
+                disabled={downloadingDocs}
+              >
+                <Download className="size-4" /> Baixar documentos
+              </Button>
+            )}
+            {selected.size > 0 ? (
+              <>
+                <ContractReportGenerator contractIds={Array.from(selected)} isBatch={true} />
+                <PautaConsolidadaExporter
+                  contractIds={Array.from(selected)}
+                  label="Baixar planilha"
+                />
+              </>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={exportarCSV}
+                disabled={!contratos?.length}
+              >
+                <Download className="size-4" /> CSV Simples
+              </Button>
+            )}
+            {selected.size > 0 && (
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => setBulkOpen(true)}
+              >
+                <Trash2 className="size-4" /> Excluir ({selected.size})
+              </Button>
+            )}
  <Dialog
  open={open}
  onOpenChange={(v) => {

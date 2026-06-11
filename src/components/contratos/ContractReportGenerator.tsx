@@ -170,11 +170,11 @@ export function ContractReportGenerator({ contractIds, isBatch = false, buttonCl
     <>
       <Button onClick={handleGenerateXls} disabled={loadingXls || loadingPdf || contractIds.length === 0} className={buttonClassName} variant={variant} size={size}>
         {loadingXls ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="mr-2 h-4 w-4" />}
-        {isBatch ? "XLSX Completo (Lote)" : "Exportar XLSX"}
+        Exportar XLSX
       </Button>
       <Button onClick={handleGeneratePdf} disabled={loadingXls || loadingPdf || contractIds.length === 0} className={buttonClassName} variant={variant} size={size}>
         {loadingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
-        {isBatch ? "PDF Completo (Lote)" : "Exportar PDF"}
+        Exportar PDF
       </Button>
     </>
   );
