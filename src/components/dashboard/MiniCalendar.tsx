@@ -5,7 +5,13 @@ import { cn } from "@/lib/utils";
  * Read-only compact calendar with dots on flagged dates.
  * @param markedDates - ISO date strings (YYYY-MM-DD) to render a dot under.
  */
-export function MiniCalendar({ markedDates = [] }: { markedDates?: string[] }) {
+export function MiniCalendar({
+  markedDates = [],
+  onDayClick,
+}: {
+  markedDates?: string[];
+  onDayClick?: (date: Date) => void;
+}) {
   const today = new Date();
   const year = today.getFullYear();
   const month = today.getMonth();
@@ -60,8 +66,31 @@ export function MiniCalendar({ markedDates = [] }: { markedDates?: string[] }) {
         {weeks.flat().map((cell, i) => {
           const isToday = cell.iso === todayIso;
           const isMarked = cell.iso ? marked.has(cell.iso) : false;
+          const clickable = cell.day !== null && !!onDayClick;
           return (
-            <div key={i} className="flex flex-col items-center">
+            <div
+              key={i}
+              role={clickable ? "button" : undefined}
+              tabIndex={clickable ? 0 : undefined}
+              onClick={() => {
+                if (!clickable || !cell.day) return;
+                const d = new Date(year, month, cell.day);
+                onDayClick?.(d);
+              }}
+              onKeyDown={(e) => {
+                if (!clickable || !cell.day) return;
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onDayClick?.(new Date(year, month, cell.day));
+                }
+              }}
+              className={cn(
+                "flex flex-col items-center rounded-md py-0.5 transition-colors",
+                clickable &&
+                  "cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50",
+                cell.day === null && "pointer-events-none",
+              )}
+            >
               <div
                 className={cn(
                   "grid size-7 place-items-center rounded-full text-[12px]",
