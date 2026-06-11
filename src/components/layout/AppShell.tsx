@@ -314,8 +314,8 @@ export function AppShell({
         </div>
         {!compact && (
           <div className="min-w-0">
-            <div className="text-[15px] font-semibold tracking-tight leading-tight text-sidebar-foreground">
-              Planejamento
+            <div className="text-[15px] font-bold tracking-tight leading-tight text-sidebar-foreground">
+              PLANEJA-IA
             </div>
             <div className="text-[11px] leading-tight text-sidebar-foreground/55">
               Contratações Públicas
