@@ -33,9 +33,9 @@ const toneMap: Record<
     ring: "ring-[#D97706]/15",
   },
   slate: {
-    surface: "bg-slate-100 dark:bg-slate-800/60",
-    icon: "text-slate-600 dark:text-slate-300",
-    ring: "ring-slate-300/30",
+    surface: "bg-muted",
+    icon: "text-muted-foreground",
+    ring: "ring-border/40",
   },
 };
 

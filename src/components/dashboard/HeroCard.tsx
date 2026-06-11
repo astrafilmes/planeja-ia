@@ -55,10 +55,11 @@ export function HeroCard({
             <button
               type="button"
               onClick={onCtaClick}
-              className="mt-6 inline-flex h-11 items-center gap-2 rounded-full bg-black px-5 text-[13px] font-medium text-white shadow-lg transition-all hover:translate-y-[-1px] hover:bg-black/90"
+              aria-label={cta}
+              className="mt-6 inline-flex h-11 items-center gap-2 rounded-full bg-[#0a0d18] px-5 text-[13px] font-medium text-white shadow-lg ring-1 ring-white/10 transition-all hover:-translate-y-px hover:bg-[#11162a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#5b4bd1]"
             >
               {cta}
-              <ArrowUpRight className="size-4" />
+              <ArrowUpRight className="size-4" aria-hidden="true" />
             </button>
           )}
         </div>
