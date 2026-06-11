@@ -166,10 +166,8 @@ function toSecretariaPayload(sec: Sec) {
  : Number(sec.m2a_ref_coluna),
  m2a_fiscal_codigo: trimOrNull(sec.m2a_fiscal_codigo),
  m2a_fiscal_nome: trimOrNull(sec.m2a_fiscal_nome),
- m2a_fiscal_cpf: trimOrNull(sec.m2a_fiscal_cpf),
  m2a_gestor_codigo: trimOrNull(sec.m2a_gestor_codigo),
  m2a_gestor_nome: trimOrNull(sec.m2a_gestor_nome),
- m2a_gestor_cpf: trimOrNull(sec.m2a_gestor_cpf),
  };
 }
 
