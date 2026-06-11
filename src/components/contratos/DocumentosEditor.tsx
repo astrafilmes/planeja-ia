@@ -147,7 +147,14 @@ export function DocumentosEditor({
  async function baixarDocumento(doc: DocumentoLista) {
  if (doc.origem ==="m2a") {
  startTask("Baixando documento", `Preparando ${doc.nome}...`);
- requestM2ABulkDownload([doc.m2a]);
+ try {
+ await downloadM2ADocuments([doc.m2a], undefined, (e) => {
+ if (e.status ==="concluido") finishTask("Documento baixado.");
+ if (e.status ==="erro") failTask(e.mensagem ??"Falha ao baixar");
+ });
+ } catch (err: any) {
+ toast.error(err?.message ??"Falha ao baixar documento.");
+ }
  return;
  }
  await baixar(doc.local);
@@ -213,13 +220,12 @@ export function DocumentosEditor({
  }
 
  startTask("Compactando documentos",
- `Preparando ${externos.length} arquivo(s)...`,
+ `Compactando ${externos.length} arquivo(s) no servidor...`,
  );
- requestM2ABulkDownload(externos, {
- archive: true,
- filename: zipName,
+ await downloadM2ADocuments(externos, { archive: true, filename: zipName }, (e) => {
+ if (e.status ==="concluido") finishTask(`${e.total} documento(s) compactado(s).`);
+ if (e.status ==="erro") failTask(e.mensagem ??"Falha ao gerar ZIP");
  });
- toast.info("Gerando ZIP dos documentos.");
  } catch (e: any) {
  failTask(e.message ??"Falha ao gerar ZIP");
  toast.error(e.message ??"Falha ao gerar ZIP");
