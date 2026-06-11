@@ -485,6 +485,8 @@ export type Database = {
           objeto: string
           preposto: string
           processo_id: string | null
+          publicado_at: string | null
+          publicado_por: string | null
           secretaria_id: string | null
           secretaria_nome: string
           secretaria_num: number
@@ -517,6 +519,8 @@ export type Database = {
           objeto: string
           preposto: string
           processo_id?: string | null
+          publicado_at?: string | null
+          publicado_por?: string | null
           secretaria_id?: string | null
           secretaria_nome: string
           secretaria_num: number
@@ -549,6 +553,8 @@ export type Database = {
           objeto?: string
           preposto?: string
           processo_id?: string | null
+          publicado_at?: string | null
+          publicado_por?: string | null
           secretaria_id?: string | null
           secretaria_nome?: string
           secretaria_num?: number
