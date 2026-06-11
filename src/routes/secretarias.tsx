@@ -605,12 +605,34 @@ function Page() {
  : actorPatch("m2a_gestor", gestor)),
  };
 
- const { error } = await supabase
+  const { error } = await supabase
  .from("secretarias")
  .update(payload)
  .in("id", ids);
 
  if (error) return toast.error(error.message);
+
+ // Propaga CPFs (fora da tabela secretarias) para cada id quando o usuário trocou o ator
+ if (groupForm.fiscalM2AId !== KEEP_SELECT_VALUE || groupForm.gestorM2AId !== KEEP_SELECT_VALUE) {
+ try {
+ await Promise.all(
+ ids.map((id) =>
+ syncSecretariaCpfs(id, {
+ ...(groupForm.fiscalM2AId === KEEP_SELECT_VALUE
+ ? {}
+ : { fiscal: fiscal?.cpf ?? null }),
+ ...(groupForm.gestorM2AId === KEEP_SELECT_VALUE
+ ? {}
+ : { gestor: gestor?.cpf ?? null }),
+ }),
+ ),
+ );
+ } catch (e) {
+ toast.error("Grupo salvo, mas CPFs não foram atualizados.", {
+ description: (e as Error).message,
+ });
+ }
+ }
 
  await logAudit({
  action:"bulk_update",
