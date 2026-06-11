@@ -401,7 +401,7 @@ function Page() {
  </Button>
  </DialogTrigger>
  <DialogContent className="max-w-2xl overflow-hidden p-0">
- <DialogHeader className="border-b border-border/60 px-6 pb-4 pt-5 dark:border-slate-800">
+ <DialogHeader className="border-b border-border/60 px-6 pb-4 pt-5 ">
  <DialogTitle>
  {editing ?"Editar processo" :"Novo processo administrativo"}
  </DialogTitle>
@@ -437,7 +437,7 @@ function Page() {
  </div>
  <div className="flex flex-col gap-1.5">
  <Label>Modalidade</Label>
- <div className="flex h-10 items-center rounded-md border border-input bg-muted/40 px-3 text-sm text-foreground/85 dark:text-slate-300">
+ <div className="flex h-10 items-center rounded-md border border-input bg-muted/40 px-3 text-sm text-foreground/85 ">
  {detectedProcesso?.modalidade ??"Aguardando número"}
  </div>
  </div>
@@ -709,7 +709,7 @@ function Page() {
  />
  </TableCell>
  <TableCell>
- <span className="inline-flex h-7 items-center rounded-md border border-input bg-white px-2.5 font-mono text-xs font-semibold text-foreground shadow-sm dark:text-slate-100">
+ <span className="inline-flex h-7 items-center rounded-md border border-input bg-card px-2.5 font-mono text-xs font-semibold text-foreground shadow-sm ">
  {p.numero_processo ??"—"}
  </span>
  </TableCell>

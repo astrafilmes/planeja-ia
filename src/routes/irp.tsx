@@ -1015,7 +1015,7 @@ function Page() {
  <div className="flex flex-col gap-1.5">
  <Label>Classificacao *</Label>
  <select
- className="h-10 rounded-md border border-input bg-white px-3 text-sm dark:bg-slate-950"
+ className="h-10 rounded-md border border-input bg-card px-3 text-sm "
  value={processoM2AForm.classificacao}
  onChange={(e) =>
  updateProcessoM2AField("classificacao", e.target.value)
@@ -1337,7 +1337,7 @@ function Page() {
  <div className="grid gap-3 text-sm">
  <div className="grid gap-2 rounded-lg border border-border/60 bg-muted/40 p-3 md:grid-cols-3">
  <div>
- <div className="text-[11px] font-semibold uppercase text-slate-500">
+ <div className="text-[11px] font-semibold uppercase text-muted-foreground">
  Orgao
  </div>
  <div className="font-mono">
@@ -1345,7 +1345,7 @@ function Page() {
  </div>
  </div>
  <div>
- <div className="text-[11px] font-semibold uppercase text-slate-500">
+ <div className="text-[11px] font-semibold uppercase text-muted-foreground">
  Unidade
  </div>
  <div className="font-mono">
@@ -1354,7 +1354,7 @@ function Page() {
  </div>
  </div>
  <div>
- <div className="text-[11px] font-semibold uppercase text-slate-500">
+ <div className="text-[11px] font-semibold uppercase text-muted-foreground">
  Agente
  </div>
  <div className="font-mono">
@@ -1364,7 +1364,7 @@ function Page() {
  </div>
 
  <div className="rounded-lg border border-border/60">
- <div className="border-b border-border/60 px-3 py-2 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground dark:border-slate-800">
+ <div className="border-b border-border/60 px-3 py-2 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground ">
  Planilhas selecionadas
  </div>
  <div className="max-h-64 overflow-auto">

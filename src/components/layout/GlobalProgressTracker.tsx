@@ -23,9 +23,9 @@ export function GlobalProgressTracker() {
  <section
  aria-live="polite"
  aria-label="Progresso de tarefa"
- className="fixed inset-x-4 bottom-4 z-50 overflow-hidden rounded-xl border border-border/60 bg-white/95 shadow-sm backdrop-blur-md transition-all sm:inset-x-auto sm:bottom-6 sm:right-6 sm:w-80"
+ className="fixed inset-x-4 bottom-4 z-50 overflow-hidden rounded-xl border border-border/60 bg-card/95 shadow-sm backdrop-blur-md transition-all sm:inset-x-auto sm:bottom-6 sm:right-6 sm:w-80"
  >
- <div className="flex items-center justify-between gap-3 border-b border-border/60 px-4 py-3 dark:border-slate-800">
+ <div className="flex items-center justify-between gap-3 border-b border-border/60 px-4 py-3 ">
  <div className="flex min-w-0 items-center gap-2">
  {status ==="success" ? (
  <CheckCircle className="size-4 shrink-0 text-emerald-500" />

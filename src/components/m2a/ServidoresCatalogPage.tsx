@@ -421,7 +421,7 @@ export function ServidoresCatalogPage({
  {unidades.map((unidade) => (
  <label
  key={unidade.id_local}
- className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-foreground/85 transition-colors hover:bg-muted/40 dark:hover:bg-slate-900"
+ className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-foreground/85 transition-colors hover:bg-muted/40 dark:hover:bg-foreground"
  >
  <Checkbox
  checked={editing.unidade_ids.includes(unidade.id_local)}

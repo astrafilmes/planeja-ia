@@ -156,7 +156,7 @@ function m2aBadgeClass(s: string) {
  return"border-red-200 bg-red-50 text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400";
  if (s ==="processando")
  return"border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-400";
- return"border-border/60 bg-muted/40 text-muted-foreground dark:text-slate-400";
+ return"border-border/60 bg-muted/40 text-muted-foreground dark:text-muted-foreground";
 }
 
 function normalizeDocumentosM2A(
@@ -869,7 +869,7 @@ function Page() {
  </TableCell>
  <TableCell>
  <div className="flex flex-col gap-1">
- <span className="inline-flex h-7 items-center rounded-md border border-input bg-white px-2.5 font-mono text-xs font-semibold text-foreground shadow-sm dark:text-slate-100">
+ <span className="inline-flex h-7 items-center rounded-md border border-input bg-card px-2.5 font-mono text-xs font-semibold text-foreground shadow-sm ">
  {c.numero_contrato}
  </span>
  <div className="truncate text-[12px] text-muted-foreground">

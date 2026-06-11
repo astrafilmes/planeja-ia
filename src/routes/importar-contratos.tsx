@@ -1782,7 +1782,7 @@ function Page() {
  {prepostoPreview ||"não informado"}
  </div>
  </div>
- <CardContent className="border-t border-border/60 p-0 dark:border-slate-800">
+ <CardContent className="border-t border-border/60 p-0 ">
  <Table className="[&_th]:h-9 [&_th]:px-3 [&_td]:px-3 [&_td]:py-2 text-[13px]">
  <TableHeader>
  <TableRow>
@@ -1891,7 +1891,7 @@ function Page() {
  </TableCell>
  <TableCell>
  <select
- className="h-9 w-full rounded-md border border-input bg-white px-2 text-[13px] transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-slate-950"
+ className="h-9 w-full rounded-md border border-input bg-card px-2 text-[13px] transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 "
  value={i.m2a_ata_id ??"__none__"}
  disabled={isAutorizado}
  onChange={(event) =>
@@ -2057,14 +2057,14 @@ function Page() {
  ) : (
  <>
  {/* 1) Vínculo de processo — vem ANTES dos dados do lote */}
- <div className="flex flex-col gap-3 rounded-xl border border-border/60 p-3 dark:border-slate-800">
+ <div className="flex flex-col gap-3 rounded-xl border border-border/60 p-3 ">
  <div className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
  Processo
  </div>
  <div className="flex flex-col gap-1.5">
  <Label>Vincular a processo existente</Label>
  <select
- className="h-10 w-full rounded-md border border-input bg-white px-2 text-sm transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-slate-950"
+ className="h-10 w-full rounded-md border border-input bg-card px-2 text-sm transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 "
  value={processoId}
  onChange={(e) => setProcessoId(e.target.value)}
  >
@@ -2152,7 +2152,7 @@ function Page() {
  secretaria/dotação detectada na planilha.
  </p>
 
- <div className="rounded-xl border border-border/60 bg-white p-3 dark:bg-slate-900">
+ <div className="rounded-xl border border-border/60 bg-card p-3 dark:bg-foreground">
  <div className="mb-2 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
  Preposto por fornecedor
  </div>
@@ -2172,7 +2172,7 @@ function Page() {
  return (
  <div
  key={target.key}
- className="grid gap-2 rounded-xl border border-border/60 bg-white px-2.5 py-2 md:grid-cols-[1fr_260px]"
+ className="grid gap-2 rounded-xl border border-border/60 bg-card px-2.5 py-2 md:grid-cols-[1fr_260px]"
  >
  <div className="min-w-0">
  <div
@@ -2211,8 +2211,8 @@ function Page() {
 
  <Separator className="my-2" />
 
- <div className="rounded-xl border border-border/60 bg-white p-3 text-[13px] text-muted-foreground dark:text-slate-300">
- <div className="font-medium text-slate-800 dark:text-slate-100">
+ <div className="rounded-xl border border-border/60 bg-card p-3 text-[13px] text-muted-foreground ">
+ <div className="font-medium text-slate-800 ">
  Pré-checagem
  </div>
  <div className="mt-1">
@@ -2252,7 +2252,7 @@ function Page() {
 
  <Separator />
 
- <div className="flex flex-col gap-1 rounded-xl bg-muted/40 p-3 text-[13px] text-muted-foreground dark:bg-muted/30 dark:text-slate-300">
+ <div className="flex flex-col gap-1 rounded-xl bg-muted/40 p-3 text-[13px] text-muted-foreground dark:bg-muted/30 ">
  <div>
  Serão criados{""}
  <strong>{contratosPreliminares.length}</strong>{""}

@@ -621,7 +621,7 @@ function Page() {
  </p>
  </div>
  <div className="grid grid-cols-3 border-t border-border/60 bg-muted/40 dark:bg-muted/30 lg:grid-cols-3 lg:border-l lg:border-t-0">
- <div className="border-r border-border/60 px-4 py-3 dark:border-slate-800">
+ <div className="border-r border-border/60 px-4 py-3 ">
  <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
  Valor
  </p>
@@ -629,7 +629,7 @@ function Page() {
  {BRL.format(valorTotal)}
  </p>
  </div>
- <div className="border-r border-border/60 px-4 py-3 dark:border-slate-800">
+ <div className="border-r border-border/60 px-4 py-3 ">
  <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
  Itens
  </p>
@@ -651,7 +651,7 @@ function Page() {
 
  {/* Dados do contrato — Grid Denso */}
  <Card className="mb-3 border-border/60">
- <CardHeader className="border-b border-border/60 px-4 py-3 dark:border-slate-800">
+ <CardHeader className="border-b border-border/60 px-4 py-3 ">
  <CardTitle>Dados do contrato</CardTitle>
  </CardHeader>
  <CardContent className="p-4">
@@ -739,7 +739,7 @@ function Page() {
 
  {/* Painel de envio */}
  <Card className="mb-3 border-border/60">
- <CardHeader className="flex-row items-center justify-between border-b border-border/60 px-4 py-3 dark:border-slate-800">
+ <CardHeader className="flex-row items-center justify-between border-b border-border/60 px-4 py-3 ">
  <CardTitle>Envio pela extensão</CardTitle>
  <div className="text-[13px] text-muted-foreground">
  Código externo: {contrato.processo?.m2a_processo_id ??"—"}

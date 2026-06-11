@@ -713,9 +713,9 @@ function Page() {
  </Button>
  </div>
 
- <Card className="border-border/60 bg-white p-3 text-[13px] dark:bg-slate-900">
+ <Card className="border-border/60 bg-card p-3 text-[13px] dark:bg-foreground">
  <div className="flex items-center gap-2 font-medium">
- <UsersRound className="size-3.5 text-slate-500" />
+ <UsersRound className="size-3.5 text-muted-foreground" />
  Nomes repetidos no catálogo
  </div>
  <div className="mt-1 text-muted-foreground">
@@ -739,7 +739,7 @@ function Page() {
 
  <div className="flex flex-col gap-3">
  {isLoading && (
- <Card className="border-border/60 p-8 text-center text-[13px] text-muted-foreground dark:text-slate-400">
+ <Card className="border-border/60 p-8 text-center text-[13px] text-muted-foreground dark:text-muted-foreground">
  Carregando secretarias...
  </Card>
  )}
@@ -785,7 +785,7 @@ function Page() {
  />
  </Button>
  </CollapsibleTrigger>
- <div className="grid size-9 shrink-0 place-items-center rounded-md bg-slate-900 text-slate-50 dark:bg-muted dark:text-slate-950">
+ <div className="grid size-9 shrink-0 place-items-center rounded-md bg-foreground text-background dark:bg-muted ">
  <Building2 className="size-4" />
  </div>
  <div className="min-w-0 flex-1">

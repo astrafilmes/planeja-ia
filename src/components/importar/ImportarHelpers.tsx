@@ -44,14 +44,14 @@ export function M2ASyncReport({ syncData }: { syncData: any }) {
  </div>
  </div>
 
- <div className="grid grid-cols-3 gap-2 border-b border-border/60 pb-3 dark:border-slate-800">
+ <div className="grid grid-cols-3 gap-2 border-b border-border/60 pb-3 ">
  <div className="text-center">
  <div className="text-xs font-bold text-foreground">
  {resumo.qtd_atas}
  </div>
  <div className="text-[9px] text-muted-foreground uppercase">Atas</div>
  </div>
- <div className="border-x border-border/60 text-center dark:border-slate-800">
+ <div className="border-x border-border/60 text-center ">
  <div className="text-xs font-bold text-foreground">
  {resumo.qtd_itens}
  </div>
@@ -73,7 +73,7 @@ export function M2ASyncReport({ syncData }: { syncData: any }) {
  <div className="px-1 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
  Último número por Secretaria:
  </div>
- <div className="max-h-32 overflow-auto rounded-xl border border-border/60 bg-white dark:bg-slate-900">
+ <div className="max-h-32 overflow-auto rounded-xl border border-border/60 bg-card dark:bg-foreground">
  <Table>
  <TableBody>
  {Object.entries(resumo.ultimo_numero_por_secretaria || {}).map(

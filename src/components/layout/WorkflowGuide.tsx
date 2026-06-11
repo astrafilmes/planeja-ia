@@ -56,7 +56,7 @@ export function WorkflowGuide({
  aside,
 }: WorkflowGuideProps) {
  return (
- <section className="mb-6 rounded-xl border border-border/60 bg-white p-4 shadow-sm dark:bg-slate-900">
+ <section className="mb-6 rounded-xl border border-border/60 bg-card p-4 shadow-sm dark:bg-foreground">
  <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
  <div className="flex min-w-0 items-center gap-3">
  <div className="hidden h-10 w-1 rounded-full bg-primary md:block" />
@@ -83,7 +83,7 @@ export function WorkflowGuide({
  ?"border-primary/50 bg-primary/10 text-primary"
  : isDone
  ?"border-primary/25 bg-primary/5 text-primary"
- :"border-border/60 bg-muted/40 text-foreground/85 hover:border-primary/30 hover:bg-primary/5 dark:bg-muted/30 dark:text-slate-200"
+ :"border-border/60 bg-muted/40 text-foreground/85 hover:border-primary/30 hover:bg-primary/5 dark:bg-muted/30 "
  }`}
  >
  <div
@@ -92,7 +92,7 @@ export function WorkflowGuide({
  ?"bg-primary text-primary-foreground"
  : isDone
  ?"bg-primary text-primary-foreground"
- :"bg-white text-muted-foreground shadow-sm dark:text-slate-300"
+ :"bg-card text-muted-foreground shadow-sm "
  }`}
  >
  {isDone ? (
