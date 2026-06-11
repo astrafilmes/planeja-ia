@@ -150,7 +150,7 @@ export function ContractReportGenerator({ contractIds, isBatch = false, buttonCl
       return;
     }
 
-    const doc = new jsPDF();
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
     let currentY = 14;
 
     contracts.forEach((contract, index) => {
