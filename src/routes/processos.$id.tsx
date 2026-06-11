@@ -78,11 +78,10 @@ import {
  ETAPAS_ORDEM,
  extractM2AProcessoId,
  listenAllM2AProgress,
- listenM2ABulkDownload,
- requestM2ABulkDownload,
  sendToM2A,
  type M2ADocumentoGerado,
 } from"@/lib/m2a";
+import { downloadM2ADocuments } from"@/lib/m2a-documents";
 import { useM2AConnection } from"@/contexts/M2AConnectionProvider";
 import { useM2APreferences } from"@/hooks/useM2APreferences";
 import {
@@ -587,28 +586,7 @@ function Page() {
  return off;
  }, [data?.contratos, failTask, finishTask, id, qc, updateProgress]);
 
- useEffect(() => {
- const off = listenM2ABulkDownload((event) => {
- if (event.status ==="iniciado") {
- startTask("Compactando documentos",
- `Preparando ${event.total} arquivo(s)...`,
- );
- }
- if (event.status ==="progresso") {
- updateProgress(
- (event.baixados / Math.max(event.total, 1)) * 100,
- `Baixando arquivo ${event.baixados} de ${event.total}...`,
- );
- }
- if (event.status ==="concluido") {
- finishTask(`${event.baixados} documento(s) compactado(s).`);
- }
- if (event.status ==="erro") {
- failTask(event.mensagem);
- }
- });
- return off;
- }, [failTask, finishTask, startTask, updateProgress]);
+ // Progresso de download em lote agora vem do helper downloadM2ADocuments (sem extensão).
 
  const contratos = useMemo(() => data?.contratos ?? [], [data?.contratos]);
 
@@ -1069,22 +1047,29 @@ function Page() {
  qc.invalidateQueries({ queryKey: ["processo-detail", id] });
  }
 
- function handleDownloadContratoDocs(contrato: ContratoRow) {
+ async function handleDownloadContratoDocs(contrato: ContratoRow) {
  const docs = getContratoDocumentos(contrato);
  if (!docs.length) {
  toast.error("Este contrato ainda não possui convocação ou contrato.");
  return;
  }
  startTask("Compactando documentos",
- `Preparando ${docs.length} documento(s)...`,
+ `Compactando ${docs.length} documento(s) no servidor...`,
  );
- requestM2ABulkDownload(docs, {
+ try {
+ await downloadM2ADocuments(docs, {
  archive: true,
  filename: `${contrato.numero_contrato ?? contrato.id}-documentos.zip`,
+ }, (e) => {
+ if (e.status ==="concluido") finishTask(`${e.total} documento(s) compactado(s).`);
+ if (e.status ==="erro") failTask(e.mensagem ??"Falha ao gerar ZIP");
  });
+ } catch (err: any) {
+ toast.error(err?.message ??"Falha ao gerar ZIP");
+ }
  }
 
- function handleDownloadSelectedDocs() {
+ async function handleDownloadSelectedDocs() {
  const docs = selectedContracts.flatMap(getContratoDocumentos);
  if (!selected.size) return;
  if (!docs.length) {
@@ -1093,12 +1078,19 @@ function Page() {
  return;
  }
  startTask("Compactando documentos",
- `Preparando ${docs.length} documento(s)...`,
+ `Compactando ${docs.length} documento(s) no servidor...`,
  );
- requestM2ABulkDownload(docs, {
+ try {
+ await downloadM2ADocuments(docs, {
  archive: true,
  filename: `processo-${id}-documentos.zip`,
+ }, (e) => {
+ if (e.status ==="concluido") finishTask(`${e.total} documento(s) compactado(s).`);
+ if (e.status ==="erro") failTask(e.mensagem ??"Falha ao gerar ZIP");
  });
+ } catch (err: any) {
+ toast.error(err?.message ??"Falha ao gerar ZIP");
+ }
  }
 
  if (isLoading) {

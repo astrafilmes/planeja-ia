@@ -101,6 +101,25 @@ X-Signature: <hex HMAC_SHA256>       # HMAC do `${ts}.${rawBody}`
 | GET    | `/numeracao?ano=YYYY&secretarias=A,B`   | Maior nº de contrato por secretaria/ano.    |
 | GET    | `/processos/:id`                        | Atas vinculadas ao processo.                |
 | GET    | `/processos/:id/atas/:ataId/itens`      | Itens da ata.                               |
+| POST   | `/documentos/baixar`                    | Baixa documentos do M2A (PDF único ou ZIP). |
+
+### `POST /documentos/baixar`
+
+Body:
+```json
+{
+  "documentos": [
+    { "source": "m2a", "id_m2a": "12345", "nome": "Contrato.pdf" },
+    { "source": "url", "url": "https://signed.url/...", "nome": "Aditivo.pdf" }
+  ],
+  "archive": true,
+  "filename": "contrato-123-documentos.zip"
+}
+```
+Resposta:
+- 1 documento e `archive=false` → binário cru (`application/pdf`, etc.) com `Content-Disposition`.
+- Vários documentos ou `archive=true` → `application/zip` streamado.
+
 
 Novos endpoints (contratos, snapshot, servidores, unidades) são adicionados em
 `src/routes/` seguindo o mesmo padrão; cada um chama `m2a.get(path)` e parseia

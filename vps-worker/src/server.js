@@ -5,10 +5,11 @@ import { numeracaoRoutes } from "./routes/numeracao.js";
 import { processosRoutes } from "./routes/processos.js";
 import { authRoutes } from "./routes/auth.js";
 import { contratosRoutes } from "./routes/contratos.js";
+import { documentosRoutes } from "./routes/documentos.js";
 
 const app = Fastify({
   logger: { level: config.logLevel },
-  bodyLimit: 2 * 1024 * 1024,
+  bodyLimit: 4 * 1024 * 1024,
 });
 
 app.get("/health", async () => ({
@@ -22,6 +23,7 @@ await app.register(authRoutes);
 await app.register(numeracaoRoutes);
 await app.register(processosRoutes);
 await app.register(contratosRoutes);
+await app.register(documentosRoutes);
 
 app.setErrorHandler((err, _req, reply) => {
   app.log.error(err);

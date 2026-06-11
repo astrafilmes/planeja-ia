@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from"react";
+import { useMemo, useState } from"react";
 import { supabase } from"@/integrations/supabase/client";
 import { Button } from"@/components/ui/button";
 import { EmptyState } from"@/components/layout/EmptyState";
@@ -19,11 +19,10 @@ import { Archive, Download, FileText, Trash2 } from"lucide-react";
 import { toast } from"sonner";
 import { logAudit } from"@/lib/audit";
 import {
- listenM2ABulkDownload,
- requestM2ABulkDownload,
  type M2ABulkDownloadDocumento,
  type M2ADocumentoGerado,
 } from"@/lib/m2a";
+import { downloadM2ADocuments } from"@/lib/m2a-documents";
 import { useProgress } from"@/contexts/ProgressContext";
 import JSZip from"jszip";
 import * as FileSaver from"file-saver";
@@ -78,28 +77,8 @@ export function DocumentosEditor({
  const [downloadingZip, setDownloadingZip] = useState(false);
  const { startTask, updateProgress, finishTask, failTask } = useProgress();
 
- useEffect(() => {
- const off = listenM2ABulkDownload((event) => {
- if (event.status ==="iniciado") {
- startTask("Baixando documentos",
- `Preparando ${event.total} arquivo(s)...`,
- );
- }
- if (event.status ==="progresso") {
- updateProgress(
- (event.baixados / Math.max(event.total, 1)) * 100,
- `Baixando arquivo ${event.baixados} de ${event.total}...`,
- );
- }
- if (event.status ==="concluido") {
- finishTask(`${event.baixados} documento(s) baixado(s).`);
- }
- if (event.status ==="erro") {
- failTask(event.mensagem);
- }
- });
- return off;
- }, [failTask, finishTask, startTask, updateProgress]);
+ // Progresso do download em lote agora é reportado diretamente pelo helper
+ // downloadM2ADocuments (sem listener global da extensão Chrome).
 
  const docsM2A = useMemo(() => {
  if (!Array.isArray(documentosM2A)) return [];
@@ -168,7 +147,14 @@ export function DocumentosEditor({
  async function baixarDocumento(doc: DocumentoLista) {
  if (doc.origem ==="m2a") {
  startTask("Baixando documento", `Preparando ${doc.nome}...`);
- requestM2ABulkDownload([doc.m2a]);
+ try {
+ await downloadM2ADocuments([doc.m2a], undefined, (e) => {
+ if (e.status ==="concluido") finishTask("Documento baixado.");
+ if (e.status ==="erro") failTask(e.mensagem ??"Falha ao baixar");
+ });
+ } catch (err: any) {
+ toast.error(err?.message ??"Falha ao baixar documento.");
+ }
  return;
  }
  await baixar(doc.local);
@@ -234,13 +220,12 @@ export function DocumentosEditor({
  }
 
  startTask("Compactando documentos",
- `Preparando ${externos.length} arquivo(s)...`,
+ `Compactando ${externos.length} arquivo(s) no servidor...`,
  );
- requestM2ABulkDownload(externos, {
- archive: true,
- filename: zipName,
+ await downloadM2ADocuments(externos, { archive: true, filename: zipName }, (e) => {
+ if (e.status ==="concluido") finishTask(`${e.total} documento(s) compactado(s).`);
+ if (e.status ==="erro") failTask(e.mensagem ??"Falha ao gerar ZIP");
  });
- toast.info("Gerando ZIP dos documentos.");
  } catch (e: any) {
  failTask(e.message ??"Falha ao gerar ZIP");
  toast.error(e.message ??"Falha ao gerar ZIP");

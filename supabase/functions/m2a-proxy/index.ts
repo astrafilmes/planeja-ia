@@ -99,13 +99,25 @@ Deno.serve(async (req) => {
     });
   }
 
-  const text = await workerRes.text();
-  return new Response(text, {
-    status: workerRes.status,
-    headers: {
-      ...corsHeaders,
-      "Content-Type":
-        workerRes.headers.get("content-type") ?? "application/json",
-    },
-  });
+  const respContentType =
+    workerRes.headers.get("content-type") ?? "application/json";
+  const respContentDisposition = workerRes.headers.get("content-disposition");
+  const isJson = respContentType.toLowerCase().includes("application/json");
+
+  // JSON / text → repassa como string. Binário (pdf, zip, etc.) → repassa o stream.
+  const headers: Record<string, string> = {
+    ...corsHeaders,
+    "Content-Type": respContentType,
+  };
+  if (respContentDisposition) {
+    headers["Content-Disposition"] = respContentDisposition;
+    headers["Access-Control-Expose-Headers"] = "Content-Disposition";
+  }
+
+  if (isJson) {
+    const text = await workerRes.text();
+    return new Response(text, { status: workerRes.status, headers });
+  }
+  const buf = await workerRes.arrayBuffer();
+  return new Response(buf, { status: workerRes.status, headers });
 });
