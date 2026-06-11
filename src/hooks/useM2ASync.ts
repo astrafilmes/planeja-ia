@@ -84,6 +84,9 @@ export function useM2ASync({
       if (summary.contratos_atualizados > 0) {
         partes.push(`${summary.contratos_atualizados} contratos atualizados`);
       }
+      if (summary.contratos_datas_atualizadas > 0) {
+        partes.push(`${summary.contratos_datas_atualizadas} datas atualizadas`);
+      }
       const base = `Sincronização concluída. ${partes.join(" · ")}.`;
       if (summary.itens_ambiguos.length > 0) {
         toast.warning(

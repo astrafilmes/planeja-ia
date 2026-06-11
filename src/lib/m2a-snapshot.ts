@@ -20,6 +20,7 @@ export interface M2aSyncSummary {
   itens_removidos: number;
   contratos_snapshot: number;
   contratos_atualizados: number;
+  contratos_datas_atualizadas: number;
   itens_relinkados: number;
   itens_ambiguos: M2aAmbiguousItem[];
   warnings: string[];
@@ -110,6 +111,14 @@ export async function persistM2ASnapshot(
       data,
     );
 
+    const { data: dateSyncData, error: dateSyncError } = await (supabase.rpc as any)(
+      "sync_m2a_contract_dates_from_snapshot",
+      { p_processo_id: processoId },
+    );
+    if (dateSyncError) {
+      console.warn(`${LOG} ⚠ datas de vigência não atualizadas:`, dateSyncError);
+    }
+
     const result = (data ?? {}) as Record<string, unknown>;
     const summary: M2aSyncSummary = {
       atas: Number(result.atas_upserted ?? 0),
@@ -119,6 +128,7 @@ export async function persistM2ASnapshot(
       itens_removidos: Number(result.itens_removed ?? 0),
       contratos_snapshot: Number(result.contratos_snapshot ?? 0),
       contratos_atualizados: Number(result.contratos_atualizados ?? 0),
+      contratos_datas_atualizadas: Number(dateSyncError ? 0 : (dateSyncData ?? 0)),
       itens_relinkados: Number(result.itens_relinkados ?? 0),
       itens_ambiguos: Array.isArray(result.itens_ambiguos)
         ? (result.itens_ambiguos as M2aAmbiguousItem[])
