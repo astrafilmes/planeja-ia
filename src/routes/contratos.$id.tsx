@@ -606,14 +606,22 @@ function Page() {
  </Badge>
  )}
  {contrato.processo && (
+ <Button
+ asChild
+ size="sm"
+ variant="outline"
+ className="h-7 gap-1.5 px-2 text-[11px] font-medium"
+ title="Abrir processo no sistema"
+ >
  <Link
  to="/processos/$id"
  params={{ id: contrato.processo.id }}
- className="inline-flex min-h-8 items-center gap-1 rounded-md px-2 text-xs text-primary hover:bg-primary/5"
  >
- Processo {contrato.processo.numero_processo ??"—"}{""}
+ <FileText className="size-3.5" />
+ Ir para o processo {contrato.processo.numero_processo ??""}
  <ExternalLink className="size-3" />
  </Link>
+ </Button>
  )}
  <Button
  size="sm"
