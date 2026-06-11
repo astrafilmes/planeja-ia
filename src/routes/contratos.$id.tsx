@@ -1069,6 +1069,7 @@ function Page() {
  <DocumentosEditor
  contratoId={id}
  contratoNumero={c.numero_contrato}
+ m2aContratoId={(c as any).m2a_contrato_id ?? null}
  documentos={contrato.documentos as any}
  documentosM2A={c.m2a_documentos_gerados}
  onChange={refetch}
