@@ -1171,11 +1171,13 @@ function Page() {
 
  <TabsContent value="visao-geral">
  <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
- <Card>
- <CardHeader className="border-b border-border/60">
- <CardTitle>Dados administrativos</CardTitle>
- </CardHeader>
- <CardContent className="grid gap-4 p-6 md:grid-cols-2">
+ <FormSection
+ id="dados-administrativos"
+ title="Dados administrativos"
+ description="Identificação, modalidade e vínculo com o portal."
+ icon={<Settings2 className="size-4" />}
+ >
+ <div className="grid gap-4 md:grid-cols-2">
  <div className="flex flex-col gap-2">
  <Label>Número do processo</Label>
  <Input
@@ -1235,14 +1237,16 @@ function Page() {
  onChange={(e) => update("observacoes", e.target.value)}
  />
  </div>
- </CardContent>
- </Card>
+ </div>
+ </FormSection>
 
- <Card>
- <CardHeader className="border-b border-border/60">
- <CardTitle>Metadados</CardTitle>
- </CardHeader>
- <CardContent className="flex flex-col gap-4 p-6 text-sm">
+ <FormSection
+ id="metadados"
+ title="Metadados"
+ description="Sincronização e totais."
+ icon={<Info className="size-4" />}
+ >
+ <div className="flex flex-col gap-4 text-sm">
  <div className="flex flex-col gap-1">
  <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
  Código externo
@@ -1273,10 +1277,11 @@ function Page() {
  </p>
  <p className="font-medium">{BRL.format(stats.total)}</p>
  </div>
- </CardContent>
- </Card>
+ </div>
+ </FormSection>
  </div>
  </TabsContent>
+
 
  <TabsContent value="contratos">
  <Card>
