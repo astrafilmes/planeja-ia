@@ -926,11 +926,22 @@ function extractVinculosSubtabela($, ataId, mapaMestraPorOrdem) {
       }
     }
 
+    // Valor unitário CONTRATADO (não o estimado da tabela mestra do processo).
+    // Aparece como célula com prefixo "R$" na subtabela da ata.
+    let valorContratado = 0;
+    for (const t of cellsText) {
+      if (looksLikeCurrency(t)) {
+        const v = parseValor(t);
+        if (v > 0) { valorContratado = v; break; }
+      }
+    }
+
     out.push({
       id_item_mestre: mestra.id_item_mestre,
       ordem: ordemNorm,
       id_ata: ataId,
       quantidade,
+      valor_unitario_contratado: valorContratado,
       descricao_linha: descricaoLinha || mestra.descricao,
     });
   }
