@@ -982,6 +982,34 @@ function Page() {
  </Badge>
  </TableCell>
  <TableCell
+ className="hidden py-2 md:table-cell"
+ onClick={(e) => e.stopPropagation()}
+ >
+ <Button
+ size="sm"
+ variant={c.publicado_at ?"default" :"outline"}
+ className={`h-7 gap-1.5 px-2 text-[11px] font-medium ${c.publicado_at ?"bg-emerald-600 text-white hover:bg-emerald-700" :"text-muted-foreground"}`}
+ disabled={togglingPub === c.id}
+ onClick={() => handleTogglePublicado(c)}
+ title={
+ c.publicado_at
+ ? `Publicado em ${formatDateBR(c.publicado_at)} — clique para desmarcar`
+ :"Marcar como publicado"
+ }
+ >
+ {c.publicado_at ? (
+ <>
+ <CheckCircle2 className="size-3.5" />
+ Publicado
+ </>
+ ) : (
+ <>
+ <Circle className="size-3.5" />
+ Marcar
+ </>
+ )}
+ </Button>
+ <TableCell
  className="pr-3 py-2 text-right whitespace-nowrap sm:pr-4"
  onClick={(e) => e.stopPropagation()}
  >
