@@ -1,0 +1,90 @@
+import { ReactNode } from "react";
+import { cn } from "@/lib/utils";
+
+type Tone = "indigo" | "pink" | "blue" | "green" | "amber" | "slate";
+
+const toneMap: Record<
+  Tone,
+  { surface: string; icon: string; ring: string }
+> = {
+  indigo: {
+    surface: "bg-[#EEEAFE] dark:bg-[#2a2256]",
+    icon: "text-[#6C5CE7] dark:text-[#b9adff]",
+    ring: "ring-[#6C5CE7]/15",
+  },
+  pink: {
+    surface: "bg-[#FCE7F0] dark:bg-[#4a1f36]",
+    icon: "text-[#D6336C] dark:text-[#f7a8c8]",
+    ring: "ring-[#D6336C]/15",
+  },
+  blue: {
+    surface: "bg-[#E3F0FF] dark:bg-[#172a48]",
+    icon: "text-[#2563EB] dark:text-[#8fb8ff]",
+    ring: "ring-[#2563EB]/15",
+  },
+  green: {
+    surface: "bg-[#DCF6E6] dark:bg-[#0f3b2a]",
+    icon: "text-[#16A34A] dark:text-[#7be0a4]",
+    ring: "ring-[#16A34A]/15",
+  },
+  amber: {
+    surface: "bg-[#FFF1D6] dark:bg-[#3d2f10]",
+    icon: "text-[#D97706] dark:text-[#f7c277]",
+    ring: "ring-[#D97706]/15",
+  },
+  slate: {
+    surface: "bg-slate-100 dark:bg-slate-800/60",
+    icon: "text-slate-600 dark:text-slate-300",
+    ring: "ring-slate-300/30",
+  },
+};
+
+export function StatChip({
+  label,
+  value,
+  icon,
+  tone = "indigo",
+  trend,
+  hint,
+}: {
+  label: string;
+  value: ReactNode;
+  icon: ReactNode;
+  tone?: Tone;
+  trend?: string;
+  hint?: string;
+}) {
+  const t = toneMap[tone];
+  return (
+    <div className="group relative flex flex-col gap-4 rounded-2xl border border-border/60 bg-surface-elevated p-5 transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-card)]">
+      <div className="flex items-center justify-between">
+        <div
+          className={cn(
+            "grid size-10 place-items-center rounded-xl ring-1",
+            t.surface,
+            t.icon,
+            t.ring,
+          )}
+        >
+          {icon}
+        </div>
+        {trend && (
+          <span className="text-[11px] font-medium text-success">{trend}</span>
+        )}
+      </div>
+      <div>
+        <div className="text-[28px] font-semibold leading-none tracking-tight text-foreground">
+          {value}
+        </div>
+        <div className="mt-1.5 text-[12px] font-medium text-muted-foreground">
+          {label}
+        </div>
+        {hint && (
+          <div className="mt-0.5 text-[11px] text-muted-foreground/70">
+            {hint}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
