@@ -1336,6 +1336,41 @@ export type Database = {
         }
         Relationships: []
       }
+      secretaria_contatos: {
+        Row: {
+          cpf: string
+          created_at: string
+          id: string
+          papel: string
+          secretaria_id: string
+          updated_at: string
+        }
+        Insert: {
+          cpf: string
+          created_at?: string
+          id?: string
+          papel: string
+          secretaria_id: string
+          updated_at?: string
+        }
+        Update: {
+          cpf?: string
+          created_at?: string
+          id?: string
+          papel?: string
+          secretaria_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "secretaria_contatos_secretaria_id_fkey"
+            columns: ["secretaria_id"]
+            isOneToOne: false
+            referencedRelation: "secretarias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       secretarias: {
         Row: {
           ativa: boolean
@@ -1345,10 +1380,8 @@ export type Database = {
           m2a_dot_orgao_id: string | null
           m2a_dotacao_default: string | null
           m2a_fiscal_codigo: string | null
-          m2a_fiscal_cpf: string | null
           m2a_fiscal_nome: string | null
           m2a_gestor_codigo: string | null
-          m2a_gestor_cpf: string | null
           m2a_gestor_nome: string | null
           m2a_orgao_id: string | null
           m2a_ref_coluna: number | null
@@ -1367,10 +1400,8 @@ export type Database = {
           m2a_dot_orgao_id?: string | null
           m2a_dotacao_default?: string | null
           m2a_fiscal_codigo?: string | null
-          m2a_fiscal_cpf?: string | null
           m2a_fiscal_nome?: string | null
           m2a_gestor_codigo?: string | null
-          m2a_gestor_cpf?: string | null
           m2a_gestor_nome?: string | null
           m2a_orgao_id?: string | null
           m2a_ref_coluna?: number | null
@@ -1389,10 +1420,8 @@ export type Database = {
           m2a_dot_orgao_id?: string | null
           m2a_dotacao_default?: string | null
           m2a_fiscal_codigo?: string | null
-          m2a_fiscal_cpf?: string | null
           m2a_fiscal_nome?: string | null
           m2a_gestor_codigo?: string | null
-          m2a_gestor_cpf?: string | null
           m2a_gestor_nome?: string | null
           m2a_orgao_id?: string | null
           m2a_ref_coluna?: number | null
@@ -1630,6 +1659,10 @@ export type Database = {
       sync_m2a_snapshot: {
         Args: { p_payload: Json; p_processo_id: string }
         Returns: Json
+      }
+      upsert_secretaria_contato: {
+        Args: { p_cpf: string; p_papel: string; p_secretaria_id: string }
+        Returns: undefined
       }
     }
     Enums: {

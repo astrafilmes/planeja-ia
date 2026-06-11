@@ -166,10 +166,8 @@ function toSecretariaPayload(sec: Sec) {
  : Number(sec.m2a_ref_coluna),
  m2a_fiscal_codigo: trimOrNull(sec.m2a_fiscal_codigo),
  m2a_fiscal_nome: trimOrNull(sec.m2a_fiscal_nome),
- m2a_fiscal_cpf: trimOrNull(sec.m2a_fiscal_cpf),
  m2a_gestor_codigo: trimOrNull(sec.m2a_gestor_codigo),
  m2a_gestor_nome: trimOrNull(sec.m2a_gestor_nome),
- m2a_gestor_cpf: trimOrNull(sec.m2a_gestor_cpf),
  };
 }
 
@@ -177,8 +175,36 @@ function actorPatch(prefix:"m2a_fiscal" |"m2a_gestor", actor?: M2AServidor) {
  return {
  [`${prefix}_codigo`]: actor?.m2a_id ?? null,
  [`${prefix}_nome`]: actor?.nome ?? null,
- [`${prefix}_cpf`]: actor?.cpf ?? null,
  };
+}
+
+/** Persiste CPFs via RPC (não estão mais em secretarias). */
+async function syncSecretariaCpfs(
+ secretariaId: string,
+ cpfs: { fiscal?: string | null; gestor?: string | null },
+) {
+ const calls: Array<Promise<unknown>> = [];
+ if (cpfs.fiscal !== undefined) {
+ calls.push(
+ // eslint-disable-next-line @typescript-eslint/no-explicit-any
+ (supabase.rpc as any)("upsert_secretaria_contato", {
+ p_secretaria_id: secretariaId,
+ p_papel: "fiscal",
+ p_cpf: cpfs.fiscal,
+ }),
+ );
+ }
+ if (cpfs.gestor !== undefined) {
+ calls.push(
+ // eslint-disable-next-line @typescript-eslint/no-explicit-any
+ (supabase.rpc as any)("upsert_secretaria_contato", {
+ p_secretaria_id: secretariaId,
+ p_papel: "gestor",
+ p_cpf: cpfs.gestor,
+ }),
+ );
+ }
+ await Promise.all(calls);
 }
 
 function pickPrincipal(
@@ -483,17 +509,38 @@ function Page() {
  async function save() {
  if (!validateSecretaria(editing)) return;
 
- const payload = toSecretariaPayload(editing);
- const result = editing.id
- ? await supabase.from("secretarias").update(payload).eq("id", editing.id)
- : await supabase.from("secretarias").insert(payload);
+  const payload = toSecretariaPayload(editing);
+ let secretariaId = editing.id ?? null;
+ if (editing.id) {
+ const { error } = await supabase.from("secretarias").update(payload).eq("id", editing.id);
+ if (error) return toast.error(error.message);
+ } else {
+ const { data, error } = await supabase
+ .from("secretarias")
+ .insert(payload)
+ .select("id")
+ .single();
+ if (error) return toast.error(error.message);
+ secretariaId = data?.id ?? null;
+ }
 
- if (result.error) return toast.error(result.error.message);
+ if (secretariaId) {
+ try {
+ await syncSecretariaCpfs(secretariaId, {
+ fiscal: trimOrNull(editing.m2a_fiscal_cpf),
+ gestor: trimOrNull(editing.m2a_gestor_cpf),
+ });
+ } catch (e) {
+ toast.error("Secretaria salva, mas CPFs não foram atualizados.", {
+ description: (e as Error).message,
+ });
+ }
+ }
 
  await logAudit({
  action: editing.id ?"update" :"insert",
  entityType:"secretaria",
- entityId: editing.id ?? null,
+ entityId: secretariaId,
  payload,
  });
 
@@ -558,12 +605,34 @@ function Page() {
  : actorPatch("m2a_gestor", gestor)),
  };
 
- const { error } = await supabase
+  const { error } = await supabase
  .from("secretarias")
  .update(payload)
  .in("id", ids);
 
  if (error) return toast.error(error.message);
+
+ // Propaga CPFs (fora da tabela secretarias) para cada id quando o usuário trocou o ator
+ if (groupForm.fiscalM2AId !== KEEP_SELECT_VALUE || groupForm.gestorM2AId !== KEEP_SELECT_VALUE) {
+ try {
+ await Promise.all(
+ ids.map((id) =>
+ syncSecretariaCpfs(id, {
+ ...(groupForm.fiscalM2AId === KEEP_SELECT_VALUE
+ ? {}
+ : { fiscal: fiscal?.cpf ?? null }),
+ ...(groupForm.gestorM2AId === KEEP_SELECT_VALUE
+ ? {}
+ : { gestor: gestor?.cpf ?? null }),
+ }),
+ ),
+ );
+ } catch (e) {
+ toast.error("Grupo salvo, mas CPFs não foram atualizados.", {
+ description: (e as Error).message,
+ });
+ }
+ }
 
  await logAudit({
  action:"bulk_update",
