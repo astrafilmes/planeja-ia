@@ -5,10 +5,11 @@ import { useEffect, useMemo, useState } from"react";
 import { AppShell } from"@/components/layout/AppShell";
 import { EmptyState } from"@/components/layout/EmptyState";
 import { WorkflowGuide } from"@/components/layout/WorkflowGuide";
+import { FormSection } from"@/components/layout/FormSection";
 import { useProgress } from"@/contexts/ProgressContext";
 import { supabase } from"@/integrations/supabase/client";
 import { Button } from"@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from"@/components/ui/card";
+import { Card, CardContent } from"@/components/ui/card";
 import { Badge } from"@/components/ui/badge";
 import { Input } from"@/components/ui/input";
 import { Label } from"@/components/ui/label";
@@ -650,11 +651,13 @@ function Page() {
  </Card>
 
  {/* Dados do contrato — Grid Denso */}
- <Card className="mb-3 border-border/60">
- <CardHeader className="border-b border-border/60 px-4 py-3 ">
- <CardTitle>Dados do contrato</CardTitle>
- </CardHeader>
- <CardContent className="p-4">
+ <FormSection
+ id="dados-contrato"
+ title="Dados do contrato"
+ description="Identificação, vínculos e configuração da automação."
+ icon={<FileSignature className="size-4" />}
+ className="mb-3"
+ >
  <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-x-4 gap-y-3 text-xs md:grid-cols-[repeat(4,minmax(0,1fr))] lg:grid-cols-[repeat(6,minmax(0,1fr))]">
  <Field label="Nº contrato" mono>
  {c.numero_contrato}
@@ -734,19 +737,22 @@ function Page() {
  </p>
  </div>
  </div>
- </CardContent>
- </Card>
+ </FormSection>
+
 
  {/* Painel de envio */}
- <Card className="mb-3 border-border/60">
- <CardHeader className="flex-row items-center justify-between border-b border-border/60 px-4 py-3 ">
- <CardTitle>Envio pela extensão</CardTitle>
- <div className="text-[13px] text-muted-foreground">
+ <FormSection
+ id="envio-extensao"
+ title="Envio pela extensão"
+ description="Acompanhamento da automação no portal."
+ icon={<Send className="size-4" />}
+ className="mb-3"
+ action={
+ <div className="text-[12.5px] text-muted-foreground">
  Código externo: {contrato.processo?.m2a_processo_id ??"—"}
  {contrato.processo?.m2a_url && (
  <>
- {""}
- ·{""}
+ {""}·{""}
  <a
  className="inline-flex min-h-8 items-center rounded-md px-2 text-primary hover:bg-primary/5"
  target="_blank"
@@ -758,8 +764,9 @@ function Page() {
  </>
  )}
  </div>
- </CardHeader>
- <CardContent className="flex flex-col gap-3 p-4">
+ }
+ >
+ <div className="flex flex-col gap-3">
  <Progress value={pct} className="h-1.5" />
  {logs.length > 0 && (
  <div className="flex max-h-52 flex-col gap-1 overflow-auto rounded-xl border border-border/60 bg-muted/40 p-3 font-mono text-[11px] dark:bg-muted/30">
@@ -788,8 +795,9 @@ function Page() {
  </p>
  </div>
  )}
- </CardContent>
- </Card>
+ </div>
+ </FormSection>
+
 
  {/* Tabs com dados internos */}
  <Tabs defaultValue="itens">
