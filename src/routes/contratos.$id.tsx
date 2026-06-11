@@ -646,7 +646,7 @@ function Page() {
  <CheckCircle2 className="size-3.5" /> Publicado
  </>
  ) : (
- <>"Marcar como publicado"</>
+ <>Marcar como publicado</>
  )}
  </Button>
  </div>
