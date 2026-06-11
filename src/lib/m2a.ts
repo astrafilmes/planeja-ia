@@ -240,28 +240,9 @@ export type M2ABulkDownloadOptions = {
   filename?: string;
 };
 
-export function requestM2ABulkDownload(
-  documentos: M2ABulkDownloadDocumento[],
-  options?: M2ABulkDownloadOptions,
-) {
-  window.postMessage(
-    { type: "M2A_BULK_DOWNLOAD", documentos, options },
-    window.location.origin,
-  );
-}
-
-export function listenM2ABulkDownload(
-  cb: (e: M2ABulkDownloadProgress) => void,
-): () => void {
-  const handler = (e: MessageEvent) => {
-    if (!isTrustedM2AEvent(e)) return;
-    const d = e.data as M2ABulkDownloadProgress | undefined;
-    if (!d || d.type !== "M2A_BULK_DOWNLOAD_PROGRESS") return;
-    cb(d);
-  };
-  window.addEventListener("message", handler);
-  return () => window.removeEventListener("message", handler);
-}
+// Os helpers `requestM2ABulkDownload` / `listenM2ABulkDownload` foram removidos.
+// O download de documentos agora é feito 100% via VPS worker — veja
+// `src/lib/m2a-documents.ts` (downloadM2ADocuments).
 
 export const ETAPA_LABEL: Record<M2AEtapa, string> = {
   validacao: "Validando sessão",
