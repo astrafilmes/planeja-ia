@@ -798,7 +798,33 @@ function Page() {
  toast.success("Processo excluído");
  qc.invalidateQueries({ queryKey: ["processos"] });
  navigate({ to:"/processos" });
- }
+  }
+
+  async function toggleImpresso(c: ContratoRow) {
+    const next = !c.impresso_assinado;
+    const { error } = await supabase
+      .from("contratos")
+      .update({ impresso_assinado: next })
+      .eq("id", c.id);
+    if (error) return toast.error(error.message);
+    toast.success(next ?"Marcado como impresso/assinado" :"Desmarcado");
+    qc.invalidateQueries({ queryKey: ["processo-detail", id] });
+    qc.invalidateQueries({ queryKey: ["contratos"] });
+  }
+
+  async function togglePublicado(c: ContratoRow) {
+    const next = !c.publicado;
+    const { error } = await supabase
+      .from("contratos")
+      .update({
+        publicado: next,
+        publicado_at: next ? new Date().toISOString() : null,
+      })
+      .eq("id", c.id);
+    if (error) return toast.error(error.message);
+    toast.success(next ?"Marcado como publicado" :"Desmarcado");
+    qc.invalidateQueries({ queryKey: ["processo-detail", id] });
+    qc.invalidateQueries({ queryKey: ["contratos"] });
 
  const deleteContratos = useMutation({
  mutationFn: async (ids: string[]) => {
