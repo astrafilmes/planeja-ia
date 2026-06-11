@@ -1376,6 +1376,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_logs_e_jobs: {
+        Args: {
+          p_audit_logs_days?: number
+          p_import_jobs_days?: number
+          p_m2a_logs_days?: number
+        }
+        Returns: Json
+      }
       consume_trusted_device: {
         Args: { p_token_hash: string }
         Returns: string
