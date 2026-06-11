@@ -164,10 +164,16 @@ export async function exportarRelatorioContratoExcel(contracts: ContractGroupedD
 
     ws.pageSetup.margins = { left: 0.4, right: 0.4, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 };
 
+    const secretariaNome = safeText(contract.header.secretaria_nome);
+    const secretariaSigla = safeText(contract.header.secretaria_sigla);
+    const secretariaTexto = secretariaSigla
+      ? `${secretariaNome} (${secretariaSigla})`
+      : secretariaNome;
+
     const headerRows: Array<[string, string]> = [
       ['Tipo de Relatório:', 'Relatório de Contrato'],
       ['Número do Contrato:', safeText(contract.header.numero_contrato)],
-      ['Secretaria:', `${safeText(contract.header.secretaria_nome)}${contract.header.secretaria_sigla ? ` (${safeText(contract.header.secretaria_sigla)})` : ''}`.trim()],
+      ['Secretaria:', secretariaTexto],
       ['Fornecedor:', safeText(contract.header.fornecedor_nome)],
       ['Objeto:', safeText(contract.header.objeto)],
       ['Dotação:', safeText(contract.header.dotacao)],
