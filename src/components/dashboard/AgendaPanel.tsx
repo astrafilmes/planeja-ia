@@ -48,9 +48,23 @@ export function AgendaPanel({
   markedDates?: string[];
   loading?: boolean;
 }) {
+  const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+
+  const handleSaveReminder = (_payload: ReminderPayload) => {
+    // TODO: integrar com Supabase para persistir o lembrete
+    // await supabase.from("lembretes").insert({ ... });
+  };
+
   return (
     <div className="flex h-full flex-col gap-5 rounded-3xl border border-border/50 bg-surface-elevated p-5 shadow-[var(--shadow-card)]">
-      <MiniCalendar markedDates={markedDates} />
+      <MiniCalendar
+        markedDates={markedDates}
+        onDayClick={(dayDate) => {
+          setSelectedDate(dayDate);
+          setIsReminderModalOpen(true);
+        }}
+      />
 
       <div className="flex items-baseline justify-between">
         <h3 className="text-[13px] font-semibold tracking-tight">Atividade recente</h3>
