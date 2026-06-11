@@ -142,7 +142,15 @@ export type Database = {
           tipo?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "contrato_atores_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       contrato_documentos: {
         Row: {
@@ -187,7 +195,15 @@ export type Database = {
           tipo?: string
           versao?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "contrato_documentos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       contrato_import_dotacoes: {
         Row: {
@@ -226,7 +242,22 @@ export type Database = {
           secretaria_sigla?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "contrato_import_dotacoes_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "contrato_import_itens"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contrato_import_dotacoes_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "contrato_import_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       contrato_import_itens: {
         Row: {
@@ -298,7 +329,15 @@ export type Database = {
           updated_at?: string
           valor_unitario?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "contrato_import_itens_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "contrato_import_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       contrato_import_jobs: {
         Row: {
@@ -408,7 +447,22 @@ export type Database = {
           secretaria_sigla?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "contrato_item_dotacoes_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "contrato_itens"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contrato_item_dotacoes_secretaria_id_fkey"
+            columns: ["secretaria_id"]
+            isOneToOne: false
+            referencedRelation: "secretarias"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       contrato_itens: {
         Row: {
@@ -459,7 +513,15 @@ export type Database = {
           valor_total?: number
           valor_unitario?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "contrato_itens_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       contratos: {
         Row: {
@@ -866,7 +928,15 @@ export type Database = {
           processo_id?: string
           synced_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "m2a_atas_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "processos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       m2a_contratos_snapshot: {
         Row: {
@@ -905,7 +975,15 @@ export type Database = {
           sequencia?: number | null
           sigla_secretaria?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "m2a_contratos_snapshot_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "processos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       m2a_envio_logs: {
         Row: {
@@ -947,7 +1025,15 @@ export type Database = {
           response_json?: Json | null
           sucesso?: boolean
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "m2a_envio_logs_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       m2a_envio_preferencias: {
         Row: {
@@ -1027,7 +1113,15 @@ export type Database = {
           unidade?: string | null
           valor_unitario?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "m2a_itens_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "processos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       m2a_servidor_unidade: {
         Row: {
