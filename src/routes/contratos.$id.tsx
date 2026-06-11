@@ -1015,9 +1015,10 @@ function Page() {
  <TableCell className="py-2 text-right text-[11px] text-muted-foreground">
  Total
  </TableCell>
- <TableCell className="text-right pr-4 py-2 tabular-nums font-semibold">
+ <TableCell className="text-right py-2 tabular-nums font-semibold">
  {BRL.format(valorTotal)}
  </TableCell>
+ <TableCell className="pr-4" />
  </TableRow>
  </TableFooter>
  </Table>
