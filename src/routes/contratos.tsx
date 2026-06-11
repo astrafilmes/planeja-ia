@@ -194,6 +194,8 @@ function Page() {
  const [search, setSearch] = useState("");
  const [secFilter, setSecFilter] = useState<string>("__all");
  const [m2aFilter, setM2aFilter] = useState<string>("__all");
+ const [pubFilter, setPubFilter] = useState<string>("__all");
+ const [togglingPub, setTogglingPub] = useState<string | null>(null);
  const [open, setOpen] = useState(false);
  const [deleting, setDeleting] = useState<any | null>(null);
  const [selected, setSelected] = useState<Set<string>>(new Set());
