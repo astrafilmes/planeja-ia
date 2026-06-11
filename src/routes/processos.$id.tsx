@@ -684,43 +684,46 @@ function Page() {
  }
  }
 
-  const consumedItems = Array.from(consumedByKey.entries()).map(
-  ([codigo, item]): ItemConsolidado => ({
-  codigo,
-  descricao: item.descricao ??"Item sem descrição",
-  unidade: item.unidade ?? null,
-  quantidadeTotal: item.quantidade,
-  quantidadeConsumida: item.quantidade,
-  saldo: 0,
-  valorDisponivel: 0,
-  valorUnitario: item.valor_unitario ?? 0,
-  valorConsumido: item.quantidade * Number(item.valor_unitario ?? 0),
-  }),
-  );
+    const consumedItems = Array.from(consumedByKey.entries()).map(
+      ([codigo, item]): ItemConsolidado => ({
+        codigo,
+        descricao: item.descricao ??"Item sem descrição",
+        unidade: item.unidade ?? null,
+        quantidadeTotal: item.quantidade,
+        quantidadeConsumida: item.quantidade,
+        saldo: 0,
+        valorDisponivel: 0,
+        valorUnitario: item.valor_unitario ?? 0,
+        valorUnitarioContratado: item.valor_unitario ?? 0,
+        valorConsumido: item.quantidade * Number(item.valor_unitario ?? 0),
+      }),
+    );
 
- const ataItens = data?.ataItens ?? [];
-  const usarSnapshotPortal =
-  ataItens.length > 0 &&
-  (consumedByKey.size === 0 || ataItens.length >= consumedByKey.size * 0.8);
- const base =
-  usarSnapshotPortal
- ? ataItens.map((item) => {
- const consumed = consumedByKey.get(item.m2a_item_id);
- const quantidadeConsumida = consumed?.quantidade ?? 0;
- const valorUnitario = Number(item.valor_unitario ?? 0);
- return {
- codigo: item.codigo,
- descricao: item.descricao,
- unidade: item.unidade,
- quantidadeTotal: null as number | null,
- quantidadeConsumida,
- saldo: null as number | null,
- valorDisponivel: null as number | null,
- valorUnitario,
- valorConsumido: quantidadeConsumida * valorUnitario,
- };
- })
-  : consumedItems;
+   const ataItens = data?.ataItens ?? [];
+    const usarSnapshotPortal =
+      ataItens.length > 0 &&
+      (consumedByKey.size === 0 || ataItens.length >= consumedByKey.size * 0.8);
+   const base =
+      usarSnapshotPortal
+        ? ataItens.map((item) => {
+            const consumed = consumedByKey.get(item.m2a_item_id);
+            const quantidadeConsumida = consumed?.quantidade ?? 0;
+            const valorUnitario = Number(item.valor_unitario ?? 0);
+            const valorUnitarioContratado = Number(consumed?.valor_unitario ?? 0) || valorUnitario;
+            return {
+              codigo: item.codigo,
+              descricao: item.descricao,
+              unidade: item.unidade,
+              quantidadeTotal: null as number | null,
+              quantidadeConsumida,
+              saldo: null as number | null,
+              valorDisponivel: null as number | null,
+              valorUnitario,
+              valorUnitarioContratado,
+              valorConsumido: quantidadeConsumida * valorUnitarioContratado,
+            };
+          })
+        : consumedItems;
 
  const sortedBase = [...base].sort((a, b) =>
   compareStrictItemOrder(a, b, (item) => item.codigo),
