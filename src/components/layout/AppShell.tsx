@@ -133,7 +133,7 @@ function NavList({
       return !entry.adminOnly || isGestor;
     });
   return (
-    <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-2 py-3">
+    <nav className="flex flex-1 flex-col gap-4 overflow-y-auto px-3 py-4">
       {visibleNav.map((entry) => {
         if ("items" in entry) {
           const GroupIcon = entry.icon;
@@ -143,6 +143,34 @@ function NavList({
           );
           const groupOpen = openGroups[entry.label] ?? activeGroup;
           const groupLabel = entry.label;
+
+          if (collapsed) {
+            // Compact: render icons only, flat list
+            return (
+              <div key={entry.label} className="flex flex-col gap-1">
+                {entry.items.map(({ to, label, icon: Icon }) => {
+                  const active =
+                    pathname === to || pathname.startsWith(to + "/");
+                  return (
+                    <Link
+                      key={to}
+                      to={to}
+                      onClick={onNavigate}
+                      title={label}
+                      className={`group relative flex h-10 items-center justify-center rounded-xl transition-all
+                        ${
+                          active
+                            ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-[0_4px_14px_-4px_rgb(108_92_231_/_0.4)]"
+                            : "text-sidebar-foreground/70 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
+                        }`}
+                    >
+                      <Icon className="size-[18px]" />
+                    </Link>
+                  );
+                })}
+              </div>
+            );
+          }
 
           return (
             <Collapsible
@@ -154,55 +182,49 @@ function NavList({
                   [entry.label]: value,
                 }))
               }
-              className="py-1"
             >
               <CollapsibleTrigger asChild>
                 <button
                   type="button"
-                  className={`flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-[13px] font-medium transition-colors
-                  ${
-                    activeGroup
-                      ? "bg-slate-800/60 text-white"
-                      : "text-slate-400 hover:bg-slate-800/40 hover:text-slate-100"
-                  } ${collapsed ? "justify-center px-2" : ""}`}
-                  title={collapsed ? groupLabel : undefined}
+                  className="flex w-full items-center gap-2 px-3 pb-2 pt-1 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-sidebar-foreground/45 transition-colors hover:text-sidebar-foreground/70"
                 >
-                  <GroupIcon className="size-4 shrink-0" />
-                  {!collapsed && (
-                    <span className="flex-1 text-left">{groupLabel}</span>
-                  )}
-                  {!collapsed && (
-                    <ChevronDown
-                      className={`size-3.5 shrink-0 transition-transform ${
-                        groupOpen ? "rotate-0" : "-rotate-90"
-                      }`}
-                    />
-                  )}
+                  <GroupIcon className="size-3.5 opacity-60" />
+                  <span className="flex-1 text-left">{groupLabel}</span>
+                  <ChevronDown
+                    className={`size-3 shrink-0 transition-transform ${
+                      groupOpen ? "rotate-0" : "-rotate-90"
+                    }`}
+                  />
                 </button>
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <div
-                  className={`${collapsed ? "ml-0 border-l-0 pl-0" : "ml-4 border-l border-sidebar-border pl-2"} mt-1 flex flex-col gap-1`}
-                >
+                <div className="flex flex-col gap-0.5">
                   {entry.items.map(({ to, label, icon: Icon }) => {
                     const active =
                       pathname === to || pathname.startsWith(to + "/");
-                    const itemLabel = label;
                     return (
                       <Link
                         key={to}
                         to={to}
                         onClick={onNavigate}
-                        title={collapsed ? itemLabel : undefined}
-                        className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-[13px] font-medium transition-colors
-                        ${
-                          active
-                            ? "bg-sidebar-primary/20 text-white border-l-2 border-sidebar-primary pl-[10px]"
-                            : "text-slate-300 hover:bg-slate-800/40 hover:text-white"
-                        } ${collapsed ? "justify-center px-2" : ""}`}
+                        className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-all
+                          ${
+                            active
+                              ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-[0_6px_20px_-8px_rgb(108_92_231_/_0.45)]"
+                              : "text-sidebar-foreground/75 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
+                          }`}
                       >
-                        <Icon className="size-4 shrink-0" />
-                        {!collapsed && itemLabel}
+                        <Icon
+                          className={`size-[17px] shrink-0 transition-colors ${
+                            active
+                              ? "text-sidebar-accent-foreground"
+                              : "text-sidebar-foreground/55 group-hover:text-sidebar-foreground/80"
+                          }`}
+                        />
+                        <span className="truncate">{label}</span>
+                        {active && (
+                          <span className="ml-auto size-1.5 rounded-full bg-sidebar-accent-foreground/70" />
+                        )}
                       </Link>
                     );
                   })}
@@ -214,22 +236,21 @@ function NavList({
 
         const { to, label, icon: Icon } = entry;
         const active = pathname === to || pathname.startsWith(to + "/");
-        const itemLabel = label;
         return (
           <Link
             key={to}
             to={to}
             onClick={onNavigate}
-            title={collapsed ? itemLabel : undefined}
-            className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-[13px] font-medium transition-colors
+            title={collapsed ? label : undefined}
+            className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-all
               ${
                 active
-                  ? "bg-sidebar-primary/20 text-white border-l-2 border-sidebar-primary pl-[10px]"
-                  : "text-slate-300 hover:bg-slate-800/40 hover:text-white"
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-[0_6px_20px_-8px_rgb(108_92_231_/_0.45)]"
+                  : "text-sidebar-foreground/75 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
               } ${collapsed ? "justify-center px-2" : ""}`}
           >
-            <Icon className="size-4 shrink-0" />
-            {!collapsed && itemLabel}
+            <Icon className="size-[17px] shrink-0" />
+            {!collapsed && label}
           </Link>
         );
       })}
