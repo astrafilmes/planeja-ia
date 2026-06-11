@@ -61,12 +61,28 @@ export function useM2ASync({
         contratos_existentes: payload.contratos_existentes ?? [],
       });
 
-      toast.success(
-        `Sincronização concluída! ${summary.atas} atas, ${summary.itens} itens, ${summary.contratos_snapshot} contratos. ` +
-          `Atualizados: ${summary.contratos_atualizados} contratos / ${summary.itens_atualizados} itens. ` +
-          `Duplicatas removidas: ${summary.duplicatas_removidas}.`,
-        { id: toastIdRef.current ?? undefined },
+      const partes: string[] = [];
+      partes.push(
+        `${summary.atas} atas${summary.atas_removidas > 0 ? ` (-${summary.atas_removidas})` : ""}`,
       );
+      partes.push(
+        `${summary.itens + summary.itens_atualizados} itens (${summary.itens} novos, ${summary.itens_atualizados} atualizados, ${summary.itens_removidos} removidos)`,
+      );
+      if (summary.itens_relinkados > 0) {
+        partes.push(`${summary.itens_relinkados} religados`);
+      }
+      if (summary.contratos_atualizados > 0) {
+        partes.push(`${summary.contratos_atualizados} contratos atualizados`);
+      }
+      const base = `Sincronização concluída. ${partes.join(" · ")}.`;
+      if (summary.itens_ambiguos.length > 0) {
+        toast.warning(
+          `${base} Atenção: ${summary.itens_ambiguos.length} ite${summary.itens_ambiguos.length === 1 ? "m" : "ns"} de contrato sem vínculo claro com o portal — revise manualmente.`,
+          { id: toastIdRef.current ?? undefined, duration: 10000 },
+        );
+      } else {
+        toast.success(base, { id: toastIdRef.current ?? undefined });
+      }
 
       console.log(
         `${LOG} ✅ TOTAL ${(performance.now() - tStart).toFixed(0)}ms`,
