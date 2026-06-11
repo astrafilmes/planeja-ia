@@ -651,11 +651,13 @@ function Page() {
  </Card>
 
  {/* Dados do contrato — Grid Denso */}
- <Card className="mb-3 border-border/60">
- <CardHeader className="border-b border-border/60 px-4 py-3 ">
- <CardTitle>Dados do contrato</CardTitle>
- </CardHeader>
- <CardContent className="p-4">
+ <FormSection
+ id="dados-contrato"
+ title="Dados do contrato"
+ description="Identificação, vínculos e configuração da automação."
+ icon={<FileSignature className="size-4" />}
+ className="mb-3"
+ >
  <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-x-4 gap-y-3 text-xs md:grid-cols-[repeat(4,minmax(0,1fr))] lg:grid-cols-[repeat(6,minmax(0,1fr))]">
  <Field label="Nº contrato" mono>
  {c.numero_contrato}
@@ -735,8 +737,8 @@ function Page() {
  </p>
  </div>
  </div>
- </CardContent>
- </Card>
+ </FormSection>
+
 
  {/* Painel de envio */}
  <Card className="mb-3 border-border/60">
