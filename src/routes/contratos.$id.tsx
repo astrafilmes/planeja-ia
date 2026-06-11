@@ -461,14 +461,14 @@ function Page() {
   if (error || !contrato) {
     return (
       <AppShell title="Contrato">
-        <Card className="border-slate-200 dark:border-slate-800">
+        <Card className="border-border/60">
           <CardContent className="flex flex-col items-center gap-3 p-10 text-center">
-            <AlertTriangle className="mx-auto size-10 text-slate-500 dark:text-slate-400" />
+            <AlertTriangle className="mx-auto size-10 text-muted-foreground" />
             <p className="text-sm font-medium">
               {error ? "Erro ao carregar contrato" : "Contrato não encontrado"}
             </p>
             {error && (
-              <p className="mx-auto max-w-md break-all font-mono text-[13px] text-slate-500 dark:text-slate-400">
+              <p className="mx-auto max-w-md break-all font-mono text-[13px] text-muted-foreground">
                 {(error as Error).message}
               </p>
             )}
@@ -576,23 +576,23 @@ function Page() {
       />
 
       {/* Smart Header com KPIs */}
-      <Card className="mb-3 overflow-hidden border-slate-200 dark:border-slate-800">
+      <Card className="mb-3 overflow-hidden border-border/60">
         <div className="grid gap-0 lg:grid-cols-[1fr_auto]">
           <div className="flex flex-col gap-2 p-4">
             <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px]">
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-[#0B0F19]">
-                <p className="text-[12px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-muted/30">
+                <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
                   Número do contrato
                 </p>
-                <p className="mt-1 truncate font-mono text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">
+                <p className="mt-1 truncate font-mono text-2xl font-semibold tracking-tight text-foreground">
                   {c.numero_contrato}
                 </p>
               </div>
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-[#0B0F19]">
-                <p className="text-[12px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-muted/30">
+                <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
                   Data do contrato
                 </p>
-                <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">
+                <p className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
                   {contratoDataLabel}
                 </p>
               </div>
@@ -618,14 +618,14 @@ function Page() {
                 </Link>
               )}
             </div>
-            <p className="text-[13px] text-slate-500 dark:text-slate-400">
+            <p className="text-[13px] text-muted-foreground">
               Preposto: <span className="text-foreground">{c.preposto}</span> ·
               Fiscal: <span className="text-foreground">{c.fiscal}</span>
             </p>
           </div>
-          <div className="grid grid-cols-3 border-t border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-[#0B0F19] lg:grid-cols-3 lg:border-l lg:border-t-0">
+          <div className="grid grid-cols-3 border-t border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-muted/30 lg:grid-cols-3 lg:border-l lg:border-t-0">
             <div className="border-r border-slate-200 px-4 py-3 dark:border-slate-800">
-              <p className="text-[12px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Valor
               </p>
               <p className="text-base font-semibold tabular-nums">
@@ -633,7 +633,7 @@ function Page() {
               </p>
             </div>
             <div className="border-r border-slate-200 px-4 py-3 dark:border-slate-800">
-              <p className="text-[12px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Itens
               </p>
               <p className="text-base font-semibold tabular-nums">
@@ -641,7 +641,7 @@ function Page() {
               </p>
             </div>
             <div className="px-4 py-3">
-              <p className="text-[12px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Anexos
               </p>
               <p className="text-base font-semibold tabular-nums">
@@ -653,7 +653,7 @@ function Page() {
       </Card>
 
       {/* Dados do contrato — Grid Denso */}
-      <Card className="mb-3 border-slate-200 dark:border-slate-800">
+      <Card className="mb-3 border-border/60">
         <CardHeader className="border-b border-slate-200 px-4 py-3 dark:border-slate-800">
           <CardTitle>Dados do contrato</CardTitle>
         </CardHeader>
@@ -680,7 +680,7 @@ function Page() {
             <Field label="Código externo" mono>
               {c.m2a_contrato_id ?? "—"}
             </Field>
-            <div className="col-span-2 min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-[#0B0F19] md:col-span-4 lg:col-span-6">
+            <div className="col-span-2 min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-muted/30 md:col-span-4 lg:col-span-6">
               <div className="grid gap-3 md:grid-cols-[minmax(180px,240px)_minmax(260px,1fr)_auto] md:items-end">
                 <div className="flex min-w-0 flex-col gap-1.5">
                   <Label>Nº do contrato</Label>
@@ -723,13 +723,13 @@ function Page() {
                   Salvar ajuste
                 </Button>
               </div>
-              <p className="mt-2 text-[13px] text-slate-500 dark:text-slate-400">
+              <p className="mt-2 text-[13px] text-muted-foreground">
                 A automação usa esta ata gravada no contrato. Não há fallback
                 para a primeira ata do processo.
               </p>
             </div>
             <div className="col-span-2 md:col-span-4 lg:col-span-6">
-              <p className="text-[12px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Objeto
               </p>
               <p className="mt-0.5 line-clamp-3 text-sm leading-snug">
@@ -741,10 +741,10 @@ function Page() {
       </Card>
 
       {/* Painel de envio */}
-      <Card className="mb-3 border-slate-200 dark:border-slate-800">
+      <Card className="mb-3 border-border/60">
         <CardHeader className="flex-row items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-800">
           <CardTitle>Envio pela extensão</CardTitle>
-          <div className="text-[13px] text-slate-500 dark:text-slate-400">
+          <div className="text-[13px] text-muted-foreground">
             Código externo: {contrato.processo?.m2a_processo_id ?? "—"}
             {contrato.processo?.m2a_url && (
               <>
@@ -765,7 +765,7 @@ function Page() {
         <CardContent className="flex flex-col gap-3 p-4">
           <Progress value={pct} className="h-1.5" />
           {logs.length > 0 && (
-            <div className="flex max-h-52 flex-col gap-1 overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-3 font-mono text-[11px] dark:border-slate-800 dark:bg-[#0B0F19]">
+            <div className="flex max-h-52 flex-col gap-1 overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-3 font-mono text-[11px] dark:border-slate-800 dark:bg-muted/30">
               {logs.map((l, i) => (
                 <div
                   key={i}
@@ -810,7 +810,7 @@ function Page() {
         </TabsList>
 
         <TabsContent value="itens">
-          <Card className="overflow-hidden border-slate-200 dark:border-slate-800">
+          <Card className="overflow-hidden border-border/60">
             {itens.length === 0 ? (
               <EmptyState
                 icon={FileText}
@@ -870,7 +870,7 @@ function Page() {
                             </div>
                             {it.especificacao && (
                               <div
-                                className="line-clamp-2 max-w-2xl text-[13px] text-slate-500 dark:text-slate-400"
+                                className="line-clamp-2 max-w-2xl text-[13px] text-muted-foreground"
                                 title={it.especificacao}
                               >
                                 {it.especificacao}
@@ -947,7 +947,7 @@ function Page() {
         </TabsContent>
 
         <TabsContent value="atores">
-          <Card className="border-slate-200 dark:border-slate-800">
+          <Card className="border-border/60">
             <CardContent className="p-4">
               <AtoresEditor
                 contratoId={id}
@@ -982,7 +982,7 @@ function Page() {
           </Card>
         </TabsContent>
         <TabsContent value="docs">
-          <Card className="border-slate-200 dark:border-slate-800">
+          <Card className="border-border/60">
             <CardContent className="p-4">
               <DocumentosEditor
                 contratoId={id}
@@ -1010,7 +1010,7 @@ function Field({
 }) {
   return (
     <div className="min-w-0">
-      <p className="text-[12px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+      <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
         {label}
       </p>
       <p

@@ -304,7 +304,7 @@ export function DocumentosEditor({
               <div className="text-sm font-semibold">
                 Documentos do contrato
               </div>
-              <div className="text-[13px] text-slate-500 dark:text-slate-400">
+              <div className="text-[13px] text-muted-foreground">
                 {docsM2A.length} gerado(s) no portal · {docsLocais.length}{" "}
                 anexo(s) local(is)
               </div>
@@ -344,7 +344,7 @@ export function DocumentosEditor({
             {todosDocumentos.map((doc) => (
               <div
                 key={doc.key}
-                className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-3 py-2.5 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-3 py-2.5 transition-colors hover:bg-muted/50"
               >
                 <Checkbox
                   checked={selected.has(doc.key)}
@@ -371,7 +371,7 @@ export function DocumentosEditor({
                       {doc.tipo}
                     </Badge>
                   </div>
-                  <div className="mt-0.5 truncate text-[13px] text-slate-500 dark:text-slate-400">
+                  <div className="mt-0.5 truncate text-[13px] text-muted-foreground">
                     {doc.detalhe}
                   </div>
                 </button>
@@ -423,7 +423,7 @@ export function DocumentosEditor({
       </div>
 
       {todosDocumentos.length > 0 && (
-        <p className="text-[13px] text-slate-500 dark:text-slate-400">
+        <p className="text-[13px] text-muted-foreground">
           Clique no nome do documento para baixar individualmente. Use a seleção
           para baixar vários ou gerar pacote ZIP.
         </p>

@@ -721,7 +721,7 @@ function Page() {
             <UsersRound className="size-3.5 text-slate-500" />
             Nomes repetidos no catálogo
           </div>
-          <div className="mt-1 text-slate-500 dark:text-slate-400">
+          <div className="mt-1 text-muted-foreground">
             {duplicateServidorNames.length === 0
               ? "Nenhum duplicado encontrado."
               : `${duplicateServidorNames.length} nome(s) ainda possuem mais de um código externo.`}
@@ -729,7 +729,7 @@ function Page() {
         </Card>
       </div>
 
-      <div className="mb-4 flex flex-wrap items-center gap-2 text-[13px] text-slate-500 dark:text-slate-400">
+      <div className="mb-4 flex flex-wrap items-center gap-2 text-[13px] text-muted-foreground">
         <Badge variant="secondary">{secretariaGroups.length} grupo(s)</Badge>
         <Badge variant="outline">
           {filteredRows.length} de {data?.length ?? 0} dotação(ões)
@@ -774,7 +774,7 @@ function Page() {
               onOpenChange={(value) => toggleGroup(group.key, value)}
             >
               <Card className="overflow-hidden border-border/60 bg-card">
-                <div className="flex items-center gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-[#0B0F19]">
+                <div className="flex items-center gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-muted/30">
                   <CollapsibleTrigger asChild>
                     <Button
                       variant="ghost"
@@ -793,10 +793,10 @@ function Page() {
                     <Building2 className="size-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-semibold text-slate-900 dark:text-white">
+                    <div className="truncate text-sm font-semibold text-foreground">
                       {group.title}
                     </div>
-                    <div className="truncate text-[13px] text-slate-500 dark:text-slate-400">
+                    <div className="truncate text-[13px] text-muted-foreground">
                       {group.subtitle}
                     </div>
                   </div>
@@ -879,7 +879,7 @@ function Page() {
                                   </span>
                                 )}
                                 {row.id === group.principal.id && (
-                                  <span className="font-medium text-slate-700 dark:text-slate-300">
+                                  <span className="font-medium text-foreground/85">
                                     Principal
                                   </span>
                                 )}
@@ -934,9 +934,9 @@ function Page() {
             <DialogTitle>Editar grupo de secretarias</DialogTitle>
           </DialogHeader>
           <div className="flex flex-col gap-4">
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-800 dark:bg-[#0B0F19]">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-800 dark:bg-muted/30">
               <div className="font-medium">{groupEditing?.title}</div>
-              <div className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">
+              <div className="mt-1 text-[13px] text-muted-foreground">
                 Esta ação atualiza {groupEditing?.rows.length ?? 0} dotação(ões)
                 do grupo de uma só vez.
               </div>
@@ -1098,8 +1098,8 @@ function Page() {
 
             {field("nome", "Nome *")}
 
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-[#0B0F19]">
-              <div className="mb-3 flex items-center gap-2 text-[12px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-muted/30">
+              <div className="mb-3 flex items-center gap-2 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
                 <Layers3 className="size-3.5" />
                 Parâmetros externos
               </div>
@@ -1253,7 +1253,7 @@ function ActorSelect({
         </SelectContent>
       </Select>
       {servidores.length === 0 && (
-        <p className="text-[13px] text-slate-500 dark:text-slate-400">
+        <p className="text-[13px] text-muted-foreground">
           {emptyMessage}
         </p>
       )}

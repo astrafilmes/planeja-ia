@@ -546,7 +546,7 @@ function Page() {
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-3xl gap-0 p-0">
-              <DialogHeader className="border-b border-slate-200 bg-slate-50 px-5 py-4 dark:border-slate-800 dark:bg-[#0B0F19]">
+              <DialogHeader className="border-b border-slate-200 bg-slate-50 px-5 py-4 dark:border-slate-800 dark:bg-muted/30">
                 <DialogTitle>Novo contrato</DialogTitle>
               </DialogHeader>
               <form
@@ -556,7 +556,7 @@ function Page() {
                 <div className="flex flex-col gap-5 overflow-y-auto p-5">
                   {/* Identificação */}
                   <section className="flex flex-col gap-3">
-                    <h3 className="text-[12px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    <h3 className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
                       Identificação
                     </h3>
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-6">
@@ -587,12 +587,12 @@ function Page() {
                           </p>
                         )}
                       </div>
-                      <div className="col-span-3 flex h-[60px] items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 dark:border-slate-800 dark:bg-[#0B0F19]">
+                      <div className="col-span-3 flex h-[60px] items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 dark:border-slate-800 dark:bg-muted/30">
                         <div>
-                          <div className="text-[13px] font-medium text-slate-700 dark:text-slate-300">
+                          <div className="text-[13px] font-medium text-foreground/85">
                             Numeração automática
                           </div>
-                          <div className="text-[13px] text-slate-500 dark:text-slate-400">
+                          <div className="text-[13px] text-muted-foreground">
                             Contador da secretaria
                           </div>
                         </div>
@@ -629,7 +629,7 @@ function Page() {
 
                   {/* Pessoas e link */}
                   <section className="flex flex-col gap-3">
-                    <h3 className="text-[12px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    <h3 className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
                       Pessoas e referência
                     </h3>
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-6">
@@ -660,7 +660,7 @@ function Page() {
                     </div>
                   </section>
                 </div>
-                <DialogFooter className="border-t border-slate-200 bg-slate-50 px-5 py-3 dark:border-slate-800 dark:bg-[#0B0F19]">
+                <DialogFooter className="border-t border-slate-200 bg-slate-50 px-5 py-3 dark:border-slate-800 dark:bg-muted/30">
                   <Button
                     type="button"
                     variant="ghost"
@@ -882,7 +882,7 @@ function Page() {
                       <span className="inline-flex h-7 items-center rounded-md border border-slate-300 bg-white px-2.5 font-mono text-xs font-semibold text-slate-900 shadow-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100">
                         {c.numero_contrato}
                       </span>
-                      <div className="truncate text-[12px] text-slate-500 dark:text-slate-400">
+                      <div className="truncate text-[12px] text-muted-foreground">
                         {c.secretaria_sigla ?? "Sem secretaria"}
                       </div>
                     </div>
@@ -894,15 +894,15 @@ function Page() {
                     className="hidden min-w-0 py-2 lg:table-cell"
                     title={c.fornecedor_nome ?? ""}
                   >
-                    <div className="line-clamp-2 text-sm font-medium text-slate-900 dark:text-slate-100">
+                    <div className="line-clamp-2 text-sm font-medium text-foreground">
                       {c.fornecedor_nome ?? "Sem empresa"}
                     </div>
                   </TableCell>
                   <TableCell className="min-w-0" title={c.objeto}>
-                    <div className="line-clamp-2 text-sm font-medium text-slate-900 dark:text-slate-100">
+                    <div className="line-clamp-2 text-sm font-medium text-foreground">
                       {c.objeto}
                     </div>
-                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-slate-500 dark:text-slate-400 lg:hidden">
+                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-muted-foreground lg:hidden">
                       <span className="truncate">
                         {c.fornecedor_nome ?? "Sem empresa"}
                       </span>

@@ -147,7 +147,7 @@ export function AtoresEditor({
       {/* Servidores padrão (automáticos) */}
       {defaults.length > 0 && (
         <div className="flex flex-col gap-2">
-          <div className="text-[12px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+          <div className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
             Servidores padrão
           </div>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -157,7 +157,7 @@ export function AtoresEditor({
               return (
                 <div
                   key={i}
-                  className="flex flex-col gap-1 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-[#0B0F19]"
+                  className="flex flex-col gap-1 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-muted/30"
                 >
                   <Badge
                     variant="outline"
@@ -175,7 +175,7 @@ export function AtoresEditor({
                       </span>
                     )}
                   </div>
-                  <div className="truncate text-[12px] text-slate-500 dark:text-slate-400">
+                  <div className="truncate text-[12px] text-muted-foreground">
                     {d.cpf ? `${formatCPF(d.cpf)} · ` : ""}
                     {d.origem}
                   </div>
@@ -189,7 +189,7 @@ export function AtoresEditor({
       {/* Servidores adicionais */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
-          <div className="text-[12px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+          <div className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
             Servidores adicionais ({atores.length})
           </div>
           {!showForm && (
@@ -204,7 +204,7 @@ export function AtoresEditor({
         </div>
 
         {showForm && (
-          <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-[#0B0F19]">
+          <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-muted/30">
             <div className="grid gap-2 md:grid-cols-5">
               <div className="flex flex-col gap-1.5">
                 <Label>Tipo</Label>
@@ -280,12 +280,12 @@ export function AtoresEditor({
         )}
 
         {atores.length === 0 ? (
-          <p className="text-[13px] italic text-slate-500 dark:text-slate-400">
+          <p className="text-[13px] italic text-muted-foreground">
             Nenhum servidor adicional. Os padrões acima já cobrem fiscal, gestor
             e preposto.
           </p>
         ) : (
-          <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800">
+          <div className="overflow-hidden rounded-xl border border-border/60">
             {atores.map((a) => (
               <div
                 key={a.id}

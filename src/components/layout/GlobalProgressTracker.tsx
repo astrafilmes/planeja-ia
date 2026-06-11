@@ -34,7 +34,7 @@ export function GlobalProgressTracker() {
           ) : (
             <Loader2 className="size-4 shrink-0 animate-spin text-primary" />
           )}
-          <h2 className="truncate text-sm font-semibold text-slate-900 dark:text-white">
+          <h2 className="truncate text-sm font-semibold text-foreground">
             {title || "Processando tarefa"}
           </h2>
         </div>
@@ -53,7 +53,7 @@ export function GlobalProgressTracker() {
       </div>
 
       <div className="flex flex-col gap-3 px-4 py-4">
-        <p className="line-clamp-2 text-[13px] text-slate-500 dark:text-slate-400">
+        <p className="line-clamp-2 text-[13px] text-muted-foreground">
           {statusText || "Aguardando atualização..."}
         </p>
         {isIndeterminate ? (

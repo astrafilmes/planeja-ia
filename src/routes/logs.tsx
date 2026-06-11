@@ -45,7 +45,7 @@ function Page() {
       title="Auditoria"
       subtitle="Ações realizadas no sistema (somente gestores e administradores)"
     >
-      <Card className="overflow-hidden border-slate-200 dark:border-slate-800">
+      <Card className="overflow-hidden border-border/60">
         <Table>
           <TableHeader>
             <TableRow>
@@ -60,7 +60,7 @@ function Page() {
               <TableRow>
                 <TableCell
                   colSpan={4}
-                  className="py-8 text-center text-[13px] text-slate-500 dark:text-slate-400"
+                  className="py-8 text-center text-[13px] text-muted-foreground"
                 >
                   Carregando...
                 </TableCell>
@@ -88,7 +88,7 @@ function Page() {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-xs">{l.entity_type}</TableCell>
-                <TableCell className="max-w-xl truncate font-mono text-[11px] text-slate-500 dark:text-slate-400">
+                <TableCell className="max-w-xl truncate font-mono text-[11px] text-muted-foreground">
                   {JSON.stringify(l.request_payload)}
                 </TableCell>
               </TableRow>

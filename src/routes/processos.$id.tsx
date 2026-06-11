@@ -1182,7 +1182,7 @@ function Page() {
         <TabsContent value="visao-geral">
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
             <Card>
-              <CardHeader className="border-b border-slate-200 dark:border-slate-800">
+              <CardHeader className="border-b border-border/60">
                 <CardTitle>Dados administrativos</CardTitle>
               </CardHeader>
               <CardContent className="grid gap-4 p-6 md:grid-cols-2">
@@ -1249,12 +1249,12 @@ function Page() {
             </Card>
 
             <Card>
-              <CardHeader className="border-b border-slate-200 dark:border-slate-800">
+              <CardHeader className="border-b border-border/60">
                 <CardTitle>Metadados</CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-4 p-6 text-sm">
                 <div className="flex flex-col gap-1">
-                  <p className="text-[12px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
                     Código externo
                   </p>
                   <p className="font-mono text-xs">
@@ -1262,7 +1262,7 @@ function Page() {
                   </p>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <p className="text-[12px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
                     Última sincronização
                   </p>
                   <p className="text-xs">
@@ -1272,13 +1272,13 @@ function Page() {
                   </p>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <p className="text-[12px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
                     Contratos
                   </p>
                   <p className="font-medium">{contratos.length}</p>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <p className="text-[12px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
                     Valor total
                   </p>
                   <p className="font-medium">{BRL.format(stats.total)}</p>
@@ -1290,11 +1290,11 @@ function Page() {
 
         <TabsContent value="contratos">
           <Card>
-            <CardHeader className="border-b border-slate-200 dark:border-slate-800">
+            <CardHeader className="border-b border-border/60">
               <div className="flex flex-wrap items-center gap-2">
                 <div className="min-w-0 flex-1">
                   <CardTitle>Contratos vinculados</CardTitle>
-                  <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">
+                  <p className="mt-1 text-[13px] text-muted-foreground">
                     Selecione contratos para enviar ao portal, baixar documentos
                     ou excluir em lote.
                   </p>
@@ -1425,19 +1425,19 @@ function Page() {
                                 </Link>
                               </Button>
                             </TableCell>
-                            <TableCell className="py-2 text-[13px] tabular-nums text-slate-600 dark:text-slate-300">
+                            <TableCell className="py-2 text-[13px] tabular-nums text-muted-foreground">
                               {formatDateBR(c.data ?? c.data_texto_legado)}
                             </TableCell>
                             <TableCell
                               className="min-w-0"
                               title={c.fornecedor_nome || undefined}
                             >
-                              <div className="line-clamp-2 text-sm font-medium text-slate-900 dark:text-slate-100">
+                              <div className="line-clamp-2 text-sm font-medium text-foreground">
                                 {c.fornecedor_nome || "Sem fornecedor"}
                               </div>
                             </TableCell>
                             <TableCell className="min-w-0" title={c.objeto}>
-                              <div className="line-clamp-2 text-sm text-slate-700 dark:text-slate-300">
+                              <div className="line-clamp-2 text-sm text-foreground/85">
                                 {c.objeto}
                               </div>
                             </TableCell>
@@ -1505,7 +1505,7 @@ function Page() {
                         </TableCell>
                         <TableCell
                           colSpan={2}
-                          className="py-2 pr-4 text-right text-[13px] text-slate-500 dark:text-slate-400"
+                          className="py-2 pr-4 text-right text-[13px] text-muted-foreground"
                         >
                           {selectionStats.count > 0
                             ? "Soma da seleção"
@@ -1522,11 +1522,11 @@ function Page() {
 
         <TabsContent value="itens">
           <Card>
-            <CardHeader className="border-b border-slate-200 dark:border-slate-800">
+            <CardHeader className="border-b border-border/60">
               <div className="flex flex-wrap items-center gap-3">
                 <div className="min-w-0 flex-1">
                   <CardTitle>Itens consolidados</CardTitle>
-                  <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">
+                  <p className="mt-1 text-[13px] text-muted-foreground">
                     Itens importados e consumidos pelos contratos deste
                     processo.
                   </p>
@@ -1587,7 +1587,7 @@ function Page() {
                           {item.codigo}
                         </TableCell>
                         <TableCell className="min-w-0">
-                          <div className="line-clamp-2 text-sm font-medium text-slate-900 dark:text-slate-100">
+                          <div className="line-clamp-2 text-sm font-medium text-foreground">
                             {item.descricao}
                           </div>
                         </TableCell>
@@ -1610,7 +1610,7 @@ function Page() {
                           <div className="font-mono text-xs">
                             {formatQuantidade(item.saldo)}
                           </div>
-                          <div className="text-[13px] text-slate-500 dark:text-slate-400">
+                          <div className="text-[13px] text-muted-foreground">
                             {item.valorDisponivel === null
                               ? "Valor indisponível"
                               : BRL.format(item.valorDisponivel)}
@@ -1633,7 +1633,7 @@ function Page() {
           </DialogHeader>
           <div className="grid gap-4 py-2 md:grid-cols-[1fr_240px]">
             <div className="flex flex-col gap-4">
-              <p className="text-[13px] text-slate-500 dark:text-slate-400">
+              <p className="text-[13px] text-muted-foreground">
                 Informe a data de assinatura. Em envio individual, você pode
                 escolher o fiscal; em lote, fiscal, gestor, unidade gestora,
                 itens e dotação serão carregados do cadastro da secretaria.
@@ -1692,7 +1692,7 @@ function Page() {
               </div>
             </div>
             <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
-              <div className="text-[12px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              <div className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Seleção
               </div>
               <div className="mt-2 flex max-h-48 flex-col gap-1 overflow-auto pr-1">
@@ -1704,17 +1704,17 @@ function Page() {
                     <div className="font-mono font-medium">
                       {contrato.numero_contrato}
                     </div>
-                    <div className="truncate text-[13px] text-slate-500 dark:text-slate-400">
+                    <div className="truncate text-[13px] text-muted-foreground">
                       {contrato.secretaria_sigla} · {contrato.itens.length}{" "}
                       item(ns)
                     </div>
-                    <div className="mt-1 font-mono text-[12px] font-semibold text-slate-700 dark:text-slate-200">
+                    <div className="mt-1 font-mono text-[12px] font-semibold text-foreground/85">
                       {BRL.format(contrato.valor_total)}
                     </div>
                   </div>
                 ))}
                 {selectedContracts.length > 8 && (
-                  <div className="text-[13px] text-slate-500 dark:text-slate-400">
+                  <div className="text-[13px] text-muted-foreground">
                     + {selectedContracts.length - 8} contrato(s)
                   </div>
                 )}

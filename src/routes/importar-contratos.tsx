@@ -1485,7 +1485,7 @@ function Page() {
       <div className="grid gap-5 xl:grid-cols-[360px_1fr]">
         {/* Sidebar: upload + histórico */}
         <div className="flex flex-col gap-4">
-          <Card className="border-slate-200 dark:border-slate-800">
+          <Card className="border-border/60">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2">
                 <Upload className="size-4" /> Nova importação
@@ -1500,7 +1500,7 @@ function Page() {
                   onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                 />
                 {file && (
-                  <div className="mt-1.5 truncate text-[13px] text-slate-500 dark:text-slate-400">
+                  <div className="mt-1.5 truncate text-[13px] text-muted-foreground">
                     {file.name}
                   </div>
                 )}
@@ -1512,7 +1512,7 @@ function Page() {
                   onChange={(event) => setM2aProcessoUrl(event.target.value)}
                   placeholder="http://precodereferencia.m2atecnologia.com.br/processo_administrativo/34291/"
                 />
-                <p className="mt-1 text-[13px] leading-relaxed text-slate-500 dark:text-slate-400">
+                <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
                   Ao importar, o sistema varre todas as atas, itens e contratos
                   existentes desse processo para separar os contratos pela ata
                   correta.
@@ -1533,7 +1533,7 @@ function Page() {
                 )}{" "}
                 Analisar e importar
               </Button>
-              <p className="text-[13px] leading-relaxed text-slate-500 dark:text-slate-400">
+              <p className="text-[13px] leading-relaxed text-muted-foreground">
                 A planilha vai para uma área de revisão. Nada é enviado ao
                 sistema de contratos até você clicar em{" "}
                 <strong>Autorizar geração</strong>.
@@ -1541,7 +1541,7 @@ function Page() {
             </CardContent>
           </Card>
 
-          <Card className="overflow-hidden border-slate-200 dark:border-slate-800">
+          <Card className="overflow-hidden border-border/60">
             <CardHeader className="pb-3">
               <CardTitle>Importações recentes</CardTitle>
             </CardHeader>
@@ -1570,10 +1570,10 @@ function Page() {
                           {j.status}
                         </Badge>
                       </div>
-                      <div className="truncate text-[13px] text-slate-500 dark:text-slate-400">
+                      <div className="truncate text-[13px] text-muted-foreground">
                         {j.original_filename}
                       </div>
-                      <div className="mt-0.5 flex gap-3 text-[12px] text-slate-500 dark:text-slate-400">
+                      <div className="mt-0.5 flex gap-3 text-[12px] text-muted-foreground">
                         <span>{j.total_itens} itens</span>
                         <span>{j.total_contratos_previstos} contratos</span>
                         <span>{formatBRL(j.total_valor)}</span>
@@ -1631,7 +1631,7 @@ function Page() {
         {/* Principal: revisão */}
         <div className="min-w-0">
           {!activeJobId && (
-            <Card className="border-dashed border-slate-200 dark:border-slate-800">
+            <Card className="border-dashed border-border/60">
               <EmptyState
                 icon={Upload}
                 title="Selecione uma importação"
@@ -1641,8 +1641,8 @@ function Page() {
           )}
 
           {activeJobId && detailFetching && !jobDetail && (
-            <Card className="border-slate-200 dark:border-slate-800">
-              <CardContent className="py-12 text-center text-[13px] text-slate-500 dark:text-slate-400">
+            <Card className="border-border/60">
+              <CardContent className="py-12 text-center text-[13px] text-muted-foreground">
                 <Loader2 className="mr-2 inline size-5 animate-spin" />
                 Carregando...
               </CardContent>
@@ -1652,7 +1652,7 @@ function Page() {
           {jobDetail && (
             <div className="flex flex-col gap-4">
               {/* Painel de resumo */}
-              <Card className="border-slate-200 dark:border-slate-800">
+              <Card className="border-border/60">
                 <CardContent className="grid gap-3 p-4 md:grid-cols-4">
                   <Metric
                     label="Empresa"
@@ -1715,11 +1715,11 @@ function Page() {
                         ]?.trim() ?? "";
                       return (
                         <Collapsible key={c.key} defaultOpen={false}>
-                          <Card className="overflow-hidden border-slate-200 dark:border-slate-800">
+                          <Card className="overflow-hidden border-border/60">
                             <CollapsibleTrigger asChild>
                               <button
                                 type="button"
-                                className="w-full text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                                className="w-full text-left transition-colors hover:bg-muted/50"
                               >
                                 <CardHeader className="pb-3 pt-3">
                                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1754,28 +1754,28 @@ function Page() {
                               </button>
                             </CollapsibleTrigger>
                             <CollapsibleContent>
-                              <div className="grid gap-2 border-t border-slate-200 bg-slate-50 px-3 py-2 text-[13px] text-slate-600 dark:border-slate-800 dark:bg-[#0B0F19] dark:text-slate-300 md:grid-cols-4">
+                              <div className="grid gap-2 border-t border-slate-200 bg-slate-50 px-3 py-2 text-[13px] text-slate-600 dark:border-slate-800 dark:bg-muted/30 dark:text-slate-300 md:grid-cols-4">
                                 <div>
-                                  <span className="font-medium text-slate-900 dark:text-slate-100">
+                                  <span className="font-medium text-foreground">
                                     Ata:
                                   </span>{" "}
                                   {c.m2aAtaNumero ?? "não definida"}
                                   {c.m2aAtaId ? ` · ID ${c.m2aAtaId}` : ""}
                                 </div>
                                 <div>
-                                  <span className="font-medium text-slate-900 dark:text-slate-100">
+                                  <span className="font-medium text-foreground">
                                     UG:
                                   </span>{" "}
                                   {sec?.m2a_orgao_id ?? "não cadastrada"}
                                 </div>
                                 <div>
-                                  <span className="font-medium text-slate-900 dark:text-slate-100">
+                                  <span className="font-medium text-foreground">
                                     Órgão Dot.:
                                   </span>{" "}
                                   {sec?.m2a_dot_orgao_id ?? "não cadastrado"}
                                 </div>
                                 <div>
-                                  <span className="font-medium text-slate-900 dark:text-slate-100">
+                                  <span className="font-medium text-foreground">
                                     Fiscal:
                                   </span>{" "}
                                   {sec?.m2a_fiscal_nome ?? "não cadastrado"}
@@ -1784,13 +1784,13 @@ function Page() {
                                     : ""}
                                 </div>
                                 <div>
-                                  <span className="font-medium text-slate-900 dark:text-slate-100">
+                                  <span className="font-medium text-foreground">
                                     Fornecedor:
                                   </span>{" "}
                                   {c.fornecedorNome ?? c.empresa ?? "—"}
                                 </div>
                                 <div>
-                                  <span className="font-medium text-slate-900 dark:text-slate-100">
+                                  <span className="font-medium text-foreground">
                                     Gestor:
                                   </span>{" "}
                                   {sec?.m2a_gestor_nome ?? "não cadastrado"}
@@ -1799,7 +1799,7 @@ function Page() {
                                     : ""}
                                 </div>
                                 <div>
-                                  <span className="font-medium text-slate-900 dark:text-slate-100">
+                                  <span className="font-medium text-foreground">
                                     Preposto:
                                   </span>{" "}
                                   {prepostoPreview || "não informado"}
@@ -1844,7 +1844,7 @@ function Page() {
                                           </div>
                                         </TableCell>
                                         <TableCell>
-                                          <div className="line-clamp-2 text-slate-500 dark:text-slate-400">
+                                          <div className="line-clamp-2 text-muted-foreground">
                                             {it.especificacao || "—"}
                                           </div>
                                         </TableCell>
@@ -1869,7 +1869,7 @@ function Page() {
                       );
                     })}
                     {contratosPreliminares.length === 0 && (
-                      <Card className="border-slate-200 dark:border-slate-800">
+                      <Card className="border-border/60">
                         <EmptyState
                           icon={FileSignature}
                           title="Nenhum contrato previsto"
@@ -1882,7 +1882,7 @@ function Page() {
 
                 {/* Tab 2: itens editáveis */}
                 <TabsContent value="itens" className="mt-3">
-                  <Card className="overflow-hidden border-slate-200 dark:border-slate-800">
+                  <Card className="overflow-hidden border-border/60">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -1932,7 +1932,7 @@ function Page() {
                                   </option>
                                 ))}
                               </select>
-                              <div className="mt-1 flex items-center gap-1 text-[12px] text-slate-500 dark:text-slate-400">
+                              <div className="mt-1 flex items-center gap-1 text-[12px] text-muted-foreground">
                                 <span>{i.m2a_match_status ?? "pendente"}</span>
                                 {i.m2a_item_id && (
                                   <span className="font-mono">
@@ -1945,7 +1945,7 @@ function Page() {
                               <div className="line-clamp-2">{i.descricao}</div>
                             </TableCell>
                             <TableCell className="text-[13px]">
-                              <div className="line-clamp-2 text-slate-500 dark:text-slate-400">
+                              <div className="line-clamp-2 text-muted-foreground">
                                 {i.especificacao || "—"}
                               </div>
                             </TableCell>
@@ -1982,7 +1982,7 @@ function Page() {
                     </Table>
                   </Card>
 
-                  <Card className="mt-4 border-slate-200 dark:border-slate-800">
+                  <Card className="mt-4 border-border/60">
                     <CardHeader className="pb-2">
                       <CardTitle>
                         Dotações ({jobDetail.dotacoes.length})
@@ -2054,7 +2054,7 @@ function Page() {
 
                 {/* Tab 3: autorizar */}
                 <TabsContent value="autorizar" className="mt-3">
-                  <Card className="border-slate-200 dark:border-slate-800">
+                  <Card className="border-border/60">
                     <CardHeader className="pb-3">
                       <CardTitle className="flex items-center gap-2">
                         {isAutorizado ? (
@@ -2081,7 +2081,7 @@ function Page() {
                         <>
                           {/* 1) Vínculo de processo — vem ANTES dos dados do lote */}
                           <div className="flex flex-col gap-3 rounded-xl border border-slate-200 p-3 dark:border-slate-800">
-                            <div className="text-[12px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                            <div className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
                               Processo
                             </div>
                             <div className="flex flex-col gap-1.5">
@@ -2123,7 +2123,7 @@ function Page() {
                               />
                               <label
                                 htmlFor="criarProc"
-                                className={`cursor-pointer ${processoId ? "text-slate-500 dark:text-slate-400" : ""}`}
+                                className={`cursor-pointer ${processoId ? "text-muted-foreground" : ""}`}
                               >
                                 Ou criar um novo processo automaticamente para
                                 este lote
@@ -2132,8 +2132,8 @@ function Page() {
                           </div>
 
                           {/* 2) Dados do lote */}
-                          <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-[#0B0F19]">
-                            <div className="text-[12px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                          <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-muted/30">
+                            <div className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
                               Dados do lote (aplicados a todos os contratos)
                             </div>
                             <div className="grid gap-3 md:grid-cols-2">
@@ -2150,7 +2150,7 @@ function Page() {
                               </div>
                               <div className="flex flex-col gap-1.5">
                                 <Label>Data dos contratos *</Label>
-                                <div className="py-2 text-[13px] italic text-slate-500 dark:text-slate-400">
+                                <div className="py-2 text-[13px] italic text-muted-foreground">
                                   Será preenchida no envio pela extensão
                                 </div>
                               </div>
@@ -2163,24 +2163,24 @@ function Page() {
                                 onChange={(e) => setObjetoBatch(e.target.value)}
                                 disabled={!!processoId}
                               />
-                              <p className="text-[13px] text-slate-500 dark:text-slate-400">
+                              <p className="text-[13px] text-muted-foreground">
                                 {processoId
                                   ? "Reaproveitado do processo vinculado."
                                   : "Mesmo objeto será gravado em todos os contratos gerados e no processo."}
                               </p>
                             </div>
-                            <p className="text-[13px] text-slate-500 dark:text-slate-400">
+                            <p className="text-[13px] text-muted-foreground">
                               Unidade Gestora, dotação, Fiscal e Gestor são
                               definidos automaticamente a partir do cadastro da
                               secretaria/dotação detectada na planilha.
                             </p>
 
                             <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
-                              <div className="mb-2 text-[12px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                              <div className="mb-2 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
                                 Preposto por fornecedor
                               </div>
                               {fornecedoresPrepostoTargets.length === 0 ? (
-                                <p className="text-[13px] text-slate-500 dark:text-slate-400">
+                                <p className="text-[13px] text-muted-foreground">
                                   Nenhum fornecedor identificado para os
                                   contratos deste lote.
                                 </p>
@@ -2199,12 +2199,12 @@ function Page() {
                                       >
                                         <div className="min-w-0">
                                           <div
-                                            className="truncate text-xs font-medium text-slate-900 dark:text-slate-100"
+                                            className="truncate text-xs font-medium text-foreground"
                                             title={target.fornecedorNome}
                                           >
                                             {target.fornecedorNome}
                                           </div>
-                                          <div className="mt-0.5 text-[12px] text-slate-500 dark:text-slate-400">
+                                          <div className="mt-0.5 text-[12px] text-muted-foreground">
                                             {target.contratos} contrato(s)
                                             {hasSaved
                                               ? " · cadastro existente"
@@ -2275,7 +2275,7 @@ function Page() {
 
                           <Separator />
 
-                          <div className="flex flex-col gap-1 rounded-xl bg-slate-50 p-3 text-[13px] text-slate-600 dark:bg-[#0B0F19] dark:text-slate-300">
+                          <div className="flex flex-col gap-1 rounded-xl bg-slate-50 p-3 text-[13px] text-slate-600 dark:bg-muted/30 dark:text-slate-300">
                             <div>
                               Serão criados{" "}
                               <strong>{contratosPreliminares.length}</strong>{" "}

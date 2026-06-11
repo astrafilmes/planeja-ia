@@ -61,7 +61,7 @@ function Page() {
               <TableRow>
                 <TableCell
                   colSpan={7}
-                  className="py-8 text-center text-[13px] text-slate-500 dark:text-slate-400"
+                  className="py-8 text-center text-[13px] text-muted-foreground"
                 >
                   Carregando...
                 </TableCell>

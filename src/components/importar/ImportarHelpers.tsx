@@ -16,7 +16,7 @@ export function Metric({
 }) {
   return (
     <div>
-      <div className="text-[12px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+      <div className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
         {label}
       </div>
       <div
@@ -39,7 +39,7 @@ export function M2ASyncReport({ syncData }: { syncData: any }) {
           <CheckCircle2 className="size-3.5" />
           Dados do portal
         </div>
-        <div className="flex items-center gap-1 text-[12px] text-slate-500 dark:text-slate-400">
+        <div className="flex items-center gap-1 text-[12px] text-muted-foreground">
           <History className="size-3" /> Sincronizado
         </div>
       </div>
@@ -70,7 +70,7 @@ export function M2ASyncReport({ syncData }: { syncData: any }) {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <div className="px-1 text-[12px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+        <div className="px-1 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
           Último número por Secretaria:
         </div>
         <div className="max-h-32 overflow-auto rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">

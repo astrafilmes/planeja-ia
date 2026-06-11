@@ -407,7 +407,7 @@ function Page() {
                 <DialogTitle>
                   {editing ? "Editar processo" : "Novo processo administrativo"}
                 </DialogTitle>
-                <p className="text-[13px] text-slate-500 dark:text-slate-400">
+                <p className="text-[13px] text-muted-foreground">
                   Cadastre o processo-mãe. Os contratos serão vinculados a ele
                   na importação.
                 </p>
@@ -416,7 +416,7 @@ function Page() {
                 <div className="flex max-h-[70vh] flex-col gap-6 overflow-y-auto px-6 py-5">
                   {/* Identificação */}
                   <section className="flex flex-col gap-3">
-                    <h3 className="text-[12px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    <h3 className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
                       Identificação
                     </h3>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_220px]">
@@ -427,7 +427,7 @@ function Page() {
                           placeholder="015/2025-PE"
                           className="font-mono"
                         />
-                        <p className="text-[13px] text-slate-500 dark:text-slate-400">
+                        <p className="text-[13px] text-muted-foreground">
                           Use o número completo com modalidade: PE, CE, DE, CR,
                           INE ou CH.
                         </p>
@@ -460,7 +460,7 @@ function Page() {
                   </section>
 
                   <section className="flex flex-col gap-3">
-                    <h3 className="text-[12px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    <h3 className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
                       Complementos
                     </h3>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -483,7 +483,7 @@ function Page() {
                   </section>
 
                   <section className="flex flex-col gap-3">
-                    <h3 className="text-[12px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    <h3 className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
                       Integração externa
                     </h3>
                     <div className="flex flex-col gap-1.5">
@@ -493,7 +493,7 @@ function Page() {
                         placeholder="http://.../processo_administrativo/36002/"
                         className="font-mono text-[13px]"
                       />
-                      <p className="text-[13px] text-slate-500 dark:text-slate-400">
+                      <p className="text-[13px] text-muted-foreground">
                         O ID do processo será extraído automaticamente da URL.
                       </p>
                       {form.formState.errors.m2a_url && (
@@ -504,7 +504,7 @@ function Page() {
                     </div>
                   </section>
                 </div>
-                <DialogFooter className="border-t border-slate-200 bg-slate-50 px-6 py-4 dark:border-slate-800 dark:bg-[#0B0F19]">
+                <DialogFooter className="border-t border-slate-200 bg-slate-50 px-6 py-4 dark:border-slate-800 dark:bg-muted/30">
                   <Button
                     type="button"
                     variant="outline"
@@ -716,10 +716,10 @@ function Page() {
                     </span>
                   </TableCell>
                   <TableCell className="min-w-0">
-                    <div className="line-clamp-2 text-sm font-medium text-slate-900 dark:text-slate-100">
+                    <div className="line-clamp-2 text-sm font-medium text-foreground">
                       {objetoResumo}
                     </div>
-                    <div className="mt-1 truncate text-[13px] text-slate-500 dark:text-slate-400">
+                    <div className="mt-1 truncate text-[13px] text-muted-foreground">
                       {parsed?.modalidade ??
                         p.modalidade ??
                         "Modalidade não identificada"}

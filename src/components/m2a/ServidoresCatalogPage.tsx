@@ -345,7 +345,7 @@ export function ServidoresCatalogPage({
                   <TableCell className="font-mono text-xs">
                     {servidor.m2a_id}
                   </TableCell>
-                  <TableCell className="max-w-md truncate text-[13px] text-slate-500 dark:text-slate-400">
+                  <TableCell className="max-w-md truncate text-[13px] text-muted-foreground">
                     {servidor.unidades_gestoras
                       .map((unidade) => unidade.nome)
                       .join(", ")}
@@ -417,7 +417,7 @@ export function ServidoresCatalogPage({
             </div>
             <div className="flex flex-col gap-2">
               <Label>Unidades Gestoras Vinculadas</Label>
-              <div className="grid max-h-72 gap-2 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-[#0B0F19] md:grid-cols-2">
+              <div className="grid max-h-72 gap-2 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-muted/30 md:grid-cols-2">
                 {unidades.map((unidade) => (
                   <label
                     key={unidade.id_local}

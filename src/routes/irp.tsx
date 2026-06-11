@@ -887,7 +887,7 @@ function Page() {
       subtitle="Carregue a planilha consolidada e gere os arquivos por secretaria"
     >
       <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="border-slate-200 dark:border-slate-800 lg:col-span-1">
+        <Card className="border-border/60 lg:col-span-1">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2">
               <Upload className="size-4 text-primary" />
@@ -912,12 +912,12 @@ function Page() {
               </p>
             </div>
             {file && (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-[13px] dark:border-slate-800 dark:bg-[#0B0F19]">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-[13px] dark:border-slate-800 dark:bg-muted/30">
                 <div className="flex items-center gap-2">
                   <FileSpreadsheet className="size-3.5 text-primary" />
                   <span className="font-medium truncate">{file.name}</span>
                 </div>
-                <div className="mt-0.5 text-slate-500 dark:text-slate-400">
+                <div className="mt-0.5 text-muted-foreground">
                   {(file.size / 1024).toFixed(1)} KB
                 </div>
               </div>
@@ -933,7 +933,7 @@ function Page() {
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200 dark:border-slate-800 lg:col-span-2">
+        <Card className="border-border/60 lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between gap-3 pb-3">
             <CardTitle className="flex items-center gap-2">
               <FileSpreadsheet className="size-4 text-primary" />
@@ -954,13 +954,13 @@ function Page() {
           </CardHeader>
           <CardContent>
             {(analise || resultadoSalvo) && (
-              <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-[#0B0F19]">
+              <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-muted/30">
                 <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <div className="text-[12px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    <div className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
                       Processo SRP no M2A
                     </div>
-                    <div className="mt-0.5 text-[13px] text-slate-600 dark:text-slate-300">
+                    <div className="mt-0.5 text-[13px] text-muted-foreground">
                       {selectedImportRows.length} de {importableRows.length}{" "}
                       planilha(s) selecionada(s)
                       {rowsMissingM2A.length > 0
@@ -1145,7 +1145,7 @@ function Page() {
                     )}
                   />
                 </div>
-                <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800">
+                <div className="overflow-hidden rounded-xl border border-border/60">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -1245,7 +1245,7 @@ function Page() {
                     value={formatBRL(Number(resultadoSalvo.job.total_valor))}
                   />
                 </div>
-                <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800">
+                <div className="overflow-hidden rounded-xl border border-border/60">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -1371,7 +1371,7 @@ function Page() {
               </div>
             </div>
 
-            <div className="rounded-lg border border-slate-200 dark:border-slate-800">
+            <div className="rounded-lg border border-border/60">
               <div className="border-b border-slate-200 px-3 py-2 text-[12px] font-semibold uppercase tracking-wider text-slate-500 dark:border-slate-800">
                 Planilhas selecionadas
               </div>
@@ -1423,11 +1423,11 @@ function Page() {
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-[#0B0F19]">
-      <div className="text-[12px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-muted/30">
+      <div className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
         {label}
       </div>
-      <div className="mt-0.5 text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
+      <div className="mt-0.5 text-lg font-semibold tracking-tight text-foreground">
         {value}
       </div>
     </div>

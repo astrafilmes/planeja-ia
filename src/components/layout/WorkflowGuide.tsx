@@ -61,10 +61,10 @@ export function WorkflowGuide({
         <div className="flex min-w-0 items-center gap-3">
           <div className="hidden h-10 w-1 rounded-full bg-primary md:block" />
           <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-slate-950 dark:text-slate-50">
+            <h2 className="text-sm font-semibold text-foreground">
               {title}
             </h2>
-            <p className="line-clamp-2 text-sm text-slate-500 dark:text-slate-400">
+            <p className="line-clamp-2 text-sm text-muted-foreground">
               Use esta sequência para sair da planilha e chegar ao contrato
               enviado, sem voltar procurando a próxima etapa.
             </p>
@@ -83,7 +83,7 @@ export function WorkflowGuide({
                     ? "border-primary/50 bg-primary/10 text-primary"
                     : isDone
                       ? "border-primary/25 bg-primary/5 text-primary"
-                      : "border-slate-200 bg-slate-50 text-slate-700 hover:border-primary/30 hover:bg-primary/5 dark:border-slate-800/60 dark:bg-[#0B0F19] dark:text-slate-200"
+                      : "border-slate-200 bg-slate-50 text-slate-700 hover:border-primary/30 hover:bg-primary/5 dark:border-slate-800/60 dark:bg-muted/30 dark:text-slate-200"
                 }`}
               >
                 <div
@@ -105,7 +105,7 @@ export function WorkflowGuide({
                   <div className="truncate text-xs font-semibold">
                     {index + 1}. {step.label}
                   </div>
-                  <div className="truncate text-[11px] text-slate-500 dark:text-slate-400">
+                  <div className="truncate text-[11px] text-muted-foreground">
                     {step.description}
                   </div>
                 </div>

@@ -194,7 +194,7 @@ function Page() {
         </div>
       }
     >
-      <Card className="overflow-hidden border-slate-200 dark:border-slate-800">
+      <Card className="overflow-hidden border-border/60">
         <Table>
           <TableHeader>
             <TableRow>
@@ -223,7 +223,7 @@ function Page() {
               <TableRow>
                 <TableCell
                   colSpan={8}
-                  className="py-8 text-center text-[13px] text-slate-500 dark:text-slate-400"
+                  className="py-8 text-center text-[13px] text-muted-foreground"
                 >
                   Carregando...
                 </TableCell>
