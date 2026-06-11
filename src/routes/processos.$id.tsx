@@ -281,7 +281,7 @@ function getContratoDocumentos(contrato: ContratoRow): M2ADocumentoGerado[] {
  if (!/^\d+$/.test(id_m2a)) return null;
  return {
  id_m2a,
- nome: `${contrato.numero_contrato} - ${String(doc.nome ?? `Documento ${id_m2a}`).trim()}`,
+ nome: `${String(doc.nome ?? `Documento ${id_m2a}`).trim()} - ${contrato.numero_contrato}`,
  contratoId: contrato.id,
  contratoNumero: contrato.numero_contrato,
  m2aContratoId: contrato.m2a_contrato_id ?? undefined,
