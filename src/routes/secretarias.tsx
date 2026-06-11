@@ -748,7 +748,7 @@ function Page() {
         )}
 
         {!isLoading && secretariaGroups.length === 0 && (
-          <Card className="border-slate-200 dark:border-slate-800">
+          <Card className="border-border/60">
             <EmptyState
               icon={Building2}
               title="Nenhuma secretaria encontrada"
@@ -773,7 +773,7 @@ function Page() {
               open={isOpen}
               onOpenChange={(value) => toggleGroup(group.key, value)}
             >
-              <Card className="overflow-hidden border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+              <Card className="overflow-hidden border-border/60 bg-card">
                 <div className="flex items-center gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-[#0B0F19]">
                   <CollapsibleTrigger asChild>
                     <Button

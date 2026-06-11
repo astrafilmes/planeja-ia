@@ -232,7 +232,7 @@ function Page() {
       }
     >
       <div className="grid gap-4 xl:grid-cols-[380px_1fr]">
-        <Card className="border-slate-200 dark:border-slate-800">
+        <Card className="border-border/60">
           <CardHeader className="pb-3">
             <CardTitle>Novo vínculo</CardTitle>
           </CardHeader>
@@ -302,7 +302,7 @@ function Page() {
           </CardContent>
         </Card>
 
-        <Card className="overflow-hidden border-slate-200 dark:border-slate-800">
+        <Card className="overflow-hidden border-border/60">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <Search className="size-4 text-muted-foreground" />

@@ -861,7 +861,7 @@ function Page() {
               {contratos?.map((c: any) => (
                 <TableRow
                   key={c.id}
-                  className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40"
+                  className="cursor-pointer hover:bg-muted/50"
                   data-state={selected.has(c.id) ? "selected" : undefined}
                   onClick={() =>
                     navigate({ to: "/contratos/$id", params: { id: c.id } })

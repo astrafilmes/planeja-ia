@@ -43,7 +43,7 @@ function Page() {
   });
   return (
     <AppShell title="Histórico" subtitle="Processamentos IRP anteriores">
-      <Card className="overflow-hidden border-slate-200 dark:border-slate-800">
+      <Card className="overflow-hidden border-border/60">
         <Table>
           <TableHeader>
             <TableRow>
