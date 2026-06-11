@@ -77,6 +77,9 @@ import {
  Trash2,
  X,
  Pencil,
+ CheckCircle2,
+ Circle,
+
 } from"lucide-react";
 import { toast } from"sonner";
 import { logAudit } from"@/lib/audit";
@@ -191,6 +194,8 @@ function Page() {
  const [search, setSearch] = useState("");
  const [secFilter, setSecFilter] = useState<string>("__all");
  const [m2aFilter, setM2aFilter] = useState<string>("__all");
+ const [pubFilter, setPubFilter] = useState<string>("__all");
+ const [togglingPub, setTogglingPub] = useState<string | null>(null);
  const [open, setOpen] = useState(false);
  const [deleting, setDeleting] = useState<any | null>(null);
  const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -225,12 +230,12 @@ function Page() {
  });
 
  const { data: contratos, isLoading } = useQuery({
- queryKey: ["contratos", search, secFilter, m2aFilter],
+ queryKey: ["contratos", search, secFilter, m2aFilter, pubFilter],
  enabled: !isDetailRoute,
  queryFn: async () => {
  let q = supabase
  .from("contratos")
- .select("id, numero_contrato, secretaria_id, secretaria_sigla, secretaria_nome, fornecedor_nome, preposto, objeto, fiscal, data, data_texto_legado, status, status_envio_m2a, m2a_contrato_id, m2a_documentos_gerados, link_contrato, created_at",
+ .select("id, numero_contrato, secretaria_id, secretaria_sigla, secretaria_nome, fornecedor_nome, preposto, objeto, fiscal, data, data_texto_legado, status, status_envio_m2a, m2a_contrato_id, m2a_documentos_gerados, link_contrato, created_at, publicado_at, publicado_por",
  )
  .is("deleted_at", null)
  .order("created_at", { ascending: false });
@@ -240,6 +245,8 @@ function Page() {
  );
  if (secFilter !=="__all") q = q.eq("secretaria_id", secFilter);
  if (m2aFilter !=="__all") q = q.eq("status_envio_m2a", m2aFilter);
+ if (pubFilter ==="publicado") q = q.not("publicado_at","is", null);
+ else if (pubFilter ==="nao_publicado") q = q.is("publicado_at", null);
  const { data, error } = await q.limit(200);
  if (error) throw error;
  const list = data ?? [];
@@ -267,12 +274,13 @@ function Page() {
  };
  }, [contratos]);
 
- const hasFilters = search || secFilter !=="__all" || m2aFilter !=="__all";
+ const hasFilters = search || secFilter !=="__all" || m2aFilter !=="__all" || pubFilter !=="__all";
 
  function clearFilters() {
  setSearch("");
  setSecFilter("__all");
  setM2aFilter("__all");
+ setPubFilter("__all");
  }
 
  useEffect(() => {
@@ -395,6 +403,34 @@ function Page() {
  return n;
  });
  qc.invalidateQueries({ queryKey: ["contratos"] });
+ }
+
+ async function handleTogglePublicado(c: any) {
+ setTogglingPub(c.id);
+ try {
+ const isPub = !!c.publicado_at;
+ const { data: userData } = await supabase.auth.getUser();
+ const uid = userData.user?.id ?? null;
+ const { error } = await supabase
+ .from("contratos")
+ .update(
+ isPub
+ ? { publicado_at: null, publicado_por: null }
+ : { publicado_at: new Date().toISOString(), publicado_por: uid },
+ )
+ .eq("id", c.id);
+ if (error) return toast.error(error.message);
+ await logAudit({
+ action:"update",
+ entityType:"contrato",
+ entityId: c.id,
+ payload: { publicado: !isPub },
+ });
+ toast.success(isPub ?"Marcado como não publicado" :"Marcado como publicado");
+ qc.invalidateQueries({ queryKey: ["contratos"] });
+ } finally {
+ setTogglingPub(null);
+ }
  }
 
  async function handleBulkDelete() {
@@ -703,7 +739,7 @@ function Page() {
  />
 
  <Card className="mb-4 p-6">
- <div className="grid grid-cols-1 items-end gap-3 md:grid-cols-10">
+ <div className="grid grid-cols-1 items-end gap-3 md:grid-cols-12">
  <div className="md:col-span-5">
  <Label>Buscar</Label>
  <div className="relative mt-2">
@@ -748,8 +784,21 @@ function Page() {
  </SelectContent>
  </Select>
  </div>
+ <div className="md:col-span-2">
+ <Label>Publicação</Label>
+ <Select value={pubFilter} onValueChange={setPubFilter}>
+ <SelectTrigger className="mt-2">
+ <SelectValue />
+ </SelectTrigger>
+ <SelectContent>
+ <SelectItem value="__all">Todos</SelectItem>
+ <SelectItem value="publicado">Publicados</SelectItem>
+ <SelectItem value="nao_publicado">Não publicados</SelectItem>
+ </SelectContent>
+ </Select>
+ </div>
  {hasFilters && (
- <div className="flex items-center justify-between text-xs text-muted-foreground md:col-span-10">
+ <div className="flex items-center justify-between text-xs text-muted-foreground md:col-span-12">
  <span>
  {stats.count} resultado(s) · {BRL.format(stats.total)}
  </span>
@@ -792,6 +841,9 @@ function Page() {
  <TableHead className="hidden w-28 whitespace-nowrap sm:table-cell">
  Status
  </TableHead>
+ <TableHead className="hidden w-28 whitespace-nowrap md:table-cell">
+ Publicação
+ </TableHead>
  <TableHead className="w-20 pr-3 text-right whitespace-nowrap sm:pr-4">
  Ações
  </TableHead>
@@ -801,7 +853,7 @@ function Page() {
  {isLoading &&
  Array.from({ length: 6 }).map((_, i) => (
  <TableRow key={`sk-${i}`}>
- {Array.from({ length: 8 }).map((_, j) => (
+ {Array.from({ length: 9 }).map((_, j) => (
  <TableCell key={j} className="py-2">
  <Skeleton className="h-4 w-full" />
  </TableCell>
@@ -810,7 +862,7 @@ function Page() {
  ))}
  {!isLoading && (contratos?.length ?? 0) === 0 && (
  <TableRow>
- <TableCell colSpan={8}>
+ <TableCell colSpan={9}>
  <EmptyState
  icon={FileSignature}
  title={
@@ -930,6 +982,35 @@ function Page() {
  </Badge>
  </TableCell>
  <TableCell
+ className="hidden py-2 md:table-cell"
+ onClick={(e) => e.stopPropagation()}
+ >
+ <Button
+ size="sm"
+ variant={c.publicado_at ?"default" :"outline"}
+ className={`h-7 gap-1.5 px-2 text-[11px] font-medium ${c.publicado_at ?"bg-emerald-600 text-white hover:bg-emerald-700" :"text-muted-foreground"}`}
+ disabled={togglingPub === c.id}
+ onClick={() => handleTogglePublicado(c)}
+ title={
+ c.publicado_at
+ ? `Publicado em ${formatDateBR(c.publicado_at)} — clique para desmarcar`
+ :"Marcar como publicado"
+ }
+ >
+ {c.publicado_at ? (
+ <>
+ <CheckCircle2 className="size-3.5" />
+ Publicado
+ </>
+ ) : (
+ <>
+ <Circle className="size-3.5" />
+ Marcar
+ </>
+ )}
+ </Button>
+ </TableCell>
+ <TableCell
  className="pr-3 py-2 text-right whitespace-nowrap sm:pr-4"
  onClick={(e) => e.stopPropagation()}
  >
@@ -1009,7 +1090,7 @@ function Page() {
  {BRL.format(stats.total)}
  </TableCell>
  <TableCell
- colSpan={2}
+ colSpan={3}
  className="py-2 text-right text-[11px] text-muted-foreground pr-4"
  >
  Soma total
