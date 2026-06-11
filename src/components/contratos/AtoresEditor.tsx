@@ -59,7 +59,7 @@ const TIPO_META: Record<
  gestor: {
  label:"Gestor",
  Icon: UserCog,
- cls:"bg-purple-500/10 text-purple-600 border-purple-500/30",
+ cls:"bg-emerald-500/10 text-emerald-600 border-emerald-500/30",
  },
  preposto: {
  label:"Preposto",
