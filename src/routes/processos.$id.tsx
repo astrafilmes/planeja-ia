@@ -1518,12 +1518,34 @@ function Page() {
  {c.objeto}
  </div>
  </TableCell>
- <TableCell className="py-2 text-right tabular-nums font-medium">
- {BRL.format(c.valor_total)}
- </TableCell>
- <TableCell className="py-2">
- <M2AStatusBadge status={effectiveStatus} />
- </TableCell>
+                          <TableCell className="py-2 text-right tabular-nums font-medium whitespace-nowrap">
+                            {BRL.format(c.valor_total)}
+                          </TableCell>
+                          <TableCell className="py-2 whitespace-nowrap">
+                            <M2AStatusBadge status={effectiveStatus} />
+                          </TableCell>
+                          <TableCell className="py-2 whitespace-nowrap text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className={`size-7 ${c.impresso_assinado ?"text-emerald-600 hover:text-emerald-700" :"text-muted-foreground/50 hover:text-foreground"}`}
+                                title={c.impresso_assinado ?"Impresso/Assinado — clique para desmarcar" :"Marcar como impresso/assinado"}
+                                onClick={() => toggleImpresso(c)}
+                              >
+                                <Printer className="size-4" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className={`size-7 ${c.publicado ?"text-emerald-600 hover:text-emerald-700" :"text-muted-foreground/50 hover:text-foreground"}`}
+                                title={c.publicado ?"Publicado — clique para desmarcar" :"Marcar como publicado"}
+                                onClick={() => togglePublicado(c)}
+                              >
+                                <Megaphone className="size-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
  <TableCell className="py-2 text-right pr-4">
  <div className="flex justify-end gap-1">
  <Button
