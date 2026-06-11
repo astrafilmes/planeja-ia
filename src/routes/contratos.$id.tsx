@@ -898,9 +898,10 @@ function Page() {
  <TableHead className="hidden w-32 text-right sm:table-cell">
  Vlr unit.
  </TableHead>
- <TableHead className="hidden w-32 text-right pr-4 sm:table-cell">
+ <TableHead className="hidden w-32 text-right sm:table-cell">
  Vlr total
  </TableHead>
+ <TableHead className="w-20 pr-4 text-right">Ações</TableHead>
  </TableRow>
  </TableHeader>
  <TableBody>
