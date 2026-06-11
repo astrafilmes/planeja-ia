@@ -194,18 +194,21 @@ export async function exportarRelatorioContratoExcel(contracts: ContractGroupedD
       const labelCell = ws.getCell(`A${r}`);
       labelCell.value = cols[0];
       labelCell.font = { bold: false };
-      labelCell.alignment = { vertical: 'top', horizontal: 'left' };
+      labelCell.alignment = { vertical: 'middle', horizontal: 'left', wrapText: false };
 
       ws.mergeCells(`B${r}:H${r}`);
       const valueCell = ws.getCell(`B${r}`);
       valueCell.value = cols[1] || '';
-      valueCell.alignment = { wrapText: true, vertical: 'top', horizontal: 'left' };
+      valueCell.alignment = { wrapText: false, vertical: 'middle', horizontal: 'left' };
+      ws.getRow(r).height = 18;
     });
 
-    ws.addRow([]);
+    const blankRow = ws.addRow([]);
+    blankRow.height = 18;
 
     const tableHeader = ['Ordem', 'Lote', 'Descrição', 'Especificação', 'Unidade', 'Quantidade', 'Valor Unitário', 'Valor Total'];
     const headerRow = ws.addRow(tableHeader);
+    headerRow.height = 18;
 
     const widths = [10, 10, 50, 50, 15, 18, 18, 18];
     widths.forEach((w, i) => {
@@ -215,7 +218,7 @@ export async function exportarRelatorioContratoExcel(contracts: ContractGroupedD
     headerRow.eachCell((cell: Cell) => {
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
       cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
-      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: false };
       cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
     });
 
@@ -230,16 +233,17 @@ export async function exportarRelatorioContratoExcel(contracts: ContractGroupedD
         it.item_valor_unitario ?? null,
         it.item_valor_total ?? null
       ]);
+      row.height = 18;
 
       row.eachCell({ includeEmpty: true }, (cell: Cell, colNumber: number) => {
         cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
 
         if (colNumber === 3 || colNumber === 4) {
-          cell.alignment = { wrapText: true, vertical: 'top', horizontal: 'left' };
+          cell.alignment = { wrapText: false, vertical: 'middle', horizontal: 'left' };
         } else if (colNumber >= 6 && colNumber <= 8) {
-          cell.alignment = { vertical: 'top', horizontal: 'right' };
+          cell.alignment = { wrapText: false, vertical: 'middle', horizontal: 'right' };
         } else {
-          cell.alignment = { vertical: 'top', horizontal: 'center' };
+          cell.alignment = { wrapText: false, vertical: 'middle', horizontal: 'center' };
         }
 
         if ((colNumber === 1 || colNumber === 2) && typeof cell.value === 'number') {
@@ -255,6 +259,10 @@ export async function exportarRelatorioContratoExcel(contracts: ContractGroupedD
     }
 
     ws.properties.defaultRowHeight = 18;
+    // Garante teto de altura 18 para todas as linhas (sem quebra de linha).
+    ws.eachRow({ includeEmpty: true }, (row) => {
+      row.height = 18;
+    });
   }
 
   const fileName = isBatch
