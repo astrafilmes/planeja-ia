@@ -19,11 +19,10 @@ import { Archive, Download, FileText, Trash2 } from"lucide-react";
 import { toast } from"sonner";
 import { logAudit } from"@/lib/audit";
 import {
- listenM2ABulkDownload,
- requestM2ABulkDownload,
  type M2ABulkDownloadDocumento,
  type M2ADocumentoGerado,
 } from"@/lib/m2a";
+import { downloadM2ADocuments } from"@/lib/m2a-documents";
 import { useProgress } from"@/contexts/ProgressContext";
 import JSZip from"jszip";
 import * as FileSaver from"file-saver";
