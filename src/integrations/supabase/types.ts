@@ -948,8 +948,8 @@ export type Database = {
           numero_contrato: string
           processo_id: string
           raw: Json | null
+          secretaria_sigla: string | null
           sequencia: number | null
-          sigla_secretaria: string | null
         }
         Insert: {
           ano?: number | null
@@ -960,8 +960,8 @@ export type Database = {
           numero_contrato: string
           processo_id: string
           raw?: Json | null
+          secretaria_sigla?: string | null
           sequencia?: number | null
-          sigla_secretaria?: string | null
         }
         Update: {
           ano?: number | null
@@ -972,8 +972,8 @@ export type Database = {
           numero_contrato?: string
           processo_id?: string
           raw?: Json | null
+          secretaria_sigla?: string | null
           sequencia?: number | null
-          sigla_secretaria?: string | null
         }
         Relationships: [
           {
