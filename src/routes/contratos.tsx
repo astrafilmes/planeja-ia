@@ -452,7 +452,7 @@ function Page() {
  toast.success(`${rows.length} contratos exportados`);
  }
 
- function handleBulkDownloadDocumentos() {
+ async function handleBulkDownloadDocumentos() {
  const docs = (contratos ?? [])
  .filter((contrato: any) => selected.has(contrato.id))
  .flatMap((contrato: any) =>
@@ -466,13 +466,29 @@ function Page() {
  return;
  }
 
+ setDownloadingDocs(true);
  startTask("Compactando documentos",
- `Preparando ${docs.length} documento(s)...`,
+ `Compactando ${docs.length} documento(s) no servidor...`,
  );
- requestM2ABulkDownload(docs, {
+ try {
+ await downloadM2ADocuments(docs, {
  archive: true,
  filename: `contratos-documentos-${new Date().toISOString().slice(0, 10)}.zip`,
+ }, (e) => {
+ if (e.status ==="concluido") {
+ finishTask(`${e.total} documento(s) compactado(s).`);
+ toast.success(`${e.total} documento(s) enviados para download.`);
+ }
+ if (e.status ==="erro") {
+ failTask(e.mensagem ??"Falha");
+ toast.error("Falha no download em lote", { description: e.mensagem });
+ }
  });
+ } catch (err: any) {
+ toast.error(err?.message ??"Falha ao gerar ZIP");
+ } finally {
+ setDownloadingDocs(false);
+ }
  }
 
  if (isDetailRoute) return <Outlet />;
