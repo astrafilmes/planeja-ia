@@ -739,7 +739,7 @@ function Page() {
  />
 
  <Card className="mb-4 p-6">
- <div className="grid grid-cols-1 items-end gap-3 md:grid-cols-10">
+ <div className="grid grid-cols-1 items-end gap-3 md:grid-cols-12">
  <div className="md:col-span-5">
  <Label>Buscar</Label>
  <div className="relative mt-2">
@@ -781,6 +781,19 @@ function Page() {
  {ENVIO_STATUS_LABELS[s] ?? s}
  </SelectItem>
  ))}
+ </SelectContent>
+ </Select>
+ </div>
+ <div className="md:col-span-2">
+ <Label>Publicação</Label>
+ <Select value={pubFilter} onValueChange={setPubFilter}>
+ <SelectTrigger className="mt-2">
+ <SelectValue />
+ </SelectTrigger>
+ <SelectContent>
+ <SelectItem value="__all">Todos</SelectItem>
+ <SelectItem value="publicado">Publicados</SelectItem>
+ <SelectItem value="nao_publicado">Não publicados</SelectItem>
  </SelectContent>
  </Select>
  </div>
