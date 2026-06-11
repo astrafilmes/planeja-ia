@@ -65,8 +65,10 @@ import {
  FileUp,
  RefreshCw,
  Settings2,
- Info,
- Send as SendIcon,
+  Info,
+  Printer,
+  Megaphone,
+  Send as SendIcon,
 } from"lucide-react";
 import { toast } from"sonner";
 import { logAudit } from"@/lib/audit";
