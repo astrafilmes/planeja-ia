@@ -13,7 +13,7 @@ const cardVariants = cva(
           "border-border/40 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-elevated)] hover:-translate-y-0.5",
         flat: "border-border/40 shadow-none",
         accent:
-          "border-transparent bg-accent-soft text-accent-strong shadow-[0_8px_24px_-12px_rgb(108_92_231_/_0.35)]",
+          "border-transparent bg-accent-soft text-accent-strong",
         outline: "border-border/70 bg-transparent shadow-none",
       },
     },

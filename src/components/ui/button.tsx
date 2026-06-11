@@ -25,7 +25,7 @@ const buttonVariants = cva(
         soft:
           "bg-accent-soft text-accent-strong hover:bg-accent-soft/80 dark:bg-accent-soft dark:text-accent-foreground",
         accent:
-          "bg-accent text-accent-foreground shadow-[0_8px_24px_-8px_rgb(108_92_231_/_0.5)] hover:bg-accent-strong hover:translate-y-[-1px]",
+          "bg-accent text-accent-foreground shadow-[0_8px_24px_-8px_rgb(0_167_168_/_0.45)] hover:bg-accent-strong hover:translate-y-[-1px]",
       },
       size: {
         default: "h-10 px-4 py-2",

@@ -59,10 +59,10 @@
   --color-sidebar-ring: var(--sidebar-ring);
   --shadow-card: 0 1px 2px 0 rgb(15 23 42 / 0.04), 0 4px 16px -4px rgb(15 23 42 / 0.06);
   --shadow-elevated: 0 4px 12px -2px rgb(15 23 42 / 0.05), 0 20px 40px -16px rgb(15 23 42 / 0.12);
-  --shadow-accent-glow: 0 8px 24px -8px rgb(108 92 231 / 0.45);
+  --shadow-accent-glow: 0 8px 24px -8px rgb(0 167 168 / 0.45);
 }
 
-/* Planeja v2 — off-white surface + institutional teal primary + indigo accent. */
+/* Planeja v2 — off-white surface + institutional teal primary + teal accent. */
 :root {
   --radius: 0.875rem;
   --background: oklch(0.985 0.004 240);

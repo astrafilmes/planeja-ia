@@ -17,7 +17,7 @@ export function HeroCard({
   illustration?: ReactNode;
 }) {
   return (
-    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#6C5CE7] via-[#5b4bd1] to-[#3d2fa5] p-7 text-white shadow-[0_20px_60px_-20px_rgb(108_92_231_/_0.55)]">
+    <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-[#0a1f33] via-[#0d2f3d] to-[#00a7a8] p-7 text-white">
       {/* decorative stars */}
       <svg
         aria-hidden="true"
@@ -56,7 +56,7 @@ export function HeroCard({
               type="button"
               onClick={onCtaClick}
               aria-label={cta}
-              className="mt-6 inline-flex h-11 items-center gap-2 rounded-full bg-[#0a0d18] px-5 text-[13px] font-medium text-white shadow-lg ring-1 ring-white/10 transition-all hover:-translate-y-px hover:bg-[#11162a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#5b4bd1]"
+              className="mt-6 inline-flex h-11 items-center gap-2 rounded-full bg-[#0a0d18] px-5 text-[13px] font-medium text-white ring-1 ring-white/10 transition-all hover:-translate-y-px hover:bg-[#11162a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#00a7a8]"
             >
               {cta}
               <ArrowUpRight className="size-4" aria-hidden="true" />

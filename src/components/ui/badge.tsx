@@ -17,7 +17,7 @@ const badgeVariants = cva(
         outline: "border-border bg-transparent text-muted-foreground",
         // Pastel tonal presets
         indigo:
-          "border-transparent bg-[#EEEAFE] text-[#5848d6] dark:bg-[#2a2256] dark:text-[#b9adff]",
+          "border-transparent bg-[#DDF4F4] text-[#007879] dark:bg-[#0e3a3b] dark:text-[#5ee2e3]",
         pink: "border-transparent bg-[#FCE7F0] text-[#B83260] dark:bg-[#4a1f36] dark:text-[#f7a8c8]",
         blue: "border-transparent bg-[#E3F0FF] text-[#1d4ed8] dark:bg-[#172a48] dark:text-[#8fb8ff]",
         green:
