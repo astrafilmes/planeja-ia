@@ -146,7 +146,22 @@ function buildAjaxHeaders(path) {
   };
 }
 
-async function fetchDoc(path, extraHeaders) {
+function traceStep(trace, event) {
+  if (!trace) return;
+  const step = {
+    seq: trace.length + 1,
+    ts: new Date().toISOString(),
+    ...event,
+  };
+  trace.push(step);
+  const status = step.status ? ` status=${step.status}` : "";
+  const counts = step.encontrados ? ` encontrados=${JSON.stringify(step.encontrados)}` : "";
+  const selected = step.selecionado ? " selecionado=true" : "";
+  const blocked = step.bloqueado ? " bloqueado=true" : "";
+  console.log(`[m2a-trace] #${step.seq} ${step.fase || ""} ${step.label || ""} ${step.url || ""}${status}${counts}${selected}${blocked}`);
+}
+
+async function fetchDocDetailed(path, extraHeaders) {
   const headers = { ...(buildAjaxHeaders(path) || {}), ...(extraHeaders || {}) };
   const r = await m2a.get(path, Object.keys(headers).length ? { headers } : undefined);
   if (r.status >= 400) {
@@ -155,7 +170,18 @@ async function fetchDoc(path, extraHeaders) {
     throw err;
   }
   const html = coerceHtmlPayload(r.html);
-  return cheerio.load(html);
+  return {
+    $: cheerio.load(html),
+    status: r.status,
+    finalUrl: r.finalUrl || "",
+    bytes: String(r.html ?? "").length,
+    decodedBytes: html.length,
+  };
+}
+
+async function fetchDoc(path, extraHeaders) {
+  const doc = await fetchDocDetailed(path, extraHeaders);
+  return doc.$;
 }
 
 export function parseM2aHtmlPayloadForTest(rawPayload) {
@@ -402,7 +428,7 @@ function extractItensFromDoc($, ataId) {
   return out;
 }
 
-async function fetchItensDaAta(ata) {
+async function fetchItensDaAta(ata, trace) {
   const attempts = [];
   if (ata.detail_url) {
     attempts.push({ label: "subtabela do processo", url: normalizeSubtableUrl(ata.detail_url, ata.id_ata) });
@@ -413,9 +439,14 @@ async function fetchItensDaAta(ata) {
       url: normalizeSubtableUrl(`/licitacao_ata_contrato_item/subtabela/${ata.id_licitacao_ata_contrato}`, ata.id_ata),
     });
   }
-  attempts.push({
+  traceStep(trace, {
+    fase: "itens",
     label: "subtabela de licitação (fallback por id_ata)",
+    id_ata: ata.id_ata,
+    numero_ata: ata.numero_ata,
     url: normalizeSubtableUrl(`/licitacao_ata_contrato_item/subtabela/${ata.id_ata}`, ata.id_ata),
+    bloqueado: true,
+    motivo: "endpoint usa id_licitacao_ata_contrato; id_ata pode apontar para registros de outra ata/processo",
   });
   attempts.push({
     label: "tabela da ata",
@@ -424,11 +455,44 @@ async function fetchItensDaAta(ata) {
 
   for (const attempt of attempts) {
     try {
-      const $ = await fetchDoc(attempt.url);
+      traceStep(trace, {
+        fase: "itens",
+        label: `requisitar ${attempt.label}`,
+        id_ata: ata.id_ata,
+        numero_ata: ata.numero_ata,
+        url: attempt.url,
+      });
+      const doc = await fetchDocDetailed(attempt.url);
+      const $ = doc.$;
       const items = extractItensFromDoc($, ata.id_ata);
+      traceStep(trace, {
+        fase: "itens",
+        label: attempt.label,
+        id_ata: ata.id_ata,
+        numero_ata: ata.numero_ata,
+        url: attempt.url,
+        status: doc.status,
+        finalUrl: doc.finalUrl,
+        bytes: doc.bytes,
+        decodedBytes: doc.decodedBytes,
+        encontrados: { itens: items.length },
+        amostra: items.slice(0, 5).map((item) => ({
+          numero_item: item.numero_item,
+          id_item: item.id_item,
+          descricao: cleanTextValue(item.descricao).slice(0, 120),
+        })),
+        selecionado: items.length > 0,
+      });
       if (items.length > 0) return items;
     } catch (err) {
-      // tenta próxima estratégia
+      traceStep(trace, {
+        fase: "itens",
+        label: attempt.label,
+        id_ata: ata.id_ata,
+        numero_ata: ata.numero_ata,
+        url: attempt.url,
+        erro: String(err?.message ?? err),
+      });
     }
   }
   return [];
@@ -475,11 +539,45 @@ function extractContratosFromDoc($, ataId) {
   return out;
 }
 
-async function fetchContratosDaAta(ata) {
+async function fetchContratosDaAta(ata, trace) {
+  const url = `/ata_registro_precos/tabela_contratos/${ata.id_ata}?page_size=1000`;
   try {
-    const $ = await fetchDoc(`/ata_registro_precos/tabela_contratos/${ata.id_ata}?page_size=1000`);
-    return extractContratosFromDoc($, ata.id_ata);
-  } catch {
+    traceStep(trace, {
+      fase: "contratos",
+      label: "requisitar contratos da ata",
+      id_ata: ata.id_ata,
+      numero_ata: ata.numero_ata,
+      url,
+    });
+    const doc = await fetchDocDetailed(url);
+    const contratos = extractContratosFromDoc(doc.$, ata.id_ata);
+    traceStep(trace, {
+      fase: "contratos",
+      label: "contratos da ata",
+      id_ata: ata.id_ata,
+      numero_ata: ata.numero_ata,
+      url,
+      status: doc.status,
+      finalUrl: doc.finalUrl,
+      bytes: doc.bytes,
+      decodedBytes: doc.decodedBytes,
+      encontrados: { contratos: contratos.length },
+      amostra: contratos.slice(0, 5).map((contrato) => ({
+        numero_contrato: contrato.numero_contrato,
+        id_contrato_m2a: contrato.id_contrato_m2a,
+        secretaria_nome: contrato.secretaria_nome,
+      })),
+    });
+    return contratos;
+  } catch (err) {
+    traceStep(trace, {
+      fase: "contratos",
+      label: "contratos da ata",
+      id_ata: ata.id_ata,
+      numero_ata: ata.numero_ata,
+      url,
+      erro: String(err?.message ?? err),
+    });
     return [];
   }
 }
@@ -499,7 +597,7 @@ async function mapWithConcurrency(items, limit, mapper) {
 }
 
 // ---------- cascata completa ----------
-async function fetchAtasDoProcesso(processoId) {
+async function fetchAtasDoProcesso(processoId, trace) {
   // Endpoints reais usados pelo portal (descobertos via inspeção da página
   // /processo_administrativo/{id}/).
   const attempts = [
@@ -512,11 +610,43 @@ async function fetchAtasDoProcesso(processoId) {
   let lastErr = null;
   for (const url of attempts) {
     try {
-      const $ = await fetchDoc(url);
-      const atas = extractAtasFromDoc($);
+      traceStep(trace, {
+        fase: "atas",
+        label: "requisitar atas do processo",
+        processo_id: processoId,
+        url,
+      });
+      const doc = await fetchDocDetailed(url);
+      const atas = extractAtasFromDoc(doc.$);
+      traceStep(trace, {
+        fase: "atas",
+        label: "buscar atas do processo",
+        processo_id: processoId,
+        url,
+        status: doc.status,
+        finalUrl: doc.finalUrl,
+        bytes: doc.bytes,
+        decodedBytes: doc.decodedBytes,
+        encontrados: { atas: atas.length },
+        amostra: atas.slice(0, 5).map((ata) => ({
+          id_ata: ata.id_ata,
+          id_licitacao_ata_contrato: ata.id_licitacao_ata_contrato,
+          numero_ata: ata.numero_ata,
+          fornecedor: ata.fornecedor?.nome,
+          detail_url: ata.detail_url,
+        })),
+        selecionado: atas.length > 0,
+      });
       if (atas.length) return atas;
     } catch (err) {
       lastErr = err;
+      traceStep(trace, {
+        fase: "atas",
+        label: "buscar atas do processo",
+        processo_id: processoId,
+        url,
+        erro: String(err?.message ?? err),
+      });
     }
   }
   if (lastErr) throw lastErr;
@@ -524,10 +654,12 @@ async function fetchAtasDoProcesso(processoId) {
 }
 
 async function runCascata(processoId) {
-  const atas = await fetchAtasDoProcesso(processoId);
+  const trace = [];
+  traceStep(trace, { fase: "inicio", label: "iniciar sincronização", processo_id: processoId, url: `/processo_administrativo/${processoId}/` });
+  const atas = await fetchAtasDoProcesso(processoId, trace);
 
   const resultados = await mapWithConcurrency(atas, SYNC_CONCURRENCY, async (ata) => {
-    const [itens, contratos] = await Promise.all([fetchItensDaAta(ata), fetchContratosDaAta(ata)]);
+    const [itens, contratos] = await Promise.all([fetchItensDaAta(ata, trace), fetchContratosDaAta(ata, trace)]);
     return { ata, itens, contratos };
   });
 
@@ -546,7 +678,14 @@ async function runCascata(processoId) {
     if (c.sequencial > atual) resumo.ultimo_numero_por_secretaria[sec] = c.sequencial;
   }
 
-  return { atas, itens, contratos_existentes: contratos, resumo };
+  traceStep(trace, {
+    fase: "fim",
+    label: "sincronização finalizada",
+    processo_id: processoId,
+    encontrados: { atas: atas.length, itens: itens.length, contratos: contratos.length },
+  });
+
+  return { atas, itens, contratos_existentes: contratos, resumo, trace };
 }
 
 // ---------- helpers de URL ----------
