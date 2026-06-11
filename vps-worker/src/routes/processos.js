@@ -1034,9 +1034,18 @@ async function runCascata(processoId) {
   // 1 item ÚNICO por ordem da tabela mestra, atrelado à primeira ata válida onde aparece.
   // Isso evita duplicação. O id_item é determinístico = id_item_mestre.
   const primeiraAtaPorOrdem = new Map();
+  // Mapa (id_ata|ordem) -> valor_unitario_contratado (vindo da subtabela da ata).
+  const valorContratadoPorAtaOrdem = new Map();
+  // Fallback (ordem) -> primeiro valor contratado encontrado em qualquer ata.
+  const valorContratadoPorOrdem = new Map();
   for (const { ata, vinculos } of resultados) {
     for (const v of vinculos) {
       if (!primeiraAtaPorOrdem.has(v.ordem)) primeiraAtaPorOrdem.set(v.ordem, ata.id_ata);
+      const vc = Number(v.valor_unitario_contratado) || 0;
+      if (vc > 0) {
+        valorContratadoPorAtaOrdem.set(`${ata.id_ata}|${v.ordem}`, vc);
+        if (!valorContratadoPorOrdem.has(v.ordem)) valorContratadoPorOrdem.set(v.ordem, vc);
+      }
     }
   }
 
@@ -1047,14 +1056,23 @@ async function runCascata(processoId) {
       const numB = Number(b.ordem || b.numero_item || b.numero) || 0;
       return numA - numB;
     })
-    .map((m) => ({
-      id_item: m.id_item_mestre,
-      numero_item: m.ordem,
-      descricao: m.descricao,
-      unidade: m.unidade,
-      valor_unitario: m.valor_unitario,
-      id_ata: primeiraAtaPorOrdem.get(m.ordem),
-    }));
+    .map((m) => {
+      const idAta = primeiraAtaPorOrdem.get(m.ordem);
+      const valorContratado =
+        valorContratadoPorAtaOrdem.get(`${idAta}|${m.ordem}`) ||
+        valorContratadoPorOrdem.get(m.ordem) ||
+        0;
+      return {
+        id_item: m.id_item_mestre,
+        numero_item: m.ordem,
+        descricao: m.descricao,
+        unidade: m.unidade,
+        // Prefere o valor unitário CONTRATADO (subtabela da ata).
+        // Cai para o estimado da tabela mestra apenas se o contratado não existir.
+        valor_unitario: valorContratado > 0 ? valorContratado : m.valor_unitario,
+        id_ata: idAta,
+      };
+    });
 
   const contratos = resultados.flatMap((r) => r.contratos);
 
