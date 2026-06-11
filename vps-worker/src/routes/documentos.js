@@ -70,57 +70,64 @@ function looksLikeBinary(r) {
   return false;
 }
 
+/** Pesquisa, em um HTML, anchors cujo href referencie o id do documento. */
+function harvestHrefsForId($, id, into) {
+  const re = new RegExp(`(^|[/=?&])${id}([/?&]|$)`);
+  $("a[href]").each((_, a) => {
+    const href = ($(a).attr("href") || "").trim();
+    if (!href || href === "#" || href.startsWith("javascript:")) return;
+    if (!re.test(href)) return;
+    if (/excluir|editar|atualizar|deletar/i.test(href)) return;
+    const title = (
+      $(a).attr("title") ||
+      $(a).attr("data-original-title") ||
+      $(a).text() ||
+      ""
+    ).toLowerCase();
+    const cls = ($(a).attr("class") || "").toLowerCase();
+    let score = 1;
+    if (/baixar|download|visualizar|imprimir|pdf|arquivo/i.test(href)) score += 6;
+    if (/baixar|download|visualizar|imprimir|pdf|arquivo/.test(title)) score += 3;
+    if (/baixar|download|visualizar|imprimir|pdf|arquivo/.test(cls)) score += 2;
+    into.push({ href, score });
+  });
+}
+
 /** Tenta extrair, da página do contrato, o href real para baixar cada documento. */
-async function discoverDownloadUrlMap(contratoId, log) {
-  const tabelaUrl = `/contratos/documentos/tabela/${contratoId}/`;
-  const map = new Map();
-  try {
-    const r = await m2a.request("GET", tabelaUrl, {
-      headers: { "X-Requested-With": "XMLHttpRequest" },
-    });
-    if (!r.html) return map;
-    const $ = cheerio.load(r.html);
-    $("tr.tr_contrato_documento, tr[id_item]").each((_, row) => {
-      const $row = $(row);
-      const id =
-        $row.attr("id_item") ||
-        $row.find("[id_item]").first().attr("id_item") ||
-        "";
-      if (!/^\d+$/.test(id)) return;
-      // Procura todos os anchors da linha — escolhe o mais provável de download.
-      const candidates = [];
-      $row.find("a[href]").each((__, a) => {
-        const href = ($(a).attr("href") || "").trim();
-        if (!href || href === "#" || href.startsWith("javascript:")) return;
-        const title = (
-          $(a).attr("title") ||
-          $(a).attr("data-original-title") ||
-          $(a).text() ||
-          ""
-        ).toLowerCase();
-        const cls = ($(a).attr("class") || "").toLowerCase();
-        let score = 0;
-        if (/baixar|download|visualizar|imprimir|pdf/i.test(href)) score += 5;
-        if (/baixar|download|visualizar|imprimir|pdf/.test(title)) score += 3;
-        if (/baixar|download|visualizar|imprimir|pdf/.test(cls)) score += 2;
-        if (href.includes(`/${id}/`) || href.includes(`/${id}?`) || href.endsWith(`/${id}`)) {
-          score += 4;
-        }
-        if (/excluir|editar|atualizar/.test(href)) score -= 10;
-        candidates.push({ href, score });
+async function discoverDownloadUrlMap(contratoId, ids, log) {
+  const candidatesById = new Map(ids.map((id) => [id, []]));
+  const sources = [
+    `/contratos/documentos/tabela/${contratoId}/`,
+    `/contratos/${contratoId}/`,
+    `/contratos/documentos/${contratoId}/`,
+    `/contratos/${contratoId}/documentos/`,
+  ];
+  for (const path of sources) {
+    try {
+      const r = await m2a.request("GET", path, {
+        headers: { "X-Requested-With": "XMLHttpRequest" },
       });
-      candidates.sort((a, b) => b.score - a.score);
-      if (candidates.length && candidates[0].score > 0) {
-        map.set(id, candidates[0].href);
-      }
-    });
-    log?.info?.(
-      { contratoId, encontrados: map.size, total_linhas: $("tr.tr_contrato_documento").length },
-      "documentos: discoverDownloadUrlMap",
-    );
-  } catch (err) {
-    log?.warn?.({ err: err.message, contratoId }, "falha ao varrer tabela de documentos");
+      if (!r.html || r.status >= 400) continue;
+      const $ = cheerio.load(r.html);
+      for (const id of ids) harvestHrefsForId($, id, candidatesById.get(id));
+    } catch (err) {
+      log?.warn?.({ err: err.message, path }, "falha ao varrer página em busca de download");
+    }
   }
+  const map = new Map();
+  for (const [id, list] of candidatesById) {
+    list.sort((a, b) => b.score - a.score);
+    if (list.length) map.set(id, list[0].href);
+  }
+  log?.info?.(
+    {
+      contratoId,
+      pedidos: ids.length,
+      encontrados: map.size,
+      amostra: Array.from(map.entries()).slice(0, 3),
+    },
+    "documentos: discoverDownloadUrlMap",
+  );
   return map;
 }
 
