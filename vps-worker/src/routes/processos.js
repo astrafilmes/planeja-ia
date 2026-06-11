@@ -455,6 +455,13 @@ async function fetchItensDaAta(ata, trace) {
 
   for (const attempt of attempts) {
     try {
+      traceStep(trace, {
+        fase: "itens",
+        label: `requisitar ${attempt.label}`,
+        id_ata: ata.id_ata,
+        numero_ata: ata.numero_ata,
+        url: attempt.url,
+      });
       const doc = await fetchDocDetailed(attempt.url);
       const $ = doc.$;
       const items = extractItensFromDoc($, ata.id_ata);
@@ -535,6 +542,13 @@ function extractContratosFromDoc($, ataId) {
 async function fetchContratosDaAta(ata, trace) {
   const url = `/ata_registro_precos/tabela_contratos/${ata.id_ata}?page_size=1000`;
   try {
+    traceStep(trace, {
+      fase: "contratos",
+      label: "requisitar contratos da ata",
+      id_ata: ata.id_ata,
+      numero_ata: ata.numero_ata,
+      url,
+    });
     const doc = await fetchDocDetailed(url);
     const contratos = extractContratosFromDoc(doc.$, ata.id_ata);
     traceStep(trace, {
