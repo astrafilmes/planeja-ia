@@ -798,7 +798,7 @@ function Page() {
  </Select>
  </div>
  {hasFilters && (
- <div className="flex items-center justify-between text-xs text-muted-foreground md:col-span-10">
+ <div className="flex items-center justify-between text-xs text-muted-foreground md:col-span-12">
  <span>
  {stats.count} resultado(s) · {BRL.format(stats.total)}
  </span>
