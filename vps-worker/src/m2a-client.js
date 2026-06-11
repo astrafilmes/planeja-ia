@@ -180,27 +180,49 @@ class M2aClient {
 
 
   async _raw(method, path, opts = {}) {
+    const binary = opts.responseType === "arraybuffer";
     const headers = {
-      Accept: "text/html,application/json,*/*",
+      Accept: binary
+        ? "application/pdf,application/octet-stream,*/*"
+        : "text/html,application/json,*/*",
       ...(opts.headers || {}),
     };
     const cfg = {
       method,
       url: path,
       headers,
-      responseType: "text",
+      responseType: binary ? "arraybuffer" : "text",
       transformResponse: [(data) => data],
     };
     if (opts.body !== undefined) cfg.data = opts.body;
     const res = await this.http.request(cfg);
+    const finalUrl = res.request?.res?.responseUrl || "";
+    const contentType = res.headers?.["content-type"] || "";
+    const contentDisposition = res.headers?.["content-disposition"] || null;
+    if (binary) {
+      const buf = Buffer.isBuffer(res.data) ? res.data : Buffer.from(res.data);
+      // Detecta página de login (HTML) mesmo quando pedimos binário.
+      const looksHtml =
+        contentType.toLowerCase().includes("text/html") ||
+        (buf.length < 64_000 && /<html/i.test(buf.toString("utf8", 0, Math.min(buf.length, 2048))));
+      const html = looksHtml ? buf.toString("utf8") : "";
+      return {
+        status: res.status,
+        html,
+        bytes: buf,
+        finalUrl,
+        contentType,
+        contentDisposition,
+        raw: res,
+      };
+    }
     const text =
       typeof res.data === "string"
         ? res.data
         : res.data == null
           ? ""
           : JSON.stringify(res.data);
-    const finalUrl = res.request?.res?.responseUrl || "";
-    return { status: res.status, html: text, finalUrl, raw: res };
+    return { status: res.status, html: text, finalUrl, contentType, contentDisposition, raw: res };
   }
 
   /** request com auto-relogin. Aceita method/path/body/headers. */
