@@ -615,6 +615,40 @@ function Page() {
  <ExternalLink className="size-3" />
  </Link>
  )}
+ <Button
+ size="sm"
+ variant={c.publicado_at ?"default" :"outline"}
+ className={`h-7 gap-1.5 px-2 text-[11px] font-medium ${c.publicado_at ?"bg-emerald-600 text-white hover:bg-emerald-700" :"text-muted-foreground"}`}
+ onClick={async () => {
+ const isPub = !!c.publicado_at;
+ const { data: u } = await supabase.auth.getUser();
+ const { error } = await supabase
+ .from("contratos")
+ .update(
+ isPub
+ ? { publicado_at: null, publicado_por: null }
+ : { publicado_at: new Date().toISOString(), publicado_por: u.user?.id ?? null },
+ )
+ .eq("id", c.id);
+ if (error) return toast.error(error.message);
+ toast.success(isPub ?"Marcado como não publicado" :"Marcado como publicado");
+ qc.invalidateQueries({ queryKey: ["contrato-full", id] });
+ qc.invalidateQueries({ queryKey: ["contratos"] });
+ }}
+ title={
+ c.publicado_at
+ ? `Publicado em ${formatDateBR(c.publicado_at)} — clique para desmarcar`
+ :"Marcar como publicado"
+ }
+ >
+ {c.publicado_at ? (
+ <>
+ <CheckCircle2 className="size-3.5" /> Publicado
+ </>
+ ) : (
+ <>"Marcar como publicado"</>
+ )}
+ </Button>
  </div>
  <p className="text-[13px] text-muted-foreground">
  Preposto: <span className="text-foreground">{c.preposto}</span> ·
