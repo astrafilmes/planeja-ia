@@ -445,9 +445,11 @@ function Page() {
  ultimo_erro_m2a: c.ultimo_erro_m2a,
  m2a_contrato_id: c.m2a_contrato_id,
  m2a_documentos_gerados: c.m2a_documentos_gerados,
- enviado_m2a_em: c.enviado_m2a_em,
- valor_total: valorByContrato[c.id] ?? 0,
- itens: itensByContrato[c.id] ?? [],
+          enviado_m2a_em: c.enviado_m2a_em,
+          impresso_assinado: !!c.impresso_assinado,
+          publicado: !!c.publicado,
+          valor_total: valorByContrato[c.id] ?? 0,
+          itens: itensByContrato[c.id] ?? [],
  }));
  return {
  processo: proc.data as Processo | null,
