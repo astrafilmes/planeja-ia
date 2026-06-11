@@ -278,46 +278,81 @@ async function tryDownload(candidate) {
   return r;
 }
 
-async function fetchFromM2A(id, hrefHint, log) {
+/**
+ * Fluxo oficial do portal M2A (confirmado via DevTools):
+ * 1) POST /contratos/documentos/visualizar_documento_individual/{id}/
+ *    body: csrfmiddlewaretoken=..., format=pdf, gerar_documento=true
+ *    → gera o arquivo temporário no servidor M2A.
+ * 2) GET  /contratos/documentos/visualizar_documento_individual/{id}/?filename=temp&format=pdf
+ *    → devolve o binário (PDF).
+ */
+async function fetchFromM2A(id, _hrefHint, log, contratoId = null) {
   const tried = [];
-  const queue = [];
-  const enqueue = (candidate, referer = null) => {
-    const c = typeof candidate === "string" ? { method: "GET", path: candidate } : candidate;
-    const path = cleanPortalPath(c.path);
-    if (!path) return;
-    queue.push({ ...c, path, referer: c.referer || referer || undefined });
-  };
-  if (hrefHint) enqueue(hrefHint);
-  for (const buildPath of M2A_DOWNLOAD_PATH_FALLBACKS) enqueue(buildPath(id));
+  const docPath = `/contratos/documentos/visualizar_documento_individual/${id}/`;
+  const referer = contratoId
+    ? `${m2a.http.defaults.baseURL}/contratos/${contratoId}/`
+    : undefined;
+  const csrfSource = contratoId ? `/contratos/${contratoId}/` : docPath;
 
-  const seen = new Set();
-  while (queue.length && tried.length < 40) {
-    const candidate = queue.shift();
-    const key = `${candidate.method || "GET"}:${candidate.path}:${candidate.body || ""}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
+  for (const format of ["pdf", "docx"]) {
     try {
-      const r = await tryDownload(candidate);
-      tried.push(`${candidate.method || "GET"} ${candidate.path} → ${r.status} ${r.contentType || ""}`);
-      if (r.status >= 200 && r.status < 300 && looksLikeBinary(r)) return r;
-      if (r.html && /<html|<form|<a\s|data-url|onclick/i.test(r.html)) {
-        const nested = extractDownloadCandidatesFromHtml(r.html, id, candidate.path);
-        for (const next of nested) enqueue(next, candidate.path);
-        if (nested.length) {
-          log?.info?.(
-            { id, origem: candidate.path, encontrados: nested.length, amostra: nested.slice(0, 5).map((x) => `${x.method || "GET"} ${x.path}`) },
-            "documento M2A: candidatos extraídos de página intermediária",
-          );
-        }
-      }
+      const csrf = await m2a.getCsrf(csrfSource);
+      const form = new URLSearchParams();
+      form.set("csrfmiddlewaretoken", csrf);
+      form.set("format", format);
+      form.set("gerar_documento", "true");
+      const gen = await m2a.request("POST", docPath, {
+        body: form.toString(),
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+          "X-Requested-With": "XMLHttpRequest",
+          ...(referer ? { Referer: referer } : {}),
+        },
+      });
+      tried.push(`POST ${docPath} format=${format} → ${gen.status}`);
+      if (gen.status >= 400) continue;
+
+      const dl = await m2a.request("GET", `${docPath}?filename=temp&format=${format}`, {
+        responseType: "arraybuffer",
+        headers: {
+          Accept: "application/pdf,application/octet-stream,*/*",
+          ...(referer ? { Referer: referer } : {}),
+        },
+      });
+      tried.push(`GET ${docPath}?filename=temp&format=${format} → ${dl.status} ${dl.contentType || ""}`);
+      if (dl.status >= 200 && dl.status < 300 && looksLikeBinary(dl)) return dl;
     } catch (err) {
-      tried.push(`${candidate.method || "GET"} ${candidate.path} → ERR ${err.message}`);
+      tried.push(`format=${format} → ERR ${err.message}`);
     }
   }
-  log?.warn?.({ id, tried }, "documento M2A: nenhum endpoint retornou binário");
+
+  log?.warn?.({ id, contratoId, tried }, "documento M2A: fluxo oficial falhou");
   throw new Error(
     `Não foi possível baixar documento ${id}. Tentativas: ${tried.join(" | ")}`,
   );
+}
+
+async function fetchFromUrl(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status} ao baixar ${url}`);
+  const buf = Buffer.from(await res.arrayBuffer());
+  return {
+    bytes: buf,
+    contentType: res.headers.get("content-type") || "application/octet-stream",
+    contentDisposition: res.headers.get("content-disposition") || null,
+  };
+}
+
+async function fetchOne(doc, _hrefMap, log) {
+  if (doc?.source === "url" || doc?.origem === "url") {
+    return fetchFromUrl(doc.url);
+  }
+  const id = String(doc?.id_m2a ?? doc?.id ?? "").trim();
+  if (!/^\d+$/.test(id)) {
+    throw new Error(`id_m2a inválido em documento "${doc?.nome ?? "?"}"`);
+  }
+  const contratoId = String(doc?.contrato_id ?? "").trim() || null;
+  return fetchFromM2A(id, null, log, contratoId);
 }
 
 async function fetchFromUrl(url) {
