@@ -1077,6 +1077,115 @@ function Page() {
  </Card>
  </TabsContent>
  </Tabs>
+
+ {/* Aviso opt-out para edição/exclusão de itens */}
+ <AlertDialog open={!!warnPending} onOpenChange={(o) => !o && setWarnPending(null)}>
+   <AlertDialogContent>
+     <AlertDialogHeader>
+       <AlertDialogTitle>Atenção</AlertDialogTitle>
+       <AlertDialogDescription>
+         Esta alteração pode interferir na sincronização com a M2A. Deseja continuar?
+       </AlertDialogDescription>
+     </AlertDialogHeader>
+     <div className="flex items-center gap-2 pt-1">
+       <Checkbox
+         id="warn-edit-item-dontshow"
+         checked={warnDontShow}
+         onCheckedChange={(v) => setWarnDontShow(v === true)}
+       />
+       <Label htmlFor="warn-edit-item-dontshow" className="cursor-pointer text-sm font-normal">
+         Não mostrar este aviso novamente
+       </Label>
+     </div>
+     <AlertDialogFooter>
+       <AlertDialogCancel>Cancelar</AlertDialogCancel>
+       <AlertDialogAction onClick={confirmWarn}>Continuar</AlertDialogAction>
+     </AlertDialogFooter>
+   </AlertDialogContent>
+ </AlertDialog>
+
+ {/* Editar item */}
+ <Dialog open={!!editingItem} onOpenChange={(o) => !o && setEditingItem(null)}>
+   <DialogContent>
+     <DialogHeader>
+       <DialogTitle>Editar item</DialogTitle>
+       <DialogDescription>
+         Alterações afetam apenas este contrato. Sincronização posterior pode ser necessária.
+       </DialogDescription>
+     </DialogHeader>
+     <div className="grid gap-3">
+       <div className="grid gap-1.5">
+         <Label htmlFor="edit-descricao">Descrição</Label>
+         <Textarea
+           id="edit-descricao"
+           rows={3}
+           value={editForm.descricao}
+           onChange={(e) => setEditForm((f) => ({ ...f, descricao: e.target.value }))}
+         />
+       </div>
+       <div className="grid grid-cols-3 gap-3">
+         <div className="grid gap-1.5">
+           <Label htmlFor="edit-unidade">Unidade</Label>
+           <Input
+             id="edit-unidade"
+             value={editForm.unidade}
+             onChange={(e) => setEditForm((f) => ({ ...f, unidade: e.target.value }))}
+           />
+         </div>
+         <div className="grid gap-1.5">
+           <Label htmlFor="edit-qtd">Quantidade</Label>
+           <Input
+             id="edit-qtd"
+             inputMode="decimal"
+             value={editForm.quantidade}
+             onChange={(e) => setEditForm((f) => ({ ...f, quantidade: e.target.value }))}
+           />
+         </div>
+         <div className="grid gap-1.5">
+           <Label htmlFor="edit-vu">Valor unit.</Label>
+           <Input
+             id="edit-vu"
+             inputMode="decimal"
+             value={editForm.valor_unitario}
+             onChange={(e) => setEditForm((f) => ({ ...f, valor_unitario: e.target.value }))}
+           />
+         </div>
+       </div>
+     </div>
+     <DialogFooter>
+       <Button variant="outline" onClick={() => setEditingItem(null)} disabled={savingItem}>
+         Cancelar
+       </Button>
+       <Button onClick={saveItemEdit} disabled={savingItem}>
+         {savingItem ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+         Salvar
+       </Button>
+     </DialogFooter>
+   </DialogContent>
+ </Dialog>
+
+ {/* Excluir item */}
+ <AlertDialog open={!!deletingItem} onOpenChange={(o) => !o && setDeletingItem(null)}>
+   <AlertDialogContent>
+     <AlertDialogHeader>
+       <AlertDialogTitle>Excluir item</AlertDialogTitle>
+       <AlertDialogDescription>
+         {deletingItem ? `"${deletingItem.descricao}" será removido deste contrato. Esta ação não pode ser desfeita.` : ""}
+       </AlertDialogDescription>
+     </AlertDialogHeader>
+     <AlertDialogFooter>
+       <AlertDialogCancel disabled={savingItem}>Cancelar</AlertDialogCancel>
+       <AlertDialogAction
+         onClick={(e) => { e.preventDefault(); deleteItemConfirmed(); }}
+         disabled={savingItem}
+         className="bg-red-600 text-white hover:bg-red-700"
+       >
+         {savingItem ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
+         Excluir
+       </AlertDialogAction>
+     </AlertDialogFooter>
+   </AlertDialogContent>
+ </AlertDialog>
  </AppShell>
  );
 }
