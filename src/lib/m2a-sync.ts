@@ -19,6 +19,14 @@ export interface M2aContratoExistenteSync {
   id_contrato_m2a: string;
   numero_contrato: string;
   id_ata: string;
+  secretaria_nome?: string;
+  fornecedor_nome?: string;
+  fornecedor_cnpj?: string;
+  vigencia_inicio?: string;
+  vigencia_fim?: string;
+  vigencia?: string;
+  valor_total?: number;
+  objeto?: string;
 }
 
 export interface M2aSyncPayload {
