@@ -596,78 +596,324 @@ async function mapWithConcurrency(items, limit, mapper) {
   return results;
 }
 
-// ---------- cascata completa ----------
-async function fetchAtasDoProcesso(processoId, trace) {
-  // Endpoints reais usados pelo portal (descobertos via inspeção da página
-  // /processo_administrativo/{id}/).
-  const attempts = [
-    `/processo_administrativo/tabela/ata_registro_de_preco/${processoId}/?page_size=1000`,
-    `/processo_administrativo/tabela/ata_registro_de_preco/${processoId}/`,
-    `/licitacao_ata_contrato/tabela/${processoId}/?page_size=1000`,
-    `/licitacao_ata_contrato/tabela/${processoId}/`,
-    `/processo_administrativo/${processoId}/`,
-  ];
-  let lastErr = null;
-  for (const url of attempts) {
-    try {
-      traceStep(trace, {
-        fase: "atas",
-        label: "requisitar atas do processo",
-        processo_id: processoId,
-        url,
-      });
-      const doc = await fetchDocDetailed(url);
-      const atas = extractAtasFromDoc(doc.$);
-      traceStep(trace, {
-        fase: "atas",
-        label: "buscar atas do processo",
-        processo_id: processoId,
-        url,
-        status: doc.status,
-        finalUrl: doc.finalUrl,
-        bytes: doc.bytes,
-        decodedBytes: doc.decodedBytes,
-        encontrados: { atas: atas.length },
-        amostra: atas.slice(0, 5).map((ata) => ({
-          id_ata: ata.id_ata,
-          id_licitacao_ata_contrato: ata.id_licitacao_ata_contrato,
-          numero_ata: ata.numero_ata,
-          fornecedor: ata.fornecedor?.nome,
-          detail_url: ata.detail_url,
-        })),
-        selecionado: atas.length > 0,
-      });
-      if (atas.length) return atas;
-    } catch (err) {
-      lastErr = err;
-      traceStep(trace, {
-        fase: "atas",
-        label: "buscar atas do processo",
-        processo_id: processoId,
-        url,
-        erro: String(err?.message ?? err),
-      });
-    }
-  }
-  if (lastErr) throw lastErr;
-  return [];
+// =====================================================================
+// NOVO ORQUESTRADOR (FASE 1 → 2 → 3)
+// Regras estritas:
+//   1) Tabela mestra de itens = fonte da verdade (sem duplicação).
+//   2) Atas com badge "Desclassificado/Cancelado/Anulado" são ignoradas.
+//   3) Subtabela da ata apenas VINCULA itens à mestra (não cria solto).
+// =====================================================================
+
+// ---------- FASE 1: TABELA MESTRA DE ITENS ----------
+function parseNumeroBR(value) {
+  if (value === null || value === undefined) return 0;
+  const cleaned = String(value)
+    .replace(/[^\d,.-]/g, "")
+    .replace(/\./g, "")
+    .replace(",", ".");
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : 0;
 }
 
+function extractLoteNumero(value) {
+  if (!value) return "";
+  const s = cleanTextValue(value).replace(/lote/i, "").trim();
+  const m = s.match(/\d+/);
+  return m ? m[0] : s;
+}
+
+function extractItemMestraId(tr) {
+  const trId = tr.attr("id") || "";
+  const m = trId.match(/tr_processo_administrativo_item_(\d+)/i);
+  if (m) return m[1];
+  const fromInput = tr.find('input[type="checkbox"][value]').first().attr("value");
+  if (fromInput && /^\d+$/.test(fromInput)) return fromInput;
+  return "";
+}
+
+function extractTabelaMestraItens($, processoId) {
+  const out = [];
+  const seen = new Set();
+  const rows = $("tr.kt-datatable__row.tr_processo_administrativo_item").toArray();
+  rows.forEach((trEl, idx) => {
+    const tr = $(trEl);
+    const tds = tr.find("td").toArray().map((td) => $(td));
+    if (tds.length < 9) return;
+    const ordem = cleanTextValue(tds[2]?.text() || "");
+    const descricao = cleanTextValue(tds[3]?.text() || "");
+    const lote = extractLoteNumero(tds[4]?.text() || "");
+    const unidade = cleanTextValue(tds[5]?.text() || "");
+    const qtdTotal = parseNumeroBR(tds[6]?.text());
+    const valorUnit = parseNumeroBR(tds[7]?.text());
+    const valorTotal = parseNumeroBR(tds[8]?.text());
+    let especificacao = "";
+    const noneTd = tr.find("td.none").first();
+    if (noneTd.length) especificacao = cleanTextValue(noneTd.text());
+    else if (tds[12]) especificacao = cleanTextValue(tds[12].text());
+
+    if (!ordem && !descricao) return;
+    const mestraId = extractItemMestraId(tr) || `M:${processoId}:${ordem || idx + 1}`;
+    const ordemNorm = String(ordem).replace(/^0+/, "") || String(idx + 1);
+    if (seen.has(ordemNorm)) return;
+    seen.add(ordemNorm);
+
+    out.push({
+      id_item_mestre: mestraId,
+      ordem: ordemNorm,
+      lote,
+      descricao,
+      especificacao,
+      unidade,
+      quantidade_total: qtdTotal,
+      valor_unitario: valorUnit,
+      valor_total: valorTotal,
+    });
+  });
+  return out;
+}
+
+async function fetchTabelaMestraItens(processoId, trace) {
+  const url = `/processo_administrativo/item/tabela/${processoId}/?page_size=1000`;
+  traceStep(trace, { fase: "itens_mestre", label: "tabela mestra de itens", processo_id: processoId, url });
+  const doc = await fetchDocDetailed(url);
+  const itens = extractTabelaMestraItens(doc.$, processoId);
+  traceStep(trace, {
+    fase: "itens_mestre",
+    label: "tabela mestra extraída",
+    processo_id: processoId,
+    url,
+    status: doc.status,
+    bytes: doc.bytes,
+    decodedBytes: doc.decodedBytes,
+    encontrados: { itens_mestre: itens.length },
+    amostra: itens.slice(0, 5).map((i) => ({ ordem: i.ordem, descricao: i.descricao.slice(0, 80) })),
+    selecionado: itens.length > 0,
+  });
+  return itens;
+}
+
+// ---------- FASE 2: ATAS VÁLIDAS (filtro anti-lixo) ----------
+const STATUS_BLOQUEADOS = /(desclassificad|cancelad|anulad)/i;
+
+function extractAtasValidasFromDoc($) {
+  const out = [];
+  const ignoradas = [];
+  const seen = new Set();
+  const rows = $("tr.kt-datatable__row.tr_licitacao_ata_contrato").toArray();
+  for (const trEl of rows) {
+    const tr = $(trEl);
+
+    // REGRA CRÍTICA: bloqueia linhas com badge danger contendo Desclassificado/Cancelado/Anulado
+    let statusBloqueado = "";
+    tr.find("span.kt-badge--danger, .kt-badge.kt-badge--danger").each((_, el) => {
+      const t = cleanTextValue($(el).text());
+      if (STATUS_BLOQUEADOS.test(t)) statusBloqueado = t;
+    });
+    if (statusBloqueado) {
+      const trId = tr.attr("id") || "";
+      const id = (trId.match(/tr_licitacao_ata_contrato_(\d+)/i) || [])[1] || "";
+      ignoradas.push({ id_licitacao_ata_contrato: id, status: statusBloqueado });
+      continue;
+    }
+
+    const trId = tr.attr("id") || "";
+    const idLicAta = (trId.match(/tr_licitacao_ata_contrato_(\d+)/i) || [])[1] || "";
+    if (!idLicAta || seen.has(idLicAta)) continue;
+    seen.add(idLicAta);
+
+    const cells = tr.find("td").toArray().map((td) => $(td));
+    const spanText = (i) => {
+      if (!cells[i]) return "";
+      const sp = cells[i].find("span").first();
+      return cleanTextValue(sp.length ? sp.text() : cells[i].text());
+    };
+
+    const ataAnchor = tr.find('a[href*="/ata_registro_precos/"]').first();
+    const ataIdFromHref = ataAnchor.attr("href")?.match(/\/ata_registro_precos\/(\d+)/)?.[1] || "";
+    const numeroAta =
+      cleanTextValue(ataAnchor.find("span").first().text() || ataAnchor.text()) ||
+      spanText(0) ||
+      `ATA-${idLicAta}`;
+
+    const secretaria = spanText(1);
+    const fornecedor = spanText(2);
+    const cnpjMatch = cleanTextValue(tr.text()).match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/);
+
+    out.push({
+      id_ata: ataIdFromHref || idLicAta,
+      id_licitacao_ata_contrato: idLicAta,
+      numero_ata: numeroAta,
+      secretaria_nome: secretaria,
+      fornecedor: { nome: fornecedor || "", cnpj: cnpjMatch?.[0] },
+      detail_url: `/licitacao_ata_contrato_item/subtabela/${idLicAta}`,
+    });
+  }
+  return { atas: out, ignoradas };
+}
+
+async function fetchAtasValidasDoProcesso(processoId, trace) {
+  const url = `/licitacao_ata_contrato/tabela/${processoId}/?page_size=1000`;
+  traceStep(trace, { fase: "atas", label: "tabela licitacao_ata_contrato", processo_id: processoId, url });
+  const doc = await fetchDocDetailed(url);
+  const { atas, ignoradas } = extractAtasValidasFromDoc(doc.$);
+  traceStep(trace, {
+    fase: "atas",
+    label: "atas válidas filtradas",
+    processo_id: processoId,
+    url,
+    status: doc.status,
+    bytes: doc.bytes,
+    decodedBytes: doc.decodedBytes,
+    encontrados: { atas_validas: atas.length, ignoradas: ignoradas.length },
+    ignoradas,
+    amostra: atas.slice(0, 5).map((a) => ({
+      id_ata: a.id_ata,
+      id_lic: a.id_licitacao_ata_contrato,
+      numero_ata: a.numero_ata,
+      fornecedor: a.fornecedor?.nome,
+    })),
+    selecionado: atas.length > 0,
+  });
+  return atas;
+}
+
+// ---------- FASE 3: VÍNCULOS (sem duplicação) ----------
+function normalizarOrdem(value) {
+  const s = String(value ?? "").trim();
+  const m = s.match(/\d+/);
+  if (!m) return "";
+  return String(Number(m[0]));
+}
+
+function extractVinculosSubtabela($, ataId, mapaMestraPorOrdem) {
+  const out = [];
+  const rows = $(
+    "tr.tr_licitacao_ata_contrato_item, tr.tr_ata_registro_preco_item, tr.kt-datatable__row",
+  ).toArray();
+  for (const trEl of rows) {
+    const tr = $(trEl);
+    const cells = tr.find("td");
+    if (!cells.length) continue;
+    const cellsText = cells.toArray().map((c) => txt($, $(c))).filter(Boolean);
+    if (cellsText.length < 3) continue;
+
+    let numero = "";
+    let descricaoLinha = "";
+    for (let i = 0; i < cellsText.length; i++) {
+      const t = cellsText[i];
+      const inline = t.match(/^(\d{1,5})\s*[-–.]\s*(.+)$/);
+      if (inline) { numero = inline[1]; descricaoLinha = inline[2]; break; }
+      if (/^\d{1,5}$/.test(t)) { numero = t; descricaoLinha = cellsText[i + 1] || ""; break; }
+    }
+    const ordemNorm = normalizarOrdem(numero);
+    if (!ordemNorm) continue;
+
+    const mestra = mapaMestraPorOrdem.get(ordemNorm);
+    if (!mestra) continue; // não cria item solto
+
+    let quantidade = 0;
+    for (const t of cellsText) {
+      if (/\d/.test(t) && !/R\$/.test(t) && !/^\d{1,5}$/.test(t) && /,/.test(t)) {
+        const v = parseNumeroBR(t);
+        if (v > 0) { quantidade = v; break; }
+      }
+    }
+
+    out.push({
+      id_item_mestre: mestra.id_item_mestre,
+      ordem: ordemNorm,
+      id_ata: ataId,
+      quantidade,
+      descricao_linha: descricaoLinha || mestra.descricao,
+    });
+  }
+  return out;
+}
+
+async function fetchVinculosDaAta(ata, mapaMestraPorOrdem, trace) {
+  const idLic = ata.id_licitacao_ata_contrato || ata.id_ata;
+  const url = `/licitacao_ata_contrato_item/subtabela/${idLic}/?page_size=1000`;
+  traceStep(trace, { fase: "vinculos", label: "subtabela de itens da ata", id_ata: ata.id_ata, id_lic: idLic, url });
+  try {
+    const doc = await fetchDocDetailed(url);
+    const vinculos = extractVinculosSubtabela(doc.$, ata.id_ata, mapaMestraPorOrdem);
+    traceStep(trace, {
+      fase: "vinculos",
+      label: "vínculos extraídos",
+      id_ata: ata.id_ata,
+      id_lic: idLic,
+      url,
+      status: doc.status,
+      bytes: doc.bytes,
+      decodedBytes: doc.decodedBytes,
+      encontrados: { vinculos: vinculos.length },
+      amostra: vinculos.slice(0, 5).map((v) => ({ ordem: v.ordem, qtd: v.quantidade })),
+    });
+    return vinculos;
+  } catch (err) {
+    traceStep(trace, {
+      fase: "vinculos",
+      label: "subtabela falhou",
+      id_ata: ata.id_ata,
+      id_lic: idLic,
+      url,
+      erro: String(err?.message ?? err),
+    });
+    return [];
+  }
+}
+
+// ---------- CASCATA REFATORADA ----------
 async function runCascata(processoId) {
   const trace = [];
-  traceStep(trace, { fase: "inicio", label: "iniciar sincronização", processo_id: processoId, url: `/processo_administrativo/${processoId}/` });
-  const atas = await fetchAtasDoProcesso(processoId, trace);
-
-  const resultados = await mapWithConcurrency(atas, SYNC_CONCURRENCY, async (ata) => {
-    const [itens, contratos] = await Promise.all([fetchItensDaAta(ata, trace), fetchContratosDaAta(ata, trace)]);
-    return { ata, itens, contratos };
+  traceStep(trace, {
+    fase: "inicio",
+    label: "iniciar sincronização v2 (mestra → atas válidas → vínculos)",
+    processo_id: processoId,
   });
 
-  const itens = resultados.flatMap((r) => r.itens);
+  // FASE 1 — Fonte da verdade
+  const itensMestre = await fetchTabelaMestraItens(processoId, trace);
+  const mapaMestraPorOrdem = new Map(itensMestre.map((i) => [i.ordem, i]));
+
+  // FASE 2 — Atas válidas (filtra cancelados/desclassificados/anulados)
+  const atas = await fetchAtasValidasDoProcesso(processoId, trace);
+
+  // FASE 3 — Vínculos + contratos por ata
+  const resultados = await mapWithConcurrency(atas, SYNC_CONCURRENCY, async (ata) => {
+    const [vinculos, contratos] = await Promise.all([
+      fetchVinculosDaAta(ata, mapaMestraPorOrdem, trace),
+      fetchContratosDaAta(ata, trace),
+    ]);
+    return { ata, vinculos, contratos };
+  });
+
+  // Payload compatível com sync_m2a_snapshot:
+  // 1 item ÚNICO por ordem da tabela mestra, atrelado à primeira ata válida onde aparece.
+  // Isso evita duplicação. O id_item é determinístico = id_item_mestre.
+  const primeiraAtaPorOrdem = new Map();
+  for (const { ata, vinculos } of resultados) {
+    for (const v of vinculos) {
+      if (!primeiraAtaPorOrdem.has(v.ordem)) primeiraAtaPorOrdem.set(v.ordem, ata.id_ata);
+    }
+  }
+
+  const itens = itensMestre
+    .filter((m) => primeiraAtaPorOrdem.has(m.ordem))
+    .map((m) => ({
+      id_item: m.id_item_mestre,
+      numero_item: m.ordem,
+      descricao: m.descricao,
+      unidade: m.unidade,
+      valor_unitario: m.valor_unitario,
+      id_ata: primeiraAtaPorOrdem.get(m.ordem),
+    }));
+
   const contratos = resultados.flatMap((r) => r.contratos);
 
   const resumo = {
     qtd_atas: atas.length,
+    qtd_itens_mestre: itensMestre.length,
     qtd_itens: itens.length,
     qtd_contratos: contratos.length,
     ultimo_numero_por_secretaria: {},
@@ -682,10 +928,22 @@ async function runCascata(processoId) {
     fase: "fim",
     label: "sincronização finalizada",
     processo_id: processoId,
-    encontrados: { atas: atas.length, itens: itens.length, contratos: contratos.length },
+    encontrados: {
+      itens_mestre: itensMestre.length,
+      atas_validas: atas.length,
+      itens_vinculados: itens.length,
+      contratos: contratos.length,
+    },
   });
 
-  return { atas, itens, contratos_existentes: contratos, resumo, trace };
+  return {
+    atas,
+    itens,
+    itens_mestre: itensMestre,
+    contratos_existentes: contratos,
+    resumo,
+    trace,
+  };
 }
 
 // ---------- helpers de URL ----------
