@@ -9,65 +9,69 @@ import autoTable from "jspdf-autotable";
 import { exportarRelatorioContratoExcel, ContractGroupedData, ContractReportData, groupContractData } from "@/lib/excel-export";
 
 // Helper function to add a single contract's data to a jsPDF document
+// Mirrors EXACTLY the XLSX export (exportarRelatorioContratoExcel):
+// - Same header rows (Tipo, Nº Contrato, Secretaria, Fornecedor, Objeto, Dotação, Data de Criação)
+// - Same table columns (Ordem, Lote, Descrição=especificação, Especificação=descricao, Unidade, Qtd, Vlr Unit, Vlr Total)
 const addContractToPdf = (contract: ContractGroupedData, doc: jsPDF, startY: number): number => {
   let currentY = startY;
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const margin = 14;
+  const maxTextWidth = pageWidth - margin * 2;
 
-  doc.setFontSize(14);
-  doc.text(`Contrato: ${contract.header.numero_contrato || 'S/N'}`, 14, currentY);
-  currentY += 7;
+  const h = contract.header;
+  const secretariaTxt = h.secretaria_sigla
+    ? `${h.secretaria_nome || ''} (${h.secretaria_sigla})`
+    : (h.secretaria_nome || '');
+
+  const headerRows: Array<[string, string]> = [
+    ['Tipo de Relatório:', 'Relatório de Contrato'],
+    ['Número do Contrato:', h.numero_contrato || ''],
+    ['Secretaria:', secretariaTxt],
+    ['Fornecedor:', h.fornecedor_nome || ''],
+    ['Objeto:', h.objeto || ''],
+    ['Dotação:', h.dotacao || ''],
+    ['Data de Criação:', h.created_at ? new Date(h.created_at).toLocaleDateString('pt-BR') : ''],
+  ];
 
   doc.setFontSize(10);
-  doc.text(`Secretaria: ${contract.header.secretaria_nome || ''} (${contract.header.secretaria_sigla || ''})`, 14, currentY);
-  currentY += 5;
-  
-  // Handling long text for fornecedor and objeto
-  const fornecedorText = doc.splitTextToSize(`Fornecedor: ${contract.header.fornecedor_nome || ''}`, 180);
-  doc.text(fornecedorText, 14, currentY);
-  currentY += (fornecedorText.length * 5);
-  
-  const objetoText = doc.splitTextToSize(`Objeto: ${contract.header.objeto || ''}`, 180);
-  doc.text(objetoText, 14, currentY);
-  currentY += (objetoText.length * 5);
+  for (const [label, value] of headerRows) {
+    const labelW = 42;
+    doc.setFont(undefined as any, 'bold');
+    doc.text(label, margin, currentY);
+    doc.setFont(undefined as any, 'normal');
+    const wrapped = doc.splitTextToSize(value || '', maxTextWidth - labelW);
+    doc.text(wrapped, margin + labelW, currentY);
+    currentY += Math.max(5, wrapped.length * 5);
+  }
+  currentY += 4;
 
-  doc.text(`Preposto: ${contract.header.preposto || ''}`, 14, currentY);
-  currentY += 5;
-  doc.text(`Fiscal: ${contract.header.fiscal || ''}`, 14, currentY);
-  currentY += 5;
-  doc.text(`Dotação: ${contract.header.dotacao || ''}`, 14, currentY);
-  currentY += 5;
-  doc.text(`ATA M2A: ${contract.header.m2a_ata_numero || ''}`, 14, currentY);
-  currentY += 5;
-  doc.text(`Data de Criação: ${contract.header.created_at ? new Date(contract.header.created_at).toLocaleDateString('pt-BR') : ''}`, 14, currentY);
-  currentY += 10; // Space before table
-
-  // Items table
+  // Items table — same column order/labels as XLSX
   autoTable(doc, {
     startY: currentY,
-    head: [['Ordem', 'Nº Item', 'Lote', 'Descrição', 'Unid.', 'Qtd.', 'Vlr Unit.', 'Vlr Total']],
+    head: [['Ordem', 'Lote', 'Descrição', 'Especificação', 'Unidade', 'Quantidade', 'Valor Unitário', 'Valor Total']],
     body: contract.items.map(item => [
-      item.item_ordem || '',
-      item.item_numero || '',
-      item.item_lote || '',
-      item.item_descricao || '',
+      item.item_ordem ?? '',
+      item.item_lote ?? '',
+      (item.item_especificacao || '').toUpperCase(),
+      (item.item_descricao || '').toUpperCase(),
       item.item_unidade || '',
       formatNumber(item.item_quantidade || 0),
       formatBRL(item.item_valor_unitario || 0),
       formatBRL(item.item_valor_total || 0),
     ]),
-    styles: { fontSize: 8 },
-    headStyles: { fillColor: [200, 200, 200], textColor: [0, 0, 0] },
+    styles: { fontSize: 7, cellPadding: 1.5, overflow: 'linebreak', valign: 'middle' },
+    headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], halign: 'center' },
     columnStyles: {
-      0: { cellWidth: 12 },
-      1: { cellWidth: 15 },
-      2: { cellWidth: 12 },
-      3: { cellWidth: 65 },
-      4: { cellWidth: 12 },
-      5: { cellWidth: 18, halign: 'right' },
-      6: { cellWidth: 22, halign: 'right' },
+      0: { cellWidth: 12, halign: 'center' },
+      1: { cellWidth: 12, halign: 'center' },
+      2: { cellWidth: 60 },
+      3: { cellWidth: 60 },
+      4: { cellWidth: 16, halign: 'center' },
+      5: { cellWidth: 20, halign: 'right' },
+      6: { cellWidth: 24, halign: 'right' },
       7: { cellWidth: 26, halign: 'right' },
     },
     didDrawPage: (data: any) => {
-      // Footer for each page
       doc.setFontSize(8);
       doc.text(`Página ${data.pageNumber}`, data.settings.margin.left, doc.internal.pageSize.height - 10);
     }
