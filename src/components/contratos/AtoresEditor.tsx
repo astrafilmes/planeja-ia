@@ -300,31 +300,33 @@ export function AtoresEditor({
  {a.portaria ? `· Port. ${a.portaria}` :""}
  </div>
  </div>
- <AlertDialog>
- <AlertDialogTrigger asChild>
- <Button
- size="icon"
- variant="ghost"
- className="size-7 text-destructive hover:text-destructive"
- >
- <Trash2 className="size-3.5" />
- </Button>
- </AlertDialogTrigger>
- <AlertDialogContent>
- <AlertDialogHeader>
- <AlertDialogTitle>Remover servidor?</AlertDialogTitle>
- <AlertDialogDescription>
- {a.tipo} — {a.nome}
- </AlertDialogDescription>
- </AlertDialogHeader>
- <AlertDialogFooter>
- <AlertDialogCancel>Cancelar</AlertDialogCancel>
- <AlertDialogAction onClick={() => excluir(a.id)}>
- Remover
- </AlertDialogAction>
- </AlertDialogFooter>
- </AlertDialogContent>
- </AlertDialog>
+      {!locked && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="size-7 text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Remover servidor?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {a.tipo} — {a.nome}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => excluir(a.id)}>
+                          Remover
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                  )}
  </div>
  ))}
  </div>
