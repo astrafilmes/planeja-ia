@@ -77,28 +77,8 @@ export function DocumentosEditor({
  const [downloadingZip, setDownloadingZip] = useState(false);
  const { startTask, updateProgress, finishTask, failTask } = useProgress();
 
- useEffect(() => {
- const off = listenM2ABulkDownload((event) => {
- if (event.status ==="iniciado") {
- startTask("Baixando documentos",
- `Preparando ${event.total} arquivo(s)...`,
- );
- }
- if (event.status ==="progresso") {
- updateProgress(
- (event.baixados / Math.max(event.total, 1)) * 100,
- `Baixando arquivo ${event.baixados} de ${event.total}...`,
- );
- }
- if (event.status ==="concluido") {
- finishTask(`${event.baixados} documento(s) baixado(s).`);
- }
- if (event.status ==="erro") {
- failTask(event.mensagem);
- }
- });
- return off;
- }, [failTask, finishTask, startTask, updateProgress]);
+ // Progresso do download em lote agora é reportado diretamente pelo helper
+ // downloadM2ADocuments (sem listener global da extensão Chrome).
 
  const docsM2A = useMemo(() => {
  if (!Array.isArray(documentosM2A)) return [];
