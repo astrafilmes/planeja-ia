@@ -1621,6 +1621,23 @@ function Page() {
  </TabsContent>
  </Tabs>
 
+ {dirty && (
+ <StickyActionBar
+ status={
+ <span className="inline-flex items-center gap-1.5">
+ <span className="size-1.5 rounded-full bg-amber-500" aria-hidden />
+ Alterações não salvas
+ </span>
+ }
+ >
+ <Button size="sm" onClick={handleSave}>
+ <Save className="size-4" /> Salvar alterações
+ </Button>
+ </StickyActionBar>
+ )}
+
+
+
  <Dialog open={m2aDialogOpen} onOpenChange={setM2aDialogOpen}>
  <DialogContent className="max-w-2xl">
  <DialogHeader>
