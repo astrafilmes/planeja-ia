@@ -990,10 +990,11 @@ function Page() {
  <TabsContent value="atores">
  <Card className="border-border/60">
  <CardContent className="p-4">
- <AtoresEditor
+     <AtoresEditor
  contratoId={id}
  atores={contrato.atores as any}
  onChange={refetch}
+ locked={statusM2A === "sucesso"}
  defaults={
  [
  {
