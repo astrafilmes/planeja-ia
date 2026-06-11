@@ -73,11 +73,13 @@ export function AtoresEditor({
  atores,
  onChange,
  defaults = [],
+ locked = false,
 }: {
  contratoId: string;
  atores: Ator[];
  onChange: () => void;
  defaults?: DefaultServidor[];
+ locked?: boolean;
 }) {
  const [form, setForm] = useState({
  tipo:"fiscal_suplente",
@@ -181,13 +183,13 @@ export function AtoresEditor({
  </div>
  )}
 
- {/* Servidores adicionais */}
+    {/* Servidores adicionais */}
  <div className="flex flex-col gap-2">
  <div className="flex items-center justify-between">
  <div className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
- Servidores adicionais ({atores.length})
+ Servidores ({defaults.length + atores.length})
  </div>
- {!showForm && (
+ {!showForm && !locked && (
  <Button
  size="sm"
  variant="outline"
@@ -298,31 +300,33 @@ export function AtoresEditor({
  {a.portaria ? `· Port. ${a.portaria}` :""}
  </div>
  </div>
- <AlertDialog>
- <AlertDialogTrigger asChild>
- <Button
- size="icon"
- variant="ghost"
- className="size-7 text-destructive hover:text-destructive"
- >
- <Trash2 className="size-3.5" />
- </Button>
- </AlertDialogTrigger>
- <AlertDialogContent>
- <AlertDialogHeader>
- <AlertDialogTitle>Remover servidor?</AlertDialogTitle>
- <AlertDialogDescription>
- {a.tipo} — {a.nome}
- </AlertDialogDescription>
- </AlertDialogHeader>
- <AlertDialogFooter>
- <AlertDialogCancel>Cancelar</AlertDialogCancel>
- <AlertDialogAction onClick={() => excluir(a.id)}>
- Remover
- </AlertDialogAction>
- </AlertDialogFooter>
- </AlertDialogContent>
- </AlertDialog>
+      {!locked && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="size-7 text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Remover servidor?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {a.tipo} — {a.nome}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => excluir(a.id)}>
+                          Remover
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                  )}
  </div>
  ))}
  </div>

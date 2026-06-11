@@ -789,24 +789,18 @@ function Page() {
  description="Acompanhamento da automação no portal."
  icon={<Send className="size-4" />}
  className="mb-3"
- action={
- <div className="text-[12.5px] text-muted-foreground">
- Código externo: {contrato.processo?.m2a_processo_id ??"—"}
- {contrato.processo?.m2a_url && (
- <>
- {""}·{""}
- <a
- className="inline-flex min-h-8 items-center rounded-md px-2 text-primary hover:bg-primary/5"
- target="_blank"
- rel="noreferrer"
- href={contrato.processo.m2a_url}
- >
- abrir portal
- </a>
- </>
- )}
- </div>
- }
+  action={
+                    contrato.processo?.m2a_url ? (
+                      <a
+                        className="inline-flex min-h-8 items-center rounded-md px-2 text-[12.5px] text-primary hover:bg-primary/5"
+                        target="_blank"
+                        rel="noreferrer"
+                        href={contrato.processo.m2a_url}
+                      >
+                        Abrir portal
+                      </a>
+                    ) : null
+                  }
  >
  <div className="flex flex-col gap-3">
  <Progress value={pct} className="h-1.5" />
@@ -996,10 +990,11 @@ function Page() {
  <TabsContent value="atores">
  <Card className="border-border/60">
  <CardContent className="p-4">
- <AtoresEditor
+     <AtoresEditor
  contratoId={id}
  atores={contrato.atores as any}
  onChange={refetch}
+ locked={statusM2A === "sucesso"}
  defaults={
  [
  {
