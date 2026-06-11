@@ -279,15 +279,15 @@ function Login() {
       <main className="relative flex flex-col items-center justify-center px-5 py-10 sm:px-10">
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 -z-10 opacity-60 dark:opacity-40"
+          className="pointer-events-none absolute inset-0 -z-10 opacity-70 dark:opacity-40"
           style={{
             background:
-              "radial-gradient(60% 50% at 50% 0%, oklch(0.85 0.05 195 / 0.35) 0%, transparent 70%)",
+              "radial-gradient(60% 50% at 50% 0%, oklch(0.78 0.16 285 / 0.25) 0%, transparent 70%)",
           }}
         />
 
         <div className="mb-7 flex items-center gap-2.5 lg:hidden">
-          <div className="grid size-9 place-items-center rounded-lg bg-primary text-primary-foreground">
+          <div className="grid size-9 place-items-center rounded-lg bg-gradient-to-br from-accent-strong to-accent text-white shadow-[0_6px_18px_-6px_rgb(108_92_231_/_0.6)]">
             <Building2 className="size-4" />
           </div>
           <span className="font-semibold tracking-tight">Planejamento</span>
