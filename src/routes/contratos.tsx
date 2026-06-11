@@ -274,12 +274,13 @@ function Page() {
  };
  }, [contratos]);
 
- const hasFilters = search || secFilter !=="__all" || m2aFilter !=="__all";
+ const hasFilters = search || secFilter !=="__all" || m2aFilter !=="__all" || pubFilter !=="__all";
 
  function clearFilters() {
  setSearch("");
  setSecFilter("__all");
  setM2aFilter("__all");
+ setPubFilter("__all");
  }
 
  useEffect(() => {
