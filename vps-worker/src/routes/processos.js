@@ -610,6 +610,12 @@ async function fetchAtasDoProcesso(processoId, trace) {
   let lastErr = null;
   for (const url of attempts) {
     try {
+      traceStep(trace, {
+        fase: "atas",
+        label: "requisitar atas do processo",
+        processo_id: processoId,
+        url,
+      });
       const doc = await fetchDocDetailed(url);
       const atas = extractAtasFromDoc(doc.$);
       traceStep(trace, {
