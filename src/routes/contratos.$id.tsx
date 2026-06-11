@@ -577,92 +577,44 @@ function Page() {
  <Card className="mb-3 overflow-hidden border-border/60">
  <div className="grid gap-0 lg:grid-cols-[1fr_auto]">
  <div className="flex flex-col gap-2 p-4">
- <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px]">
- <div className="rounded-xl border border-border/60 bg-muted/40 p-3 dark:bg-muted/30">
- <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
- Número do contrato
- </p>
- <p className="mt-1 truncate font-mono text-2xl font-semibold tracking-tight text-foreground">
- {c.numero_contrato}
- </p>
- </div>
- <div className="rounded-xl border border-border/60 bg-muted/40 p-3 dark:bg-muted/30">
- <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
-  Início vigência
- </p>
- <p className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
- {contratoDataLabel}
- </p>
- </div>
- </div>
- <div className="flex flex-wrap items-center gap-2">
- <Badge variant="secondary" className="text-xs">
- {c.secretaria_sigla}
- </Badge>
- <M2AStatusBadge status={statusM2A} />
- {c.m2a_contrato_id && (
- <Badge variant="outline" className="font-mono text-[10px]">
- Código externo #{c.m2a_contrato_id}
- </Badge>
- )}
- {contrato.processo && (
- <Button
- asChild
- size="sm"
- variant="outline"
- className="h-7 gap-1.5 px-2 text-[11px] font-medium"
- title="Abrir processo no sistema"
- >
- <Link
- to="/processos/$id"
- params={{ id: contrato.processo.id }}
- >
- <FileText className="size-3.5" />
- Ir para o processo {contrato.processo.numero_processo ??""}
- <ExternalLink className="size-3" />
- </Link>
- </Button>
- )}
- <Button
- size="sm"
- variant={c.publicado_at ?"default" :"outline"}
- className={`h-7 gap-1.5 px-2 text-[11px] font-medium ${c.publicado_at ?"bg-emerald-600 text-white hover:bg-emerald-700" :"text-muted-foreground"}`}
- onClick={async () => {
- const isPub = !!c.publicado_at;
- const { data: u } = await supabase.auth.getUser();
- const { error } = await supabase
- .from("contratos")
- .update(
- isPub
- ? { publicado_at: null, publicado_por: null }
- : { publicado_at: new Date().toISOString(), publicado_por: u.user?.id ?? null },
- )
- .eq("id", c.id);
- if (error) return toast.error(error.message);
- toast.success(isPub ?"Marcado como não publicado" :"Marcado como publicado");
- qc.invalidateQueries({ queryKey: ["contrato-full", id] });
- qc.invalidateQueries({ queryKey: ["contratos"] });
- }}
- title={
- c.publicado_at
- ? `Publicado em ${formatDateBR(c.publicado_at)} — clique para desmarcar`
- :"Marcar como publicado"
- }
- >
- {c.publicado_at ? (
- <>
- <CheckCircle2 className="size-3.5" /> Publicado
- </>
- ) : (
- <>Marcar como publicado</>
- )}
- </Button>
- </div>
- <p className="text-[13px] text-muted-foreground">
- Preposto: <span className="text-foreground">{c.preposto}</span> ·
- Fiscal: <span className="text-foreground">{c.fiscal}</span>
- </p>
- </div>
+        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px]">
+          <div className="rounded-xl border border-border/60 bg-muted/40 p-3 dark:bg-muted/30">
+            <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
+             Número do contrato
+            </p>
+            <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <p className="truncate font-mono text-2xl font-semibold tracking-tight text-foreground">
+               {c.numero_contrato}
+              </p>
+              {contrato.processo && (
+                <Link
+                  to="/processos/$id"
+                  params={{ id: contrato.processo.id }}
+                  className="font-mono text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                  title="Abrir processo"
+                >
+                  Processo {contrato.processo.numero_processo ?? ""}
+                </Link>
+              )}
+            </div>
+          </div>
+          <div className="rounded-xl border border-border/60 bg-muted/40 p-3 dark:bg-muted/30">
+            <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Início vigência
+            </p>
+            <p className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
+             {contratoDataLabel}
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <M2AStatusBadge status={statusM2A} />
+        </div>
+        <p className="text-[13px] text-muted-foreground">
+          Preposto: <span className="text-foreground">{c.preposto}</span> ·
+          Fiscal: <span className="text-foreground">{c.fiscal}</span>
+        </p>
+      </div>
  <div className="grid grid-cols-3 border-t border-border/60 bg-muted/40 dark:bg-muted/30 lg:grid-cols-3 lg:border-l lg:border-t-0">
  <div className="border-r border-border/60 px-4 py-3 ">
  <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
