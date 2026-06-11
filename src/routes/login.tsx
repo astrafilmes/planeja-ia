@@ -287,7 +287,7 @@ function Login() {
         />
 
         <div className="mb-7 flex items-center gap-2.5 lg:hidden">
-          <div className="grid size-9 place-items-center rounded-lg bg-gradient-to-br from-accent-strong to-accent text-white shadow-[0_6px_18px_-6px_rgb(0_167_168_/_0.55)]">
+          <div className="grid size-9 place-items-center rounded-lg bg-gradient-to-br from-accent-strong to-accent text-white">
             <Building2 className="size-4" />
           </div>
           <span className="font-semibold tracking-tight">Planejamento</span>
