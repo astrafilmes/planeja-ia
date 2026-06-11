@@ -167,9 +167,11 @@ type ContratoRow = {
  ultimo_erro_m2a: string | null;
  m2a_contrato_id: string | null;
  m2a_documentos_gerados: unknown;
- enviado_m2a_em: string | null;
- valor_total: number;
- itens: ContratoItemM2A[];
+  enviado_m2a_em: string | null;
+  impresso_assinado: boolean;
+  publicado: boolean;
+  valor_total: number;
+  itens: ContratoItemM2A[];
 };
 
 type ContratoItemM2A = {
