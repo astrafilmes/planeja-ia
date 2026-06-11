@@ -825,8 +825,9 @@ function Page() {
     toast.success(next ?"Marcado como publicado" :"Desmarcado");
     qc.invalidateQueries({ queryKey: ["processo-detail", id] });
     qc.invalidateQueries({ queryKey: ["contratos"] });
+  }
 
- const deleteContratos = useMutation({
+  const deleteContratos = useMutation({
  mutationFn: async (ids: string[]) => {
  const { error } = await supabase
  .from("contratos")
