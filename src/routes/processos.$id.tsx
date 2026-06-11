@@ -295,6 +295,31 @@ function formatQuantidade(value: number | null | undefined) {
  });
 }
 
+function getStrictItemNumber(value: unknown) {
+ const raw = String(value ?? "").trim();
+ if (!raw) return Number.MAX_SAFE_INTEGER;
+ const parsed = Number(raw.replace(",", "."));
+ if (Number.isFinite(parsed)) return parsed;
+ const firstNumber = raw.match(/\d+/)?.[0];
+ return firstNumber ? Number(firstNumber) : Number.MAX_SAFE_INTEGER;
+}
+
+function compareStrictItemOrder<T>(
+ a: T,
+ b: T,
+ getValue: (item: T) => unknown,
+) {
+ const valueA = getValue(a);
+ const valueB = getValue(b);
+ const numA = getStrictItemNumber(valueA);
+ const numB = getStrictItemNumber(valueB);
+ if (numA !== numB) return numA - numB;
+ return String(valueA ?? "").localeCompare(String(valueB ?? ""), "pt-BR", {
+  numeric: true,
+  sensitivity: "base",
+ });
+}
+
 function Page() {
  const { id } = Route.useParams();
  const qc = useQueryClient();
@@ -387,6 +412,9 @@ function Page() {
  });
  }
  }
+  for (const lista of Object.values(itensByContrato)) {
+  lista.sort((a, b) => compareStrictItemOrder(a, b, (item) => item.numero));
+  }
  const contratosFull: ContratoRow[] = contratoRows.map((c: any) => ({
  id: c.id,
  numero_contrato: c.numero_contrato,
@@ -421,7 +449,7 @@ function Page() {
  return {
  processo: proc.data as Processo | null,
  contratos: contratosFull,
- ataItens: ((ataItens.data ?? []) as any[]).map(
+  ataItens: ((ataItens.data ?? []) as any[]).map(
  (item): ProcessoAtaItem => ({
  id: item.id,
  codigo: String(item.numero_item ??"").trim() || item.m2a_item_id,
@@ -431,7 +459,7 @@ function Page() {
  m2a_item_id: item.m2a_item_id,
  m2a_ata_id: item.m2a_ata_id,
  }),
- ),
+  ).sort((a, b) => compareStrictItemOrder(a, b, (item) => item.codigo)),
  };
  },
  });
@@ -694,9 +722,12 @@ function Page() {
  })
   : consumedItems;
 
+ const sortedBase = [...base].sort((a, b) =>
+  compareStrictItemOrder(a, b, (item) => item.codigo),
+ );
  const q = itemSearch.trim().toLowerCase();
- if (!q) return base;
- return base.filter((item) =>
+ if (!q) return sortedBase;
+ return sortedBase.filter((item) =>
  [item.codigo, item.descricao, item.unidade]
  .filter(Boolean)
  .join("")

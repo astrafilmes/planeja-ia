@@ -900,6 +900,11 @@ async function runCascata(processoId) {
 
   const itens = itensMestre
     .filter((m) => primeiraAtaPorOrdem.has(m.ordem))
+    .sort((a, b) => {
+      const numA = Number(a.ordem || a.numero_item || a.numero) || 0;
+      const numB = Number(b.ordem || b.numero_item || b.numero) || 0;
+      return numA - numB;
+    })
     .map((m) => ({
       id_item: m.id_item_mestre,
       numero_item: m.ordem,

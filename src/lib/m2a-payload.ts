@@ -75,7 +75,12 @@ export function normalizeItensForM2A(itens: M2AContractItemSource[]) {
       m2a_item_id: item.m2a_item_id ?? undefined,
       quantidade: formatM2AQuantity(item.quantidade),
     }))
-    .filter((item) => item.numero);
+    .filter((item) => item.numero)
+    .sort((a, b) => {
+      const numA = Number(a.numero) || 0;
+      const numB = Number(b.numero) || 0;
+      return numA - numB;
+    });
 }
 
 export function buildM2AContractPayload(input: M2AContractPayloadInput) {
