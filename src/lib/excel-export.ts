@@ -538,6 +538,31 @@ export async function exportarPautaConsolidadaExcel(
         }
       });
 
+      // Fórmulas fixas de espelhamento/soma entre colunas de secretarias.
+      // AB = AA ; AE = AC+AD ; AH = AG ; AJ = AI ; AO = SUM(AK:AN) ; AR = AQ ; AX = SUM(AS:AW)
+      const fixedFormulas: Array<{ target: string; formula: string; fillCol?: number }> = [
+        { target: 'AB', formula: `AA${rowIndex}`, fillCol: 28 },
+        { target: 'AE', formula: `AC${rowIndex}+AD${rowIndex}`, fillCol: 31 },
+        { target: 'AH', formula: `AG${rowIndex}`, fillCol: 34 },
+        { target: 'AJ', formula: `AI${rowIndex}`, fillCol: 36 },
+        { target: 'AO', formula: `SUM(AK${rowIndex}:AN${rowIndex})`, fillCol: 41 },
+        { target: 'AR', formula: `AQ${rowIndex}`, fillCol: 44 },
+        { target: 'AX', formula: `SUM(AS${rowIndex}:AW${rowIndex})`, fillCol: 50 },
+      ];
+      fixedFormulas.forEach(({ target, formula, fillCol }) => {
+        const cell = ws.getCell(`${target}${rowIndex}`);
+        cell.value = { formula } as any;
+        cell.alignment = { horizontal: 'right', vertical: 'middle' };
+        cell.font = { bold: false, size: 9, color: { argb: 'FF000000' } };
+        if (fillCol) {
+          const conf = PAUTA_COLUMNS_CONFIG[fillCol - 1];
+          if (conf) {
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: conf.row2Color } };
+          }
+        }
+      });
+
+
       // Total Geral Dinâmico (Soma de todos os subtotais)
       const groupTotalCols = PAUTA_COLUMNS_CONFIG.filter(c => c.isGroupTotal).map(c => c.index);
       if (groupTotalCols.length > 0) {
