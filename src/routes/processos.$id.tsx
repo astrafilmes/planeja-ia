@@ -1291,31 +1291,14 @@ function Page() {
  onChange={(e) => update("data_abertura", e.target.value)}
  />
  </div>
- <div className="flex flex-col gap-2">
- <Label>URL do processo no portal</Label>
- <div className="flex gap-2">
- <Input
- className="font-mono text-xs"
- value={form.m2a_url ??""}
- onChange={(e) => update("m2a_url", e.target.value)}
- placeholder="http://.../processo_administrativo/36002/"
- />
- <Button
- type="button"
- size="icon"
- variant="outline"
- disabled={isSyncing || !form.m2a_url}
- onClick={() => syncM2A()}
- title="Sincronizar dados do portal"
- >
- {isSyncing ? (
- <Loader2 className="size-4 animate-spin" />
- ) : (
- <RefreshCw className="size-4" />
- )}
- </Button>
- </div>
- </div>
+                <div className="flex flex-col gap-2">
+                  <Label>URL do processo no portal</Label>
+                  <Input
+                    value={form.m2a_url ??""}
+                    onChange={(e) => update("m2a_url", e.target.value)}
+                    placeholder="http://.../processo_administrativo/36002/"
+                  />
+                </div>
  <div className="flex flex-col gap-2 md:col-span-2">
  <Label>Observações</Label>
  <Textarea
