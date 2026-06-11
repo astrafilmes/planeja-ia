@@ -428,7 +428,7 @@ function extractItensFromDoc($, ataId) {
   return out;
 }
 
-async function fetchItensDaAta(ata) {
+async function fetchItensDaAta(ata, trace) {
   const attempts = [];
   if (ata.detail_url) {
     attempts.push({ label: "subtabela do processo", url: normalizeSubtableUrl(ata.detail_url, ata.id_ata) });
@@ -439,9 +439,14 @@ async function fetchItensDaAta(ata) {
       url: normalizeSubtableUrl(`/licitacao_ata_contrato_item/subtabela/${ata.id_licitacao_ata_contrato}`, ata.id_ata),
     });
   }
-  attempts.push({
+  traceStep(trace, {
+    fase: "itens",
     label: "subtabela de licitação (fallback por id_ata)",
+    id_ata: ata.id_ata,
+    numero_ata: ata.numero_ata,
     url: normalizeSubtableUrl(`/licitacao_ata_contrato_item/subtabela/${ata.id_ata}`, ata.id_ata),
+    bloqueado: true,
+    motivo: "endpoint usa id_licitacao_ata_contrato; id_ata pode apontar para registros de outra ata/processo",
   });
   attempts.push({
     label: "tabela da ata",
@@ -450,11 +455,37 @@ async function fetchItensDaAta(ata) {
 
   for (const attempt of attempts) {
     try {
-      const $ = await fetchDoc(attempt.url);
+      const doc = await fetchDocDetailed(attempt.url);
+      const $ = doc.$;
       const items = extractItensFromDoc($, ata.id_ata);
+      traceStep(trace, {
+        fase: "itens",
+        label: attempt.label,
+        id_ata: ata.id_ata,
+        numero_ata: ata.numero_ata,
+        url: attempt.url,
+        status: doc.status,
+        finalUrl: doc.finalUrl,
+        bytes: doc.bytes,
+        decodedBytes: doc.decodedBytes,
+        encontrados: { itens: items.length },
+        amostra: items.slice(0, 5).map((item) => ({
+          numero_item: item.numero_item,
+          id_item: item.id_item,
+          descricao: cleanTextValue(item.descricao).slice(0, 120),
+        })),
+        selecionado: items.length > 0,
+      });
       if (items.length > 0) return items;
     } catch (err) {
-      // tenta próxima estratégia
+      traceStep(trace, {
+        fase: "itens",
+        label: attempt.label,
+        id_ata: ata.id_ata,
+        numero_ata: ata.numero_ata,
+        url: attempt.url,
+        erro: String(err?.message ?? err),
+      });
     }
   }
   return [];
