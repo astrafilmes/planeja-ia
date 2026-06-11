@@ -1,6 +1,7 @@
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { cn } from "@/lib/utils";
 import { MiniCalendar } from "./MiniCalendar";
+import { ReminderDialog, ReminderPayload } from "./ReminderDialog";
 
 export type AgendaItem = {
   id: string;
