@@ -1090,7 +1090,7 @@ function Page() {
  {BRL.format(stats.total)}
  </TableCell>
  <TableCell
- colSpan={2}
+ colSpan={3}
  className="py-2 text-right text-[11px] text-muted-foreground pr-4"
  >
  Soma total
