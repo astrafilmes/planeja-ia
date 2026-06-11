@@ -778,7 +778,11 @@ export function prepararDadosPautaConsolidada(dadosBrutos: any[]): Array<{ proce
     if (!itemEntry.cells[4] && (descricao || especificacao)) itemEntry.cells[4] = descricao || especificacao;
     if (!itemEntry.cells[5] && (especificacao || descricao)) itemEntry.cells[5] = especificacao || descricao;
 
-    const target = getTargetIndex(row.secretaria_sigla || row.sigla || row.unidade_sigla, row.subcategoria || row.dotacao || row.subtipo);
+    const target = getTargetIndex(
+      row.secretaria_sigla || row.sigla || row.unidade_sigla,
+      row.subcategoria || row.subtipo,
+      row.dotacao || row.subcategoria,
+    );
     if (target !== null && target !== undefined) {
       const existing = itemEntry.cells[target];
       const addVal = Number(row.quantidade ?? row.item_quantidade ?? 0) || 0;
