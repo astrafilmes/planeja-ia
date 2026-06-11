@@ -7,7 +7,7 @@ import { PageHeader } from"@/components/layout/PageHeader";
 import { WorkflowGuide } from"@/components/layout/WorkflowGuide";
 import { EmptyState } from"@/components/layout/EmptyState";
 import { FormSection } from"@/components/layout/FormSection";
-import { StickyActionBar } from"@/components/layout/StickyActionBar";
+import { StickyActionBar, SectionNav } from"@/components/layout/StickyActionBar";
 import { useProgress } from"@/contexts/ProgressContext";
 import { supabase } from"@/integrations/supabase/client";
 import { Button } from"@/components/ui/button";
@@ -443,6 +443,29 @@ function Page() {
  useEffect(() => {
  if (data?.processo) setForm(data.processo);
  }, [data?.processo]);
+
+ const SECTIONS = [
+ { id:"dados-administrativos", label:"Dados administrativos" },
+ { id:"metadados", label:"Metadados" },
+ ];
+ const [activeSection, setActiveSection] = useState<string>(SECTIONS[0].id);
+ useEffect(() => {
+ const els = SECTIONS.map((s) => document.getElementById(s.id)).filter(
+ (el): el is HTMLElement => Boolean(el),
+ );
+ if (els.length === 0) return;
+ const io = new IntersectionObserver(
+ (entries) => {
+ const visible = entries
+ .filter((e) => e.isIntersecting)
+ .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+ if (visible?.target?.id) setActiveSection(visible.target.id);
+ },
+ { rootMargin:"-30% 0px -55% 0px", threshold: [0, 0.25, 0.5, 1] },
+ );
+ els.forEach((el) => io.observe(el));
+ return () => io.disconnect();
+ }, [data?.processo?.id]);
 
  useEffect(() => {
  const off = listenAllM2AProgress(async (event) => {
@@ -1240,6 +1263,12 @@ function Page() {
  </div>
  </FormSection>
 
+ <div className="flex flex-col gap-4">
+ <SectionNav
+ sections={SECTIONS}
+ activeId={activeSection}
+ className="!block w-full lg:!block"
+ />
  <FormSection
  id="metadados"
  title="Metadados"
@@ -1280,6 +1309,8 @@ function Page() {
  </div>
  </FormSection>
  </div>
+ </div>
+
  </TabsContent>
 
 
