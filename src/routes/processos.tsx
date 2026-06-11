@@ -129,17 +129,9 @@ function externalStatusVariant(p: any):"default" |"outline" {
 }
 
 function resumirObjetoProcesso(objeto?: string | null) {
- const original = String(objeto ??"").trim();
- if (!original) return"Objeto não informado";
-  return original
-   .replace(
-    /^registro\s+de\s+pre[cç]os\s+visando\s+(à|a)\s+futura\s+e\s+eventual\s+/i,"",
-   )
-   .replace(/^registro\s+de\s+pre[cç]os\s+para\s+/i,"")
-   .replace(/^registro\s+de\s+pre[cç]os\s+/i,"")
-   .replace(/^aquisi[cç][aã]o\s+de\s+/i,"Aquisição de ")
-   .replace(/\s+/g," ")
-   .trim();
+  const original = String(objeto ?? "").replace(/\s+/g, " ").trim();
+  if (!original) return "Objeto não informado";
+  return original;
 }
 
 // extrai o ano (YYYY) do número do processo (ex.: 012/2025-PE → 2025)
