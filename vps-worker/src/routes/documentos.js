@@ -251,33 +251,58 @@ async function discoverDownloadUrlMap(contratoId, ids, log) {
   return map;
 }
 
-async function tryDownload(path) {
-  const r = await m2a.request("GET", path, { responseType: "arraybuffer" });
+async function tryDownload(candidate) {
+  const c = typeof candidate === "string" ? { method: "GET", path: candidate } : candidate;
+  const headers =
+    c.method === "POST"
+      ? {
+          "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+          "X-Requested-With": "XMLHttpRequest",
+          Referer: c.referer || undefined,
+        }
+      : undefined;
+  const r = await m2a.request(c.method || "GET", c.path, {
+    responseType: "arraybuffer",
+    ...(c.body ? { body: c.body } : {}),
+    ...(headers ? { headers } : {}),
+  });
   return r;
 }
 
 async function fetchFromM2A(id, hrefHint, log) {
   const tried = [];
-  // 1) anchor real, se descoberto.
-  if (hrefHint) {
+  const queue = [];
+  const enqueue = (candidate, referer = null) => {
+    const c = typeof candidate === "string" ? { method: "GET", path: candidate } : candidate;
+    const path = cleanPortalPath(c.path);
+    if (!path) return;
+    queue.push({ ...c, path, referer: c.referer || referer || undefined });
+  };
+  if (hrefHint) enqueue(hrefHint);
+  for (const buildPath of M2A_DOWNLOAD_PATH_FALLBACKS) enqueue(buildPath(id));
+
+  const seen = new Set();
+  while (queue.length && tried.length < 40) {
+    const candidate = queue.shift();
+    const key = `${candidate.method || "GET"}:${candidate.path}:${candidate.body || ""}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
     try {
-      const r = await tryDownload(hrefHint);
-      tried.push(`${hrefHint} → ${r.status} ${r.contentType || ""}`);
+      const r = await tryDownload(candidate);
+      tried.push(`${candidate.method || "GET"} ${candidate.path} → ${r.status} ${r.contentType || ""}`);
       if (r.status >= 200 && r.status < 300 && looksLikeBinary(r)) return r;
+      if (r.html && /<html|<form|<a\s|data-url|onclick/i.test(r.html)) {
+        const nested = extractDownloadCandidatesFromHtml(r.html, id, candidate.path);
+        for (const next of nested) enqueue(next, candidate.path);
+        if (nested.length) {
+          log?.info?.(
+            { id, origem: candidate.path, encontrados: nested.length, amostra: nested.slice(0, 5).map((x) => `${x.method || "GET"} ${x.path}`) },
+            "documento M2A: candidatos extraídos de página intermediária",
+          );
+        }
+      }
     } catch (err) {
-      tried.push(`${hrefHint} → ERR ${err.message}`);
-    }
-  }
-  // 2) palpites conhecidos.
-  for (const buildPath of M2A_DOWNLOAD_PATH_FALLBACKS) {
-    const path = buildPath(id);
-    if (path === hrefHint) continue;
-    try {
-      const r = await tryDownload(path);
-      tried.push(`${path} → ${r.status} ${r.contentType || ""}`);
-      if (r.status >= 200 && r.status < 300 && looksLikeBinary(r)) return r;
-    } catch (err) {
-      tried.push(`${path} → ERR ${err.message}`);
+      tried.push(`${candidate.method || "GET"} ${candidate.path} → ERR ${err.message}`);
     }
   }
   log?.warn?.({ id, tried }, "documento M2A: nenhum endpoint retornou binário");
