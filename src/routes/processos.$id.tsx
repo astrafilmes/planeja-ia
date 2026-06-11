@@ -1138,13 +1138,28 @@ function Page() {
  title={`Processo ${p.numero_processo ??"sem número"}`}
  subtitle={p.objeto}
  onBack={() => window.history.back()}
- secondaryActions={
- <>
- <PautaConsolidadaExporter 
- processoIds={[id]} 
- variant="outline" 
- size="sm" 
- />
+          secondaryActions={
+            <>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={isSyncing || !form.m2a_url}
+                onClick={() => syncM2A()}
+                title="Sincronizar dados do processo com o M2A"
+              >
+                {isSyncing ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="size-4" />
+                )}
+                Sincronizar M2A
+              </Button>
+              <PautaConsolidadaExporter 
+                processoIds={[id]} 
+                variant="outline" 
+                size="sm" 
+              />
  {objetoLongo && (
  <Dialog>
  <DialogTrigger asChild>
