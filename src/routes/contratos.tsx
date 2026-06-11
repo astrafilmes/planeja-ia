@@ -841,6 +841,9 @@ function Page() {
  <TableHead className="hidden w-28 whitespace-nowrap sm:table-cell">
  Status
  </TableHead>
+ <TableHead className="hidden w-28 whitespace-nowrap md:table-cell">
+ Publicação
+ </TableHead>
  <TableHead className="w-20 pr-3 text-right whitespace-nowrap sm:pr-4">
  Ações
  </TableHead>
