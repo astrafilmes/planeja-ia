@@ -14,12 +14,16 @@ import { m2a } from "../m2a-client.js";
 // varre links/forms/scripts e só então baixa o arquivo final.
 const M2A_DOWNLOAD_PATH_FALLBACKS = [
   (id) => `/contratos/documentos/configuracao/${id}/`,
+  (id) => `/contratos/documentos/configuracao/${id}`,
   (id) => `/contratos/documentos/gerar/${id}/`,
+  (id) => `/contratos/documentos/gerar/${id}`,
   (id) => `/contratos/documentos/gerar_documento/${id}/`,
   (id) => `/contratos/documentos/gerar_arquivo/${id}/`,
   (id) => `/contratos/documentos/arquivo/${id}/`,
   (id) => `/contratos/documentos/baixar/${id}/`,
+  (id) => `/contratos/documentos/baixar/${id}`,
   (id) => `/contratos/documentos/download/${id}/`,
+  (id) => `/contratos/documentos/download/${id}`,
   (id) => `/contratos/documentos/visualizar/${id}/`,
   (id) => `/contratos/documentos/imprimir/${id}/`,
   (id) => `/contratos/documentos/exportar/${id}/`,
@@ -263,7 +267,7 @@ async function tryDownload(candidate) {
       ? {
           "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
           "X-Requested-With": "XMLHttpRequest",
-          Referer: c.referer || undefined,
+          ...(c.referer ? { Referer: c.referer } : {}),
         }
       : undefined;
   const r = await m2a.request(c.method || "GET", c.path, {
