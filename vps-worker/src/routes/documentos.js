@@ -294,4 +294,64 @@ export async function documentosRoutes(app) {
     }
     await zip.finalize();
   });
+
+  // Diagnóstico: retorna anchors/iframes/forms encontrados nas páginas do contrato
+  // que referenciam o id do documento. Use pra descobrir a URL real do download.
+  // POST /documentos/diagnostico  { contrato_id, id_m2a }
+  app.post("/documentos/diagnostico", async (req, reply) => {
+    const body = req.body || {};
+    const contratoId = String(body.contrato_id ?? "").trim();
+    const id = String(body.id_m2a ?? "").trim();
+    if (!/^\d+$/.test(contratoId) || !/^\d+$/.test(id)) {
+      return reply.code(400).send({ error: "contrato_id e id_m2a numéricos são obrigatórios" });
+    }
+    const paths = [
+      `/contratos/${contratoId}/`,
+      `/contratos/documentos/tabela/${contratoId}/`,
+      `/contratos/documentos/${contratoId}/`,
+      `/contratos/${contratoId}/documentos/`,
+    ];
+    const out = [];
+    for (const path of paths) {
+      try {
+        const r = await m2a.request("GET", path, {
+          headers: { "X-Requested-With": "XMLHttpRequest" },
+        });
+        const $ = cheerio.load(r.html || "");
+        const anchors = [];
+        const re = new RegExp(`(^|[/=?&])${id}([/?&]|$)`);
+        $("a[href]").each((_, a) => {
+          const href = ($(a).attr("href") || "").trim();
+          if (re.test(href)) {
+            anchors.push({
+              href,
+              title: $(a).attr("title") || null,
+              text: $(a).text().replace(/\s+/g, " ").trim().slice(0, 80) || null,
+              class: $(a).attr("class") || null,
+            });
+          }
+        });
+        // Também captura referências no HTML cru (data-url, onclick, etc.)
+        const rawMatches = Array.from(
+          new Set(
+            (String(r.html || "").match(
+              new RegExp(`["'(=\\s](/[^\\s"'()<>]*${id}[^\\s"'()<>]*)`, "g"),
+            ) || []).map((m) => m.slice(1)),
+          ),
+        ).slice(0, 30);
+        out.push({
+          path,
+          status: r.status,
+          finalUrl: r.finalUrl,
+          contentType: r.contentType,
+          bytes: (r.html || "").length,
+          anchors,
+          rawMatches,
+        });
+      } catch (err) {
+        out.push({ path, error: err.message });
+      }
+    }
+    return reply.send({ contratoId, id, resultados: out });
+  });
 }
