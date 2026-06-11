@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from"react";
 import { AppShell } from"@/components/layout/AppShell";
 import { EmptyState } from"@/components/layout/EmptyState";
 import { WorkflowGuide } from"@/components/layout/WorkflowGuide";
+import { FormSection } from"@/components/layout/FormSection";
 import { useProgress } from"@/contexts/ProgressContext";
 import { supabase } from"@/integrations/supabase/client";
 import { Button } from"@/components/ui/button";
