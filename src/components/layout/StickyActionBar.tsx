@@ -39,11 +39,14 @@ interface SectionNavProps {
  * Sticky table-of-contents for long detail pages.
  * Pairs with FormSection's id+scroll-mt for smooth section jumps.
  */
-export function SectionNav({ sections, activeId }: SectionNavProps) {
+export function SectionNav({ sections, activeId, className }: SectionNavProps) {
   return (
     <nav
       aria-label="Navegação de seções"
-      className="sticky top-20 hidden w-56 shrink-0 self-start lg:block"
+      className={cn(
+        "sticky top-20 hidden w-56 shrink-0 self-start lg:block",
+        className,
+      )}
     >
       <ul className="flex flex-col gap-0.5 border-l border-border/60 pl-3 text-[13px]">
         {sections.map((s) => {
