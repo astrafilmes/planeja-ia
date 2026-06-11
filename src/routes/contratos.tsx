@@ -176,7 +176,7 @@ function normalizeDocumentosM2A(
  if (!/^\d+$/.test(id_m2a)) return null;
  return {
  id_m2a,
- nome: `${contrato.numero_contrato} - ${nome}`,
+ nome: `${nome} - ${contrato.numero_contrato}`,
  contratoId: contrato.id,
  contratoNumero: contrato.numero_contrato,
  m2aContratoId: contrato.m2a_contrato_id ?? undefined,
