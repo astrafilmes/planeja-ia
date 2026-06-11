@@ -1460,7 +1460,7 @@ function Page() {
  />
  </TableHead>
  <TableHead className="w-44">Contrato</TableHead>
- <TableHead className="w-32">Data</TableHead>
+  <TableHead className="w-32">Início vigência</TableHead>
  <TableHead className="w-72">Empresa</TableHead>
  <TableHead>Objeto</TableHead>
  <TableHead className="text-right">Valor</TableHead>

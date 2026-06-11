@@ -588,7 +588,7 @@ function Page() {
  </div>
  <div className="rounded-xl border border-border/60 bg-muted/40 p-3 dark:bg-muted/30">
  <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
- Data do contrato
+  Início vigência
  </p>
  <p className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
  {contratoDataLabel}
@@ -707,7 +707,7 @@ function Page() {
  <Field label="Secretaria">
  {c.secretaria_sigla} — {c.secretaria_nome}
  </Field>
- <Field label="Data">{contratoDataLabel}</Field>
+ <Field label="Início vigência">{contratoDataLabel}</Field>
  <Field label="Preposto">{c.preposto}</Field>
  <Field label="Fiscal">{c.fiscal}</Field>
  <Field label="Link / código" mono>

@@ -647,7 +647,7 @@ function Page() {
  </div>
  )}
  <div className="col-span-2 flex flex-col gap-1.5">
- <Label>Data</Label>
+ <Label>Início vigência</Label>
  <Input type="date" {...form.register("data")} />
  </div>
  </div>
@@ -829,7 +829,7 @@ function Page() {
  Contrato
  </TableHead>
  <TableHead className="hidden w-32 whitespace-nowrap md:table-cell">
- Data
+ Início vigência
  </TableHead>
  <TableHead className="hidden min-w-52 whitespace-nowrap lg:table-cell">
  Empresa
