@@ -1326,14 +1326,6 @@ function Page() {
  <div className="flex flex-col gap-4 text-sm">
  <div className="flex flex-col gap-1">
  <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
- Código externo
- </p>
- <p className="font-mono text-xs">
- {p.m2a_processo_id ??"Pendente"}
- </p>
- </div>
- <div className="flex flex-col gap-1">
- <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
  Última sincronização
  </p>
  <p className="text-xs">
