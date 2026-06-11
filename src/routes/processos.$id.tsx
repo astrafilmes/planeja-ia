@@ -586,28 +586,7 @@ function Page() {
  return off;
  }, [data?.contratos, failTask, finishTask, id, qc, updateProgress]);
 
- useEffect(() => {
- const off = listenM2ABulkDownload((event) => {
- if (event.status ==="iniciado") {
- startTask("Compactando documentos",
- `Preparando ${event.total} arquivo(s)...`,
- );
- }
- if (event.status ==="progresso") {
- updateProgress(
- (event.baixados / Math.max(event.total, 1)) * 100,
- `Baixando arquivo ${event.baixados} de ${event.total}...`,
- );
- }
- if (event.status ==="concluido") {
- finishTask(`${event.baixados} documento(s) compactado(s).`);
- }
- if (event.status ==="erro") {
- failTask(event.mensagem);
- }
- });
- return off;
- }, [failTask, finishTask, startTask, updateProgress]);
+ // Progresso de download em lote agora vem do helper downloadM2ADocuments (sem extensão).
 
  const contratos = useMemo(() => data?.contratos ?? [], [data?.contratos]);
 
