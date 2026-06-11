@@ -1,107 +1,95 @@
-# Plano de correções — PLANEJA-IA
+## Inspiração extraída da referência (Dribbble)
 
-Agrupei tudo o que você pediu em blocos lógicos. Cada bloco lista o arquivo principal e o que muda. Nada de mexer em lógica de negócio fora do necessário.
+Não vamos clonar — vamos aproveitar **ideias específicas** que conversam com o Planeja:
 
-## 1. Identidade e tipografia (global)
+1. **Layout split com painel lateral fixo** (esquerda = conteúdo principal, direita = "agenda/coluna viva")
+2. **Bento grid assimétrico** com cards de tamanhos diferentes (números grandes em destaque, um card "hero/imagem" no meio, mini-KPIs flutuantes sobrepostos)
+3. **Hierarquia tipográfica editorial**: título grande "Main Dashboard" + sub-tabs minimalistas com underline
+4. **Cards monocromáticos por função**: 1 card sólido colorido como acento + demais neutros/brancos
+5. **Painel direito tipo "linha do tempo"**: lista vertical com horário à esquerda e cards coloridos por categoria
+6. **Card promocional/CTA ilustrado** no meio do grid (no nosso caso = WorkflowGuide / próximos passos)
 
-- Trocar título exibido para **PLANEJA-IA** (maiúsculo) onde aparece no header/sidebar e `<title>` (`index.html`, `AppShell.tsx`, `route-head.ts`).
-- Padronizar **uma única família** de fonte para todo o sistema: **Inter** (já é a sans). Variar só **peso, tamanho e cor**.
-  - Remover `Instrument Serif` e `JetBrains Mono` de `src/index.css` / `src/styles.css` (manter `font-mono` apontando para system mono só como fallback técnico, mas não usar em UI).
-  - Auditar componentes que usam `font-serif` / `font-mono` e trocar por `font-sans` com peso/tamanho.
-- Resultado: todos os campos (inputs, labels, valores) na mesma família.
+Tudo isso usando **tokens semânticos existentes** (accent verde/teal do Planeja já casa com a paleta sage/teal da referência).
 
-## 2. Menu lateral (AppShell)
+---
 
-- Hoje itens e subitens parecem iguais. Diferenciar visualmente:
-  - Itens pai: peso 600, ícone, sem indentação.
-  - Subitens: indentação clara (pl-8), peso 400, tamanho menor, com guia vertical (border-left sutil) para indicar hierarquia.
-  - Item pai com filhos: chevron de expandir/recolher.
+## O que muda no `/dashboard`
 
-## 3. Página do Processo (`routes/processos.$id.tsx`)
+### 1. Novo layout em 2 colunas (12 / 4)
+```text
+┌──────────────────────────────────┬───────────────┐
+│  HERO compacto (eyebrow + título)│  AGENDA       │
+│                                  │  ─────────    │
+│  Tabs: Visão geral · Atividade   │  Hoje, terça  │
+│  ─────────                       │  [mini cal]   │
+│                                  │               │
+│  ┌─────┐ ┌─────┐ ┌──────────┐    │  Timeline:    │
+│  │ KPI │ │ KPI │ │  CARD    │    │  • Processos  │
+│  │ 142 │ │ 38  │ │  HERO    │    │    pendentes  │
+│  └─────┘ └─────┘ │  (imagem │    │  • Contratos  │
+│  ┌─────┐ ┌─────┐ │   ou     │    │    a vencer   │
+│  │ KPI │ │ KPI │ │  gráfico)│    │  • Sync M2A   │
+│  └─────┘ └─────┘ └──────────┘    │               │
+│                                  │               │
+│  Gráfico: Contratos por sec.     │               │
+│  (full width)                    │               │
+│                                  │               │
+│  Guia rápido (compact cards)     │               │
+└──────────────────────────────────┴───────────────┘
+```
 
-- **Botão "Sincronizar com M2A" no topo** (header da página), via `PageHeader.primaryAction`. Remover o botão atual que fica ao lado da URL.
-- **Tabela de itens**: remover colunas de consumo. Manter:
-  - Item / Descrição
-  - Quantidade
-  - Valor unitário inicial (estimado)
-  - Valor contratado
-  - Total
-- Padronizar fonte dos campos do formulário (vide bloco 1).
+### 2. Bento grid de KPIs (substitui a fileira atual de 4 StatChips)
+- 4 cards pequenos em grid 2×2 + 1 card grande à direita ocupando 2 linhas
+- 1 deles ganha **fundo sólido accent** (amarelo/teal) como na referência — destaque para "Processamentos IRP" ou "Contratos vigentes"
+- Os outros: fundo branco/card neutro, número grande (text-3xl), label discreto acima, micro-sparkline opcional
+- O card grande (à direita do bento): "Próximo passo" — combina um indicador-chave com CTA forte
 
-### Aba Contratos (dentro do processo)
-- Reordenar colunas com larguras controladas:
-  - Colunas de **Valor** e **Status**: `width: 1%; white-space: nowrap` para ocuparem exatamente o conteúdo, sem quebrar.
-  - Demais colunas flexíveis.
-- Adicionar **2 ícones clicáveis** na linha (sem texto, com tooltip):
-  - 🖨️ Impresso/Assinado (toggle)
-  - 📢 Publicado (toggle)
-- Testar em desktop (1440px) para garantir que valor não quebra linha.
+### 3. Painel direito "Agenda / Atividade"
+- Substitui o card "Guia rápido" lateral
+- Topo: data atual em destaque editorial (`Jan, 21 · Terça`) + mini-calendário compacto (recharts/dom nativo, 1 mês, dots em datas com vencimento)
+- Abaixo: **timeline vertical** com horários/datas relativas → atividades reais do sistema:
+  - Contratos com vencimento próximo (badge teal)
+  - Processos aguardando sincronização (badge amber)
+  - Últimos jobs IRP (badge rose)
+- Cada item = card pill colorido pastel + ícone + título + horário, alinhado a uma "trilha" vertical
+- Scroll independente
 
-### Aba Servidores
-- Corrigir contador no título: `Servidores ({count})` — bug, hoje mostra 0 mesmo com 3.
-- Remover seção "Servidores adicionais".
-- Permitir **editar servidores apenas antes do envio à M2A**. Após envio com sucesso → bloqueado (mensagem: "Editar somente pela M2A").
+### 4. Refinamentos visuais
+- **Cantos mais arredondados** (`rounded-2xl` / `rounded-3xl`) coerentes com a referência
+- **Sombras suaves** usando `var(--shadow-card)` (sem reintroduzir as sombras pesadas que removemos)
+- **Tabs minimalistas** com underline accent (Visão geral · Atividade · Indicadores)
+- **Espaçamento generoso** entre seções (gap-8)
+- Header do dashboard com saudação + busca global compacta no topo (opcional, só se o AppShell já não cobre)
 
-### Aba Documentos
-- Remover texto "Documento gerado no portal id …".
-- Remover badge "Portal #1".
-- Trocar ações em lote para: **ZIP selecionados** / **PDF selecionados**.
+### 5. O que **não** muda
+- Não muda o AppShell, sidebar, rotas, RLS, queries de backend (apenas adiciona 2-3 queries leves para a timeline)
+- Não muda o tema/paleta — só recompõe usando os tokens já existentes
+- Não toca em outras páginas
 
-### Envio pela extensão
-- Remover "Código externo".
-- Manter apenas botão "Abrir porta".
+---
 
-## 4. Página do Contrato (`routes/contratos.$id.tsx`)
+## Seções técnicas
 
-### Cabeçalho de informações
-- Remover: "Marcar como publicado", "Código externo", "Secretaria".
-- Em vez de "Ir para o processo X", mostrar o **número do processo ao lado do número do contrato**, clicável (link discreto sublinhado no hover).
+**Arquivos editados**
+- `src/routes/dashboard.tsx` — reestrutura o layout
+- `src/components/dashboard/BentoKPI.tsx` *(novo)* — variant de card KPI (neutro + accent)
+- `src/components/dashboard/AgendaPanel.tsx` *(novo)* — coluna direita (mini-cal + timeline)
+- `src/components/dashboard/MiniCalendar.tsx` *(novo)* — calendário compacto read-only com dots
+- Reaproveita `HeroCard`, `ChartCard`, `WorkflowGuide` existentes
 
-### Dados do contrato
-- Remover: Link/código, Código externo, Dotação, Número do contrato (duplicado), texto "Automação usa esta ata gravado no contrato não há fallback…".
+**Dados novos (queries leves, mesma sessão Supabase)**
+- Contratos com `data_fim` próxima (próx. 30 dias) → timeline
+- Últimos 5 `irp_jobs` por `created_at` → timeline
+- Contagem de processos sem contrato vinculado → timeline
 
-### Tabela de itens do contrato
-- Permitir **editar e excluir itens** com modal de aviso:
-  - "Esta alteração pode interferir na sincronização com a M2A. Deseja continuar?"
-  - Checkbox: **"Não mostrar este aviso novamente"** (persistido em `localStorage` por usuário).
+**Sem mudanças de schema, sem migration, sem novas dependências.**
 
-## 5. Página de Contratos (lista — `routes/contratos.tsx`)
+---
 
-- Adicionar colunas/ícones de **Impresso/Assinado** e **Publicado** (mesmos toggles da aba do processo, persistindo em `contratos`).
-- Adicionar **filtros** no topo: "Impresso", "Publicado" (tri-state: todos / sim / não).
-- Garantir mesma regra de largura para coluna de Valor e Status (nowrap, width 1%).
+## Entregáveis
+1. Dashboard reorganizado em bento + painel lateral de agenda
+2. KPIs visualmente hierarquizados (1 destaque colorido + neutros)
+3. Timeline real de atividades do sistema (não mock)
+4. Visual coeso com a referência, mas usando 100% dos tokens do Planeja
 
-### Barra de ações em lote (quando há seleção)
-Ordem exata, sem prefixo "Lote":
-1. **Baixar documentos**
-2. **Exportar XLSX**
-3. **Exportar PDF**
-4. **Baixar planilha**
-5. **Excluir**
-6. **+ Novo**
-
-## 6. Banco de dados
-
-Adicionar 2 colunas em `contratos`:
-- `impresso_assinado boolean default false`
-- `publicado boolean default false`
-
-Migration com GRANTs e políticas já existentes mantidas (update permitido a `authenticated` conforme padrão atual da tabela).
-
-## Ordem de execução
-
-1. Migration (`contratos.impresso_assinado`, `contratos.publicado`).
-2. Tipografia global + título PLANEJA-IA + menu lateral.
-3. Página do processo (header, itens, abas contratos/servidores/documentos/extensão).
-4. Página do contrato (limpeza cabeçalho/dados, editar itens com aviso opt-out).
-5. Página de contratos (colunas, filtros, barra de ações reordenada).
-6. QA visual em 1440px focando truncamento de valores.
-
-## Observações técnicas
-
-- Toggles de impresso/publicado: `Toggle` ou `Button` com `variant="ghost"` + ícone preenchido quando ativo.
-- Largura "shrink to fit" em tabela: `<TableHead className="w-[1%] whitespace-nowrap">`.
-- Aviso opt-out: chave `localStorage["warn-edit-item"] = "off"`.
-- Edição de servidor bloqueada quando `contrato.m2a_sync_status === 'success'` (ou flag equivalente já existente).
-
-Pode aprovar que sigo executando nessa ordem, ou me diga o que ajustar.
+Aprova esse plano para eu implementar?
