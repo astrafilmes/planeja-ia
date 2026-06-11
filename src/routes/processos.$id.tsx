@@ -1596,10 +1596,10 @@ function Page() {
  <div className="flex flex-wrap items-center gap-3">
  <div className="min-w-0 flex-1">
  <CardTitle>Itens consolidados</CardTitle>
- <p className="mt-1 text-[13px] text-muted-foreground">
- Itens importados e consumidos pelos contratos deste
- processo.
- </p>
+                  <p className="mt-1 text-[13px] text-muted-foreground">
+                    Itens importados da ata e quantidades contratadas neste
+                    processo.
+                  </p>
  </div>
  <div className="flex-1" />
  <div className="relative w-full sm:w-80">
