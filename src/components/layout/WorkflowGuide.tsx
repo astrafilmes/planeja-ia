@@ -18,60 +18,74 @@ type WorkflowStep = {
 };
 
 type WorkflowGuideProps = {
- title?: string;
- steps?: WorkflowStep[];
- aside?: ReactNode;
+	title?: string;
+	steps?: WorkflowStep[];
+	aside?: ReactNode;
+	compact?: boolean;
 };
 
 const defaultSteps: WorkflowStep[] = [
- {
- label:"Importar",
- description:"Planilha e vínculo com portal",
- to:"/importar-contratos",
- icon: FileUp,
- },
- {
- label:"Processos",
- description:"Processo-mãe e atas",
- to:"/processos",
- icon: FileText,
- },
- {
- label:"Contratos",
- description:"Revisão e documentos",
- to:"/contratos",
- icon: FileSignature,
- },
- {
- label:"Enviar",
- description:"Portal e PDFs finais",
- to:"/contratos",
- icon: Send,
- },
+	{
+		label: "Importar",
+		description: "Planilha e vínculo com portal",
+		to: "/importar-contratos",
+		icon: FileUp,
+	},
+	{
+		label: "Processos",
+		description: "Processo-mãe e atas",
+		to: "/processos",
+		icon: FileText,
+	},
+	{
+		label: "Contratos",
+		description: "Revisão e documentos",
+		to: "/contratos",
+		icon: FileSignature,
+	},
+	{
+		label: "Enviar",
+		description: "Portal e PDFs finais",
+		to: "/contratos",
+		icon: Send,
+	},
 ];
 
 export function WorkflowGuide({
- title ="Fluxo recomendado",
- steps = defaultSteps,
- aside,
+	title = "Fluxo recomendado",
+	steps = defaultSteps,
+	aside,
+	compact = false,
 }: WorkflowGuideProps) {
- return (
- <section className="mb-6 rounded-xl border border-border/60 bg-card p-4 shadow-sm dark:bg-foreground">
- <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
- <div className="flex min-w-0 items-center gap-3">
- <div className="hidden h-10 w-1 rounded-full bg-primary md:block" />
- <div className="min-w-0">
- <h2 className="text-sm font-semibold text-foreground">
- {title}
- </h2>
- <p className="line-clamp-2 text-sm text-muted-foreground">
- Use esta sequência para sair da planilha e chegar ao contrato
- enviado, sem voltar procurando a próxima etapa.
- </p>
- </div>
- </div>
+	const wrapperClass = compact
+		? "flex flex-col gap-3"
+		: "mb-6 rounded-xl border border-border/60 bg-card p-4 shadow-sm";
+	const innerClass = compact
+		? "flex flex-col gap-3"
+		: "flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between";
+	const gridClass = compact
+		? "grid gap-2"
+		: "grid gap-2 md:grid-cols-2 xl:grid-cols-4";
+	return (
+		<section className={wrapperClass}>
+			<div className={innerClass}>
+				{!compact && (
+					<div className="flex min-w-0 items-center gap-3">
+						<div className="hidden h-10 w-1 rounded-full bg-primary md:block" />
+						<div className="min-w-0">
+							<h2 className="text-sm font-semibold text-foreground">
+								{title}
+							</h2>
+							<p className="line-clamp-2 text-sm text-muted-foreground">
+								Use esta sequência para sair da planilha e chegar ao contrato
+								enviado, sem voltar procurando a próxima etapa.
+							</p>
+						</div>
+					</div>
+				)}
 
- <div className="grid gap-2 md:grid-cols-2 xl:min-w-[720px] xl:grid-cols-4">
+				<div className={gridClass}>
+
  {steps.map((step, index) => {
  const Icon = step.icon ?? FileText;
  const isActive = step.state ==="active";

@@ -226,7 +226,7 @@ function Dashboard() {
             </ResponsiveContainer>
           </ChartCard>
 
-          <Card className="border-border/60 shadow-[var(--shadow-card)]">
+          <Card variant="elevated">
             <CardHeader className="pb-3">
               <CardTitle className="text-[15px]">Guia rápido</CardTitle>
               <p className="text-[12px] text-muted-foreground">
@@ -234,9 +234,10 @@ function Dashboard() {
               </p>
             </CardHeader>
             <CardContent>
-              <WorkflowGuide />
+              <WorkflowGuide compact />
             </CardContent>
           </Card>
+
         </div>
       </div>
     </AppShell>
