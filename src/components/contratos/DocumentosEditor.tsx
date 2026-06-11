@@ -110,19 +110,19 @@ export function DocumentosEditor({
  const id_m2a = String(doc.id_m2a ?? doc.id ??"").trim();
  if (!/^\d+$/.test(id_m2a)) return null;
  const nomeDoc = String(doc.nome ?? `Documento ${index + 1}`).trim();
- return {
- key: `m2a:${id_m2a}`,
- origem:"m2a" as const,
- nome: nomeDoc,
- tipo: `Portal #${index + 1}`,
- detalhe: `Documento gerado no portal · ID ${id_m2a}`,
- m2a: {
- id_m2a,
- nome: `${contratoNumero ?? contratoId} - ${nomeDoc}`,
- contratoId,
- contratoNumero,
- },
- };
+          return {
+            key: `m2a:${id_m2a}`,
+            origem:"m2a" as const,
+            nome: nomeDoc,
+            tipo:"Portal",
+            detalhe:"Documento do portal",
+            m2a: {
+              id_m2a,
+              nome: `${contratoNumero ?? contratoId} - ${nomeDoc}`,
+              contratoId,
+              contratoNumero,
+            },
+          };
  })
  .filter(Boolean) as DocumentoLista[];
  }, [contratoId, contratoNumero, documentosM2A]);
