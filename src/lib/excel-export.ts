@@ -100,7 +100,16 @@ export const groupContractData = (data: ContractReportData[]): ContractGroupedDa
       });
     }
   });
-  return Array.from(contractsMap.values());
+  // Ordenação numérica estrita dos itens (evita ordem lexicográfica 1,10,11,2,20...)
+  const contracts = Array.from(contractsMap.values());
+  for (const contract of contracts) {
+    contract.items.sort((a, b) => {
+      const numA = Number(a.item_ordem ?? a.item_numero ?? 0) || 0;
+      const numB = Number(b.item_ordem ?? b.item_numero ?? 0) || 0;
+      return numA - numB;
+    });
+  }
+  return contracts;
 };
 
 /**
