@@ -591,6 +591,61 @@ function extractContratosFromDoc($, ataId) {
 }
 
 
+async function fetchAtaFornecedorFromDetail(idAta, trace) {
+  const url = `/ata_registro_precos/${idAta}`;
+  try {
+    const { $, status } = await fetchDocDetailed(url);
+    // 1) anchor para /fornecedores/{id}
+    const fornAnchor = $('a[href*="/fornecedores/"]').first();
+    let nome = "";
+    let cnpj = "";
+    if (fornAnchor.length) {
+      nome = cleanTextValue(fornAnchor.find("span").first().text() || fornAnchor.text());
+    }
+    // 2) varre labels/dt buscando "Fornecedor" ou "Empresa"
+    if (!nome) {
+      $("label, dt, th, strong, b, .form-group, .kt-portlet__head-title").each((_, el) => {
+        const t = cleanTextValue($(el).text());
+        if (/^(fornecedor|empresa contratada|empresa)\b/i.test(t)) {
+          const candidates = [
+            $(el).next(),
+            $(el).parent().find("input").first(),
+            $(el).parent().find("span").last(),
+            $(el).siblings("dd").first(),
+          ];
+          for (const c of candidates) {
+            if (!c || !c.length) continue;
+            const v = cleanTextValue(c.attr?.("value") || c.text?.() || "");
+            if (v && v.length > 2 && !/^fornecedor/i.test(v)) { nome = v; return false; }
+          }
+        }
+      });
+    }
+    // 3) CNPJ presente em qualquer lugar
+    const cnpjMatch = cleanTextValue($("body").text()).match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/);
+    if (cnpjMatch) cnpj = cnpjMatch[0];
+    traceStep(trace, {
+      fase: "ata-detalhe",
+      label: "fornecedor extraído do detalhe da ata",
+      id_ata: idAta,
+      url,
+      status,
+      fornecedor: nome || null,
+      cnpj: cnpj || null,
+    });
+    if (nome || cnpj) return { nome, cnpj: cnpj || undefined };
+  } catch (err) {
+    traceStep(trace, {
+      fase: "ata-detalhe",
+      label: "falha ao buscar detalhe da ata",
+      id_ata: idAta,
+      url,
+      erro: String(err?.message ?? err),
+    });
+  }
+  return null;
+}
+
 async function fetchContratosDaAta(ata, trace) {
   const url = `/ata_registro_precos/tabela_contratos/${ata.id_ata}?page_size=1000`;
   try {
@@ -939,6 +994,30 @@ async function runCascata(processoId) {
     ]);
     return { ata, vinculos, contratos };
   });
+
+  // Enriquecimento de fornecedor: contratos no portal M2A são listados POR ata,
+  // então herdamos o fornecedor da ata sempre que o contrato não trouxer coluna própria.
+  // Se a própria ata estiver sem fornecedor, buscamos a página de detalhe da ata
+  // (/ata_registro_precos/{id}) para tentar extrair nome e CNPJ.
+  for (const r of resultados) {
+    if (!r.ata.fornecedor) r.ata.fornecedor = { nome: "", cnpj: undefined };
+    const nomeAta = (r.ata.fornecedor?.nome || "").trim();
+    const cnpjAta = (r.ata.fornecedor?.cnpj || "").trim?.() || r.ata.fornecedor?.cnpj || "";
+    const algumContratoSemForn = r.contratos.some((c) => !(c.fornecedor_nome || "").trim());
+    if (!nomeAta || (algumContratoSemForn && !cnpjAta)) {
+      const detalhe = await fetchAtaFornecedorFromDetail(r.ata.id_ata, trace);
+      if (detalhe?.nome && !nomeAta) r.ata.fornecedor.nome = detalhe.nome;
+      if (detalhe?.cnpj && !cnpjAta) r.ata.fornecedor.cnpj = detalhe.cnpj;
+    }
+    const nomeFinal = (r.ata.fornecedor?.nome || "").trim();
+    const cnpjFinal = (r.ata.fornecedor?.cnpj || "").trim?.() || r.ata.fornecedor?.cnpj || "";
+    if (nomeFinal || cnpjFinal) {
+      for (const c of r.contratos) {
+        if (!(c.fornecedor_nome || "").trim() && nomeFinal) c.fornecedor_nome = nomeFinal;
+        if (!c.fornecedor_cnpj && cnpjFinal) c.fornecedor_cnpj = cnpjFinal;
+      }
+    }
+  }
 
   // Payload compatível com sync_m2a_snapshot:
   // 1 item ÚNICO por ordem da tabela mestra, atrelado à primeira ata válida onde aparece.
