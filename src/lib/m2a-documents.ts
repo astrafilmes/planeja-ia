@@ -25,7 +25,9 @@ function toWorkerDocs(documentos: M2ABulkDownloadDocumento[]): WorkerDoc[] {
       }
       const id = String((d as { id_m2a?: string }).id_m2a ?? "").trim();
       if (!/^\d+$/.test(id)) return null;
-      const contratoId = String((d as { contratoId?: string }).contratoId ?? "").trim();
+      const contratoId = String(
+        (d as { m2aContratoId?: string }).m2aContratoId ?? "",
+      ).trim();
       return {
         source: "m2a" as const,
         id_m2a: id,
