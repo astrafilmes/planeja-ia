@@ -163,7 +163,7 @@ function m2aBadgeClass(s: string) {
 
 function normalizeDocumentosM2A(
  value: unknown,
- contrato: { id: string; numero_contrato: string },
+ contrato: { id: string; numero_contrato: string; m2a_contrato_id?: string | null },
 ): M2ADocumentoGerado[] {
  if (!Array.isArray(value)) return [];
  return (value as any[])
@@ -179,6 +179,7 @@ function normalizeDocumentosM2A(
  nome: `${contrato.numero_contrato} - ${nome}`,
  contratoId: contrato.id,
  contratoNumero: contrato.numero_contrato,
+ m2aContratoId: contrato.m2a_contrato_id ?? undefined,
  };
  })
  .filter(Boolean) as M2ADocumentoGerado[];
