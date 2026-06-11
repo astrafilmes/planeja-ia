@@ -646,7 +646,9 @@ function Page() {
  },
  );
  console.log("[m2a-import] → persistM2ASnapshot");
- await persistM2ASnapshot(processoImportId, workerSnapshot);
+  await persistM2ASnapshot(processoImportId, workerSnapshot, {
+  expectedM2aProcessoId: m2aProcessoId,
+  });
  console.log(
  `[m2a-import] ✓ Passo 4 concluído em ${(performance.now() - syncT0).toFixed(0)}ms`,
  );
