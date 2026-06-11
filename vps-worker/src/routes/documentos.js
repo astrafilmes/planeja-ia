@@ -229,7 +229,12 @@ async function discoverDownloadUrlMap(contratoId, ids, log) {
       });
       if (!r.html || r.status >= 400) continue;
       const $ = cheerio.load(r.html);
-      for (const id of ids) harvestHrefsForId($, id, candidatesById.get(id));
+      for (const id of ids) {
+        harvestHrefsForId($, id, candidatesById.get(id));
+        for (const c of extractDownloadCandidatesFromHtml(r.html, id, path)) {
+          candidatesById.get(id).push({ href: c.path, score: c.score });
+        }
+      }
     } catch (err) {
       log?.warn?.({ err: err.message, path }, "falha ao varrer página em busca de download");
     }
@@ -455,6 +460,7 @@ export async function documentosRoutes(app) {
       `/contratos/documentos/tabela/${contratoId}/`,
       `/contratos/documentos/${contratoId}/`,
       `/contratos/${contratoId}/documentos/`,
+      `/contratos/documentos/configuracao/${id}/`,
     ];
     const out = [];
     for (const path of paths) {
@@ -492,6 +498,9 @@ export async function documentosRoutes(app) {
           bytes: (r.html || "").length,
           anchors,
           rawMatches,
+          candidates: extractDownloadCandidatesFromHtml(r.html || "", id, path)
+            .slice(0, 20)
+            .map((c) => ({ method: c.method, path: c.path, score: c.score, meta: c.meta })),
         });
       } catch (err) {
         out.push({ path, error: err.message });
