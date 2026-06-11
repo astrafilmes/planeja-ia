@@ -55,6 +55,10 @@ function extFromContentType(ct) {
   return "";
 }
 
+function hasKnownExtension(name) {
+  return /\.[A-Za-z0-9]{1,8}$/.test(String(name || "").trim());
+}
+
 function filenameFromHeader(headerValue) {
   if (!headerValue) return null;
   const m =
@@ -377,9 +381,9 @@ export async function documentosRoutes(app) {
       const doc = documentos[0];
       try {
         const r = await fetchOne(doc, hrefMap, app.log);
-        const headerName =
-          filenameFromHeader(r.contentDisposition) ||
-          safeName(doc.nome || filename) + extFromContentType(r.contentType);
+        let headerName = safeName(doc.nome || filename || "documento");
+        const ext = extFromContentType(r.contentType);
+        if (ext && !hasKnownExtension(headerName)) headerName += ext;
         reply
           .header("Content-Type", r.contentType || "application/octet-stream")
           .header(
@@ -430,9 +434,8 @@ export async function documentosRoutes(app) {
       try {
         const r = await fetchOne(doc, hrefMap, app.log);
         const ext = extFromContentType(r.contentType);
-        let nome =
-          doc.nome || filenameFromHeader(r.contentDisposition) || "documento";
-        if (ext && !nome.toLowerCase().endsWith(ext)) nome += ext;
+        let nome = doc.nome || filenameFromHeader(r.contentDisposition) || "documento";
+        if (ext && !hasKnownExtension(nome)) nome += ext;
         zip.append(r.bytes, { name: safeUnique(nome) });
       } catch (err) {
         app.log.warn({ err: err.message, doc }, "falha ao baixar documento");
