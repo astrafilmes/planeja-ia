@@ -1002,7 +1002,7 @@ export async function processosRoutes(app) {
     const id = String(req.params.id || "").trim();
     if (!id) return reply.code(400).send({ error: "id obrigatório" });
     try {
-      const atas = await fetchAtasDoProcesso(id);
+      const atas = await fetchAtasValidasDoProcesso(id, []);
       return { processo_id: id, atas };
     } catch (err) {
       const status = err.status && err.status >= 400 ? err.status : 500;
