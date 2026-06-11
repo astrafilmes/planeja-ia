@@ -652,7 +652,49 @@ export function prepararDadosPautaConsolidada(dadosBrutos: any[]): Array<{ proce
 
   const processesMap = new Map<string, { processo_id: string; processo_nome?: string | null; contrato_numero?: string | null; itemsMap: Map<string, { cells: (string | number | null)[]; valor_unit?: number | null; valor_total?: number | null }> }>();
 
-  const getTargetIndex = (sigla?: string | null, sub?: string | null): number | null => {
+  // Mapa dotação → coluna (primeiros 6 segmentos UU.FF.SSS.PPPP.A.NNN).
+  // Tem prioridade sobre sigla/subcategoria.
+  const dotacaoMap: Record<string, number> = {
+    "0301.04.122.0021.2.012": columnMap.ADM,
+    "0302.06.125.0021.2.019": columnMap.ADM_GM,
+    "0101.04.124.0021.2.001": columnMap.CGM,
+    // OBS: 1101.13.122.0021.2.128 foi informado p/ CUT e SMA — mantemos SMA.
+    "1101.13.122.0021.2.128": columnMap.SMA,
+    "0501.20.122.0021.2.028": columnMap.DES,
+    "0601.27.392.0021.2.042": columnMap.EJL,
+    "9001.09.272.0100.2.136": columnMap.FPS_FUNDO,
+    "0201.04.122.0021.2.003": columnMap.GAB,
+    "0401.15.122.0021.2.023": columnMap.INF,
+    "0701.12.122.0021.2.045": columnMap.SME_SEC,
+    "0703.12.361.0173.2.060": columnMap.SME_FF,
+    "0703.12.365.0174.2.062": columnMap.SME_FI,
+    "0801.10.122.0021.2.068": columnMap.SMS_SEC,
+    "0803.10.302.0113.2.086": columnMap.SMS_HOSP,
+    "0803.10.302.0113.2.083": columnMap.SMS_MAC,
+    "0802.10.303.0116.2.080": columnMap.SMS_CAF,
+    "0802.10.301.0112.2.078": columnMap.SMS_ATB,
+    "0802.10.305.0121.2.084": columnMap.SMS_VIGIL,
+    "0901.08.122.0021.2.087": columnMap.SPS_SECRET,
+    "0902.08.244.0081.2.107": columnMap.SPS_IGD_PBF,
+    "0902.08.244.0073.2.104": columnMap.SPS_CRAS,
+    "0902.08.244.0074.2.105": columnMap.SPS_CREAS,
+    "0902.08.243.0078.2.101": columnMap.SPS_CRIANCA_FELIZ,
+    "0902.08.126.0089.2.100": columnMap.SPS_PROCAD,
+  };
+
+  const normalizeDotacao = (raw?: string | null): string | null => {
+    if (!raw) return null;
+    const cleaned = String(raw).replace(/[^0-9.]/g, "");
+    const parts = cleaned.split(".").filter(Boolean);
+    if (parts.length < 6) return null;
+    return parts.slice(0, 6).join(".");
+  };
+
+  const getTargetIndex = (sigla?: string | null, sub?: string | null, dotacao?: string | null): number | null => {
+    // 1) Match por dotação (mais específico) — distribui em CRAS/CREAS/MAC/CAF/etc.
+    const dkey = normalizeDotacao(dotacao);
+    if (dkey && dotacaoMap[dkey] !== undefined) return dotacaoMap[dkey];
+
     if (!sigla) return null;
     const s = String(sigla).toUpperCase().trim();
     const subKey = sub ? String(sub).toUpperCase().replace(/[^A-Z0-9]/g, '_') : '';
