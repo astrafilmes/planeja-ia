@@ -1463,13 +1463,14 @@ function Page() {
   <TableHead className="w-32">Início vigência</TableHead>
  <TableHead className="w-72">Empresa</TableHead>
  <TableHead>Objeto</TableHead>
- <TableHead className="text-right">Valor</TableHead>
- <TableHead>Status</TableHead>
- <TableHead className="text-right pr-4 w-32">
- Ações
- </TableHead>
- </TableRow>
- </TableHeader>
+                       <TableHead className="w-[1%] whitespace-nowrap text-right">Valor</TableHead>
+                       <TableHead className="w-[1%] whitespace-nowrap">Status</TableHead>
+                       <TableHead className="w-[1%] whitespace-nowrap text-center">Marcadores</TableHead>
+                       <TableHead className="text-right pr-4 w-32">
+                         Ações
+                       </TableHead>
+                     </TableRow>
+                   </TableHeader>
  <TableBody>
  {contratos.map((c) => {
  const effectiveStatus =
