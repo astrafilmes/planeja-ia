@@ -29,6 +29,7 @@ async function callWorker<T = unknown>({
 
 export interface WorkerProcessoResponse extends M2aSyncPayload {
   processo_id: string;
+  trace?: Array<Record<string, unknown>>;
   resumo?: {
     qtd_atas: number;
     qtd_itens: number;

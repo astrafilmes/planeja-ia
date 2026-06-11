@@ -48,8 +48,14 @@ export function useM2ASync({
           atas: payload.atas?.length ?? 0,
           itens: payload.itens?.length ?? 0,
           contratos: payload.contratos_existentes?.length ?? 0,
+          links_requisitados: payload.trace?.length ?? 0,
         },
       );
+      if (payload.trace?.length) {
+        console.groupCollapsed(`${LOG} trace completo do worker (${payload.trace.length} passos)`);
+        console.table(payload.trace);
+        console.groupEnd();
+      }
 
       toast.loading("Salvando atas, itens e contratos…", {
         id: toastIdRef.current ?? undefined,
