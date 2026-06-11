@@ -200,7 +200,7 @@ async function buildHrefMap(documentos, log) {
     porContrato.get(cId).push(String(d.id_m2a));
   }
   for (const [cId, ids] of porContrato) {
-    const m = await discoverDownloadUrlMap(cId, log);
+    const m = await discoverDownloadUrlMap(cId, ids, log);
     for (const id of ids) {
       if (m.has(id)) map.set(id, m.get(id));
     }
