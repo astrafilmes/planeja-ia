@@ -175,8 +175,36 @@ function actorPatch(prefix:"m2a_fiscal" |"m2a_gestor", actor?: M2AServidor) {
  return {
  [`${prefix}_codigo`]: actor?.m2a_id ?? null,
  [`${prefix}_nome`]: actor?.nome ?? null,
- [`${prefix}_cpf`]: actor?.cpf ?? null,
  };
+}
+
+/** Persiste CPFs via RPC (não estão mais em secretarias). */
+async function syncSecretariaCpfs(
+ secretariaId: string,
+ cpfs: { fiscal?: string | null; gestor?: string | null },
+) {
+ const calls: Array<Promise<unknown>> = [];
+ if (cpfs.fiscal !== undefined) {
+ calls.push(
+ // eslint-disable-next-line @typescript-eslint/no-explicit-any
+ (supabase.rpc as any)("upsert_secretaria_contato", {
+ p_secretaria_id: secretariaId,
+ p_papel: "fiscal",
+ p_cpf: cpfs.fiscal,
+ }),
+ );
+ }
+ if (cpfs.gestor !== undefined) {
+ calls.push(
+ // eslint-disable-next-line @typescript-eslint/no-explicit-any
+ (supabase.rpc as any)("upsert_secretaria_contato", {
+ p_secretaria_id: secretariaId,
+ p_papel: "gestor",
+ p_cpf: cpfs.gestor,
+ }),
+ );
+ }
+ await Promise.all(calls);
 }
 
 function pickPrincipal(
