@@ -230,12 +230,12 @@ function Page() {
  });
 
  const { data: contratos, isLoading } = useQuery({
- queryKey: ["contratos", search, secFilter, m2aFilter],
+ queryKey: ["contratos", search, secFilter, m2aFilter, pubFilter],
  enabled: !isDetailRoute,
  queryFn: async () => {
  let q = supabase
  .from("contratos")
- .select("id, numero_contrato, secretaria_id, secretaria_sigla, secretaria_nome, fornecedor_nome, preposto, objeto, fiscal, data, data_texto_legado, status, status_envio_m2a, m2a_contrato_id, m2a_documentos_gerados, link_contrato, created_at",
+ .select("id, numero_contrato, secretaria_id, secretaria_sigla, secretaria_nome, fornecedor_nome, preposto, objeto, fiscal, data, data_texto_legado, status, status_envio_m2a, m2a_contrato_id, m2a_documentos_gerados, link_contrato, created_at, publicado_at, publicado_por",
  )
  .is("deleted_at", null)
  .order("created_at", { ascending: false });
@@ -245,6 +245,8 @@ function Page() {
  );
  if (secFilter !=="__all") q = q.eq("secretaria_id", secFilter);
  if (m2aFilter !=="__all") q = q.eq("status_envio_m2a", m2aFilter);
+ if (pubFilter ==="publicado") q = q.not("publicado_at","is", null);
+ else if (pubFilter ==="nao_publicado") q = q.is("publicado_at", null);
  const { data, error } = await q.limit(200);
  if (error) throw error;
  const list = data ?? [];
