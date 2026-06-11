@@ -186,19 +186,19 @@ function NavList({
               <CollapsibleTrigger asChild>
                 <button
                   type="button"
-                  className="flex w-full items-center gap-2 px-3 pb-2 pt-1 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-sidebar-foreground/45 transition-colors hover:text-sidebar-foreground/70"
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-[12px] font-bold uppercase tracking-[0.08em] text-sidebar-foreground transition-colors hover:bg-sidebar-accent/30"
                 >
-                  <GroupIcon className="size-3.5 opacity-60" />
+                  <GroupIcon className="size-4 shrink-0 text-sidebar-foreground/70" />
                   <span className="flex-1 text-left">{groupLabel}</span>
                   <ChevronDown
-                    className={`size-3 shrink-0 transition-transform ${
+                    className={`size-3.5 shrink-0 text-sidebar-foreground/50 transition-transform ${
                       groupOpen ? "rotate-0" : "-rotate-90"
                     }`}
                   />
                 </button>
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <div className="flex flex-col gap-0.5">
+                <div className="ml-[14px] mt-1 flex flex-col gap-0.5 border-l border-sidebar-border/70 pl-2">
                   {entry.items.map(({ to, label, icon: Icon }) => {
                     const active =
                       pathname === to || pathname.startsWith(to + "/");
@@ -207,18 +207,18 @@ function NavList({
                         key={to}
                         to={to}
                         onClick={onNavigate}
-                        className={`group relative flex items-center gap-3 rounded-xl border px-3 py-2.5 text-[13px] font-medium transition-colors
+                        className={`group relative flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[12.5px] font-normal transition-colors
                           ${
                             active
-                              ? "border-sidebar-border bg-sidebar-accent/60 text-sidebar-accent-foreground"
-                              : "border-transparent text-sidebar-foreground/75 hover:bg-sidebar-accent/30 hover:text-sidebar-foreground"
+                              ? "bg-sidebar-accent/60 text-sidebar-accent-foreground font-medium"
+                              : "text-sidebar-foreground/70 hover:bg-sidebar-accent/30 hover:text-sidebar-foreground"
                           }`}
                       >
                         <Icon
-                          className={`size-[17px] shrink-0 transition-colors ${
+                          className={`size-[15px] shrink-0 transition-colors ${
                             active
                               ? "text-sidebar-accent-foreground"
-                              : "text-sidebar-foreground/55 group-hover:text-sidebar-foreground/80"
+                              : "text-sidebar-foreground/45 group-hover:text-sidebar-foreground/70"
                           }`}
                         />
                         <span className="truncate">{label}</span>
