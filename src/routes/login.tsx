@@ -200,7 +200,7 @@ function Login() {
         />
 
         <div className="relative flex items-center gap-3 animate-fade-in">
-          <div className="grid size-11 place-items-center rounded-xl bg-gradient-to-br from-accent-strong to-accent font-semibold text-white shadow-[0_8px_24px_-8px_rgb(0_167_168_/_0.55)]">
+          <div className="grid size-11 place-items-center rounded-xl bg-gradient-to-br from-accent-strong to-accent font-semibold text-white">
             P
           </div>
           <div className="leading-tight">
@@ -287,7 +287,7 @@ function Login() {
         />
 
         <div className="mb-7 flex items-center gap-2.5 lg:hidden">
-          <div className="grid size-9 place-items-center rounded-lg bg-gradient-to-br from-accent-strong to-accent text-white shadow-[0_6px_18px_-6px_rgb(0_167_168_/_0.55)]">
+          <div className="grid size-9 place-items-center rounded-lg bg-gradient-to-br from-accent-strong to-accent text-white">
             <Building2 className="size-4" />
           </div>
           <span className="font-semibold tracking-tight">Planejamento</span>
@@ -308,7 +308,7 @@ function Login() {
                 </p>
               </header>
 
-              <div className="rounded-2xl border border-border/70 bg-card/80 p-1.5 shadow-[0_30px_80px_-30px_rgba(15,23,42,0.25)] backdrop-blur-xl dark:shadow-[0_30px_80px_-30px_rgba(0,0,0,0.6)]">
+              <div className="rounded-2xl border border-border/70 bg-card/80 p-1.5 shadow-[var(--shadow-card)] backdrop-blur-xl">
                 <Tabs defaultValue="login">
                   <TabsList className="grid w-full grid-cols-2 rounded-xl bg-muted/60 p-1">
                     <TabsTrigger value="login" className="rounded-lg">
@@ -653,7 +653,7 @@ function RecoverPanel({
         </p>
       </header>
 
-      <div className="rounded-2xl border border-border/70 bg-card/80 p-6 shadow-[0_30px_80px_-30px_rgba(15,23,42,0.25)] backdrop-blur-xl dark:shadow-[0_30px_80px_-30px_rgba(0,0,0,0.6)]">
+      <div className="rounded-2xl border border-border/70 bg-card/80 p-6 shadow-[var(--shadow-card)] backdrop-blur-xl">
         <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
           <Field
             id="rc-email"
