@@ -591,6 +591,61 @@ function extractContratosFromDoc($, ataId) {
 }
 
 
+async function fetchAtaFornecedorFromDetail(idAta, trace) {
+  const url = `/ata_registro_precos/${idAta}`;
+  try {
+    const { $, status } = await fetchDocDetailed(url);
+    // 1) anchor para /fornecedores/{id}
+    const fornAnchor = $('a[href*="/fornecedores/"]').first();
+    let nome = "";
+    let cnpj = "";
+    if (fornAnchor.length) {
+      nome = cleanTextValue(fornAnchor.find("span").first().text() || fornAnchor.text());
+    }
+    // 2) varre labels/dt buscando "Fornecedor" ou "Empresa"
+    if (!nome) {
+      $("label, dt, th, strong, b, .form-group, .kt-portlet__head-title").each((_, el) => {
+        const t = cleanTextValue($(el).text());
+        if (/^(fornecedor|empresa contratada|empresa)\b/i.test(t)) {
+          const candidates = [
+            $(el).next(),
+            $(el).parent().find("input").first(),
+            $(el).parent().find("span").last(),
+            $(el).siblings("dd").first(),
+          ];
+          for (const c of candidates) {
+            if (!c || !c.length) continue;
+            const v = cleanTextValue(c.attr?.("value") || c.text?.() || "");
+            if (v && v.length > 2 && !/^fornecedor/i.test(v)) { nome = v; return false; }
+          }
+        }
+      });
+    }
+    // 3) CNPJ presente em qualquer lugar
+    const cnpjMatch = cleanTextValue($("body").text()).match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/);
+    if (cnpjMatch) cnpj = cnpjMatch[0];
+    traceStep(trace, {
+      fase: "ata-detalhe",
+      label: "fornecedor extraído do detalhe da ata",
+      id_ata: idAta,
+      url,
+      status,
+      fornecedor: nome || null,
+      cnpj: cnpj || null,
+    });
+    if (nome || cnpj) return { nome, cnpj: cnpj || undefined };
+  } catch (err) {
+    traceStep(trace, {
+      fase: "ata-detalhe",
+      label: "falha ao buscar detalhe da ata",
+      id_ata: idAta,
+      url,
+      erro: String(err?.message ?? err),
+    });
+  }
+  return null;
+}
+
 async function fetchContratosDaAta(ata, trace) {
   const url = `/ata_registro_precos/tabela_contratos/${ata.id_ata}?page_size=1000`;
   try {
