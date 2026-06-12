@@ -237,7 +237,7 @@ function Page() {
  queryFn: async () => {
  let q = supabase
  .from("contratos")
- .select("id, numero_contrato, secretaria_id, secretaria_sigla, secretaria_nome, fornecedor_nome, preposto, objeto, fiscal, data, data_texto_legado, status, status_envio_m2a, m2a_contrato_id, m2a_documentos_gerados, link_contrato, created_at, publicado, publicado_at, publicado_por, impresso_assinado, processo_id",
+ .select("id, numero_contrato, secretaria_id, secretaria_sigla, secretaria_nome, fornecedor_nome, preposto, objeto, fiscal, data, data_texto_legado, status, status_envio_m2a, m2a_contrato_id, m2a_documentos_gerados, link_contrato, created_at, publicado, publicado_at, publicado_por, impresso_assinado",
  )
  .is("deleted_at", null)
  .order("created_at", { ascending: false });
