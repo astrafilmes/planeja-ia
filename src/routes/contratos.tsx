@@ -943,7 +943,10 @@ function Page() {
  </TableCell>
  <TableCell>
  <div className="flex flex-col gap-1">
- <span className="inline-flex h-7 items-center rounded-md border border-input bg-card px-2.5 font-mono text-xs font-semibold text-foreground shadow-sm ">
+ <span
+ className={`inline-flex h-8 w-fit items-center rounded-md border px-2.5 font-mono text-[12px] font-semibold shadow-sm ${numeroBadgeClass(c.status_envio_m2a ?? "pendente")}`}
+ title={`Status M2A: ${ENVIO_STATUS_LABELS[c.status_envio_m2a ?? "pendente"] ?? "Pendente"}`}
+ >
  {c.numero_contrato}
  </span>
  <div className="truncate text-[12px] text-muted-foreground">
@@ -975,17 +978,6 @@ function Page() {
  </span>
  </div>
  <div className="mt-1 flex flex-wrap items-center gap-1.5 sm:hidden">
- <Badge
- variant="outline"
- className={`text-[10px] font-medium ${m2aBadgeClass(
- c.status_envio_m2a ??"pendente",
- )}`}
- >
- {ENVIO_STATUS_LABELS[
- c.status_envio_m2a ??"pendente"
- ] ??
- c.status_envio_m2a ??"Pendente"}
- </Badge>
  <span className="text-[11px] font-medium tabular-nums text-muted-foreground">
  {BRL.format(c.valor_total)}
  </span>
@@ -994,33 +986,30 @@ function Page() {
  <TableCell className="hidden py-2 text-right tabular-nums text-xs font-medium whitespace-nowrap sm:table-cell">
  {BRL.format(c.valor_total)}
  </TableCell>
- <TableCell className="hidden py-2 sm:table-cell">
- <Badge
- variant="outline"
- className={`text-[10px] font-medium ${m2aBadgeClass(c.status_envio_m2a ??"pendente")}`}
- >
- {ENVIO_STATUS_LABELS[c.status_envio_m2a ??"pendente"] ??
- c.status_envio_m2a ??"Pendente"}
- </Badge>
- </TableCell>
  <TableCell
  className="hidden py-2 md:table-cell"
  onClick={(e) => e.stopPropagation()}
  >
- <div className="flex items-center justify-center gap-1">
- <Button
- size="icon"
- variant="ghost"
- className={`size-7 ${c.impresso_assinado ?"text-emerald-600 hover:text-emerald-700" :"text-muted-foreground/50 hover:text-foreground"}`}
- title={c.impresso_assinado ?"Impresso/Assinado — clique para desmarcar" :"Marcar como impresso/assinado"}
+ <div className="flex items-center justify-center gap-1.5">
+ <button
+ type="button"
+ className={`inline-flex size-9 items-center justify-center rounded-lg border transition-all ${
+ c.impresso_assinado
+ ? "border-emerald-300 bg-emerald-100 text-emerald-700 shadow-sm hover:bg-emerald-200 dark:border-emerald-500/40 dark:bg-emerald-500/20 dark:text-emerald-300"
+ : "border-border bg-muted/40 text-muted-foreground hover:border-foreground/30 hover:bg-muted hover:text-foreground"
+ }`}
+ title={c.impresso_assinado ? "Impresso/Assinado — clique para desmarcar" : "Marcar como impresso/assinado"}
  onClick={() => handleToggleImpresso(c)}
  >
- <Printer className="size-4" />
- </Button>
- <Button
- size="icon"
- variant="ghost"
- className={`size-7 ${(c.publicado || c.publicado_at) ?"text-emerald-600 hover:text-emerald-700" :"text-muted-foreground/50 hover:text-foreground"}`}
+ <Printer className="size-[18px]" strokeWidth={2.25} />
+ </button>
+ <button
+ type="button"
+ className={`inline-flex size-9 items-center justify-center rounded-lg border transition-all disabled:opacity-50 ${
+ (c.publicado || c.publicado_at)
+ ? "border-emerald-300 bg-emerald-100 text-emerald-700 shadow-sm hover:bg-emerald-200 dark:border-emerald-500/40 dark:bg-emerald-500/20 dark:text-emerald-300"
+ : "border-border bg-muted/40 text-muted-foreground hover:border-foreground/30 hover:bg-muted hover:text-foreground"
+ }`}
  title={
  (c.publicado || c.publicado_at)
  ? `Publicado${c.publicado_at ? ` em ${formatDateBR(c.publicado_at)}` :""} — clique para desmarcar`
@@ -1029,39 +1018,46 @@ function Page() {
  disabled={togglingPub === c.id}
  onClick={() => handleTogglePublicado(c)}
  >
- <Megaphone className="size-4" />
- </Button>
+ <Megaphone className="size-[18px]" strokeWidth={2.25} />
+ </button>
  </div>
  </TableCell>
  <TableCell
  className="pr-3 py-2 text-right whitespace-nowrap sm:pr-4"
  onClick={(e) => e.stopPropagation()}
  >
- <div className="flex items-center justify-end gap-1">
+ <DropdownMenu>
+ <DropdownMenuTrigger asChild>
  <Button
  size="icon"
  variant="ghost"
  className="size-8"
- title="Abrir"
+ title="Ações"
+ >
+ <MoreVertical className="size-4" />
+ </Button>
+ </DropdownMenuTrigger>
+ <DropdownMenuContent align="end">
+ <DropdownMenuItem
  onClick={() =>
  navigate({
- to:"/contratos/$id",
+ to: "/contratos/$id",
  params: { id: c.id },
  })
  }
  >
  <Pencil className="size-4" />
- </Button>
- <Button
- size="icon"
- variant="ghost"
- className="size-8 text-destructive hover:text-destructive"
- title="Excluir"
+ Abrir
+ </DropdownMenuItem>
+ <DropdownMenuItem
+ className="text-destructive focus:text-destructive"
  onClick={() => setDeleting(c)}
  >
  <Trash2 className="size-4" />
- </Button>
- </div>
+ Excluir
+ </DropdownMenuItem>
+ </DropdownMenuContent>
+ </DropdownMenu>
  </TableCell>
  </TableRow>
  ))}
