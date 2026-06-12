@@ -993,30 +993,31 @@ function Page() {
  className="hidden py-2 md:table-cell"
  onClick={(e) => e.stopPropagation()}
  >
+ <div className="flex items-center justify-center gap-1">
  <Button
- size="sm"
- variant={c.publicado_at ?"default" :"outline"}
- className={`h-7 gap-1.5 px-2 text-[11px] font-medium ${c.publicado_at ?"bg-emerald-600 text-white hover:bg-emerald-700" :"text-muted-foreground"}`}
- disabled={togglingPub === c.id}
- onClick={() => handleTogglePublicado(c)}
+ size="icon"
+ variant="ghost"
+ className={`size-7 ${c.impresso_assinado ?"text-emerald-600 hover:text-emerald-700" :"text-muted-foreground/50 hover:text-foreground"}`}
+ title={c.impresso_assinado ?"Impresso/Assinado — clique para desmarcar" :"Marcar como impresso/assinado"}
+ onClick={() => handleToggleImpresso(c)}
+ >
+ <Printer className="size-4" />
+ </Button>
+ <Button
+ size="icon"
+ variant="ghost"
+ className={`size-7 ${(c.publicado || c.publicado_at) ?"text-emerald-600 hover:text-emerald-700" :"text-muted-foreground/50 hover:text-foreground"}`}
  title={
- c.publicado_at
- ? `Publicado em ${formatDateBR(c.publicado_at)} — clique para desmarcar`
+ (c.publicado || c.publicado_at)
+ ? `Publicado${c.publicado_at ? ` em ${formatDateBR(c.publicado_at)}` :""} — clique para desmarcar`
  :"Marcar como publicado"
  }
+ disabled={togglingPub === c.id}
+ onClick={() => handleTogglePublicado(c)}
  >
- {c.publicado_at ? (
- <>
- <CheckCircle2 className="size-3.5" />
- Publicado
- </>
- ) : (
- <>
- <Circle className="size-3.5" />
- Marcar
- </>
- )}
+ <Megaphone className="size-4" />
  </Button>
+ </div>
  </TableCell>
  <TableCell
  className="pr-3 py-2 text-right whitespace-nowrap sm:pr-4"
