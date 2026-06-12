@@ -64,7 +64,7 @@ import {
  AlertDialogHeader,
  AlertDialogTitle,
 } from"@/components/ui/alert-dialog";
-import {
+ import {
  Plus,
  Search,
  Download,
@@ -79,6 +79,8 @@ import {
  Pencil,
  CheckCircle2,
  Circle,
+ Printer,
+ Megaphone,
 
 } from"lucide-react";
 import { toast } from"sonner";
