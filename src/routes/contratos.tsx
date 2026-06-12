@@ -510,19 +510,22 @@ function Page() {
  `Compactando ${docs.length} documento(s) no servidor...`,
  );
  try {
- await downloadM2ADocuments(docs, {
- archive: true,
- filename: `contratos-documentos-${new Date().toISOString().slice(0, 10)}.zip`,
- }, (e) => {
- if (e.status ==="concluido") {
- finishTask(`${e.total} documento(s) compactado(s).`);
- toast.success(`${e.total} documento(s) enviados para download.`);
- }
- if (e.status ==="erro") {
- failTask(e.mensagem ??"Falha");
- toast.error("Falha no download em lote", { description: e.mensagem });
- }
- });
+      await downloadM2ADocuments(docs, {
+        archive: true,
+        filename: `contratos-documentos-${new Date().toISOString().slice(0, 10)}.zip`,
+      }, (e) => {
+        if (e.mensagem && (e.status === "documento" || e.status === "compactando" || e.status === "preparado" || e.status === "iniciado")) {
+          updateProgress(e.percent ?? 0, e.mensagem, { isIndeterminate: e.percent == null });
+        }
+        if (e.status === "concluido") {
+          finishTask(`${e.total} documento(s) compactado(s).`);
+          toast.success(`${e.total} documento(s) enviados para download.`);
+        }
+        if (e.status === "erro") {
+          failTask(e.mensagem ?? "Falha");
+          toast.error("Falha no download em lote", { description: e.mensagem });
+        }
+      });
  } catch (err: any) {
  toast.error(err?.message ??"Falha ao gerar ZIP");
  } finally {

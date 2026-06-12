@@ -102,9 +102,11 @@ Deno.serve(async (req) => {
   const respContentType =
     workerRes.headers.get("content-type") ?? "application/json";
   const respContentDisposition = workerRes.headers.get("content-disposition");
+  const respCacheControl = workerRes.headers.get("cache-control");
   const isJson = respContentType.toLowerCase().includes("application/json");
+  const isEventStream = respContentType.toLowerCase().includes("text/event-stream");
 
-  // JSON / text → repassa como string. Binário (pdf, zip, etc.) → repassa o stream.
+  // JSON / text → repassa como string. Binário/stream → repassa o body sem buffering.
   const headers: Record<string, string> = {
     ...corsHeaders,
     "Content-Type": respContentType,
@@ -113,6 +115,14 @@ Deno.serve(async (req) => {
     headers["Content-Disposition"] = respContentDisposition;
     headers["Access-Control-Expose-Headers"] = "Content-Disposition";
   }
+  if (isEventStream) {
+    headers["Cache-Control"] = "no-cache, no-transform";
+    headers["X-Accel-Buffering"] = "no";
+    headers["Connection"] = "keep-alive";
+  } else if (respCacheControl) {
+    headers["Cache-Control"] = respCacheControl;
+  }
+
 
   if (isJson) {
     const text = await workerRes.text();

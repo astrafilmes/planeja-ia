@@ -152,10 +152,13 @@ export function DocumentosEditor({
  }
 
  async function baixarDocumento(doc: DocumentoLista) {
- if (doc.origem ==="m2a") {
+    if (doc.origem ==="m2a") {
  startTask("Baixando documento", `Preparando ${doc.nome}...`);
  try {
  await downloadM2ADocuments([doc.m2a], undefined, (e) => {
+ if (e.mensagem && (e.status === "documento" || e.status === "iniciado")) {
+ updateProgress(e.percent ?? 0, e.mensagem, { isIndeterminate: e.percent == null });
+ }
  if (e.status ==="concluido") finishTask("Documento baixado.");
  if (e.status ==="erro") failTask(e.mensagem ??"Falha ao baixar");
  });
@@ -229,7 +232,10 @@ export function DocumentosEditor({
  startTask("Compactando documentos",
  `Compactando ${externos.length} arquivo(s) no servidor...`,
  );
- await downloadM2ADocuments(externos, { archive: true, filename: zipName }, (e) => {
+  await downloadM2ADocuments(externos, { archive: true, filename: zipName }, (e) => {
+ if (e.mensagem && (e.status === "documento" || e.status === "compactando" || e.status === "preparado" || e.status === "iniciado")) {
+ updateProgress(e.percent ?? 0, e.mensagem, { isIndeterminate: e.percent == null });
+ }
  if (e.status ==="concluido") finishTask(`${e.total} documento(s) compactado(s).`);
  if (e.status ==="erro") failTask(e.mensagem ??"Falha ao gerar ZIP");
  });
