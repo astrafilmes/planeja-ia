@@ -389,21 +389,28 @@ function Page() {
  qc.invalidateQueries({ queryKey: ["contratos"] });
  }
 
+ function patchContratoLocal(id: string, patch: Record<string, any>) {
+ qc.setQueriesData({ queryKey: ["contratos"] }, (old: any) => {
+ if (!Array.isArray(old)) return old;
+ return old.map((c: any) => (c.id === id ? { ...c, ...patch } : c));
+ });
+ }
+
  async function handleTogglePublicado(c: any) {
  setTogglingPub(c.id);
  try {
  const isPub = !!c.publicado_at || !!c.publicado;
  const { data: userData } = await supabase.auth.getUser();
  const uid = userData.user?.id ?? null;
+ const patch = isPub
+ ? { publicado: false, publicado_at: null, publicado_por: null }
+ : { publicado: true, publicado_at: new Date().toISOString(), publicado_por: uid };
  const { error } = await supabase
  .from("contratos")
- .update(
- isPub
- ? { publicado: false, publicado_at: null, publicado_por: null }
- : { publicado: true, publicado_at: new Date().toISOString(), publicado_por: uid },
- )
+ .update(patch)
  .eq("id", c.id);
  if (error) return toast.error(error.message);
+ patchContratoLocal(c.id, patch);
  await logAudit({
  action:"update",
  entityType:"contrato",
@@ -411,7 +418,6 @@ function Page() {
  payload: { publicado: !isPub },
  });
  toast.success(isPub ?"Marcado como não publicado" :"Marcado como publicado");
- qc.invalidateQueries({ queryKey: ["contratos"] });
  qc.invalidateQueries({ queryKey: ["processo-detail"] });
  } finally {
  setTogglingPub(null);
@@ -425,6 +431,7 @@ function Page() {
  .update({ impresso_assinado: next })
  .eq("id", c.id);
  if (error) return toast.error(error.message);
+ patchContratoLocal(c.id, { impresso_assinado: next });
  await logAudit({
  action:"update",
  entityType:"contrato",
@@ -432,7 +439,6 @@ function Page() {
  payload: { impresso_assinado: next },
  });
  toast.success(next ?"Marcado como impresso/assinado" :"Desmarcado");
- qc.invalidateQueries({ queryKey: ["contratos"] });
  qc.invalidateQueries({ queryKey: ["processo-detail"] });
  }
 
