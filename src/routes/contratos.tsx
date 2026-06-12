@@ -69,6 +69,7 @@ import {
  Search,
  Download,
  MoreHorizontal,
+ MoreVertical,
  ExternalLink,
  FileSignature,
  FileText,
