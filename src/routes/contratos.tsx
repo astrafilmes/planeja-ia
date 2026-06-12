@@ -69,6 +69,7 @@ import {
  Search,
  Download,
  MoreHorizontal,
+ MoreVertical,
  ExternalLink,
  FileSignature,
  FileText,
@@ -161,6 +162,16 @@ function m2aBadgeClass(s: string) {
  if (s ==="processando")
  return"border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-400";
  return"border-border/60 bg-muted/40 text-muted-foreground dark:text-muted-foreground";
+}
+
+function numeroBadgeClass(s: string) {
+ if (["sucesso","enviado"].includes(s))
+ return"border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-200";
+ if (s ==="erro")
+ return"border-red-300 bg-red-50 text-red-700 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-300";
+ if (s ==="processando")
+ return"border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-500/40 dark:bg-blue-500/15 dark:text-blue-300";
+ return"border-input bg-card text-foreground";
 }
 
 function normalizeDocumentosM2A(
@@ -378,21 +389,28 @@ function Page() {
  qc.invalidateQueries({ queryKey: ["contratos"] });
  }
 
+ function patchContratoLocal(id: string, patch: Record<string, any>) {
+ qc.setQueriesData({ queryKey: ["contratos"] }, (old: any) => {
+ if (!Array.isArray(old)) return old;
+ return old.map((c: any) => (c.id === id ? { ...c, ...patch } : c));
+ });
+ }
+
  async function handleTogglePublicado(c: any) {
  setTogglingPub(c.id);
  try {
  const isPub = !!c.publicado_at || !!c.publicado;
  const { data: userData } = await supabase.auth.getUser();
  const uid = userData.user?.id ?? null;
+ const patch = isPub
+ ? { publicado: false, publicado_at: null, publicado_por: null }
+ : { publicado: true, publicado_at: new Date().toISOString(), publicado_por: uid };
  const { error } = await supabase
  .from("contratos")
- .update(
- isPub
- ? { publicado: false, publicado_at: null, publicado_por: null }
- : { publicado: true, publicado_at: new Date().toISOString(), publicado_por: uid },
- )
+ .update(patch)
  .eq("id", c.id);
  if (error) return toast.error(error.message);
+ patchContratoLocal(c.id, patch);
  await logAudit({
  action:"update",
  entityType:"contrato",
@@ -400,7 +418,6 @@ function Page() {
  payload: { publicado: !isPub },
  });
  toast.success(isPub ?"Marcado como não publicado" :"Marcado como publicado");
- qc.invalidateQueries({ queryKey: ["contratos"] });
  qc.invalidateQueries({ queryKey: ["processo-detail"] });
  } finally {
  setTogglingPub(null);
@@ -414,6 +431,7 @@ function Page() {
  .update({ impresso_assinado: next })
  .eq("id", c.id);
  if (error) return toast.error(error.message);
+ patchContratoLocal(c.id, { impresso_assinado: next });
  await logAudit({
  action:"update",
  entityType:"contrato",
@@ -421,7 +439,6 @@ function Page() {
  payload: { impresso_assinado: next },
  });
  toast.success(next ?"Marcado como impresso/assinado" :"Desmarcado");
- qc.invalidateQueries({ queryKey: ["contratos"] });
  qc.invalidateQueries({ queryKey: ["processo-detail"] });
  }
 
@@ -846,14 +863,11 @@ function Page() {
  <TableHead className="hidden w-28 text-right whitespace-nowrap sm:table-cell">
  Valor
  </TableHead>
- <TableHead className="hidden w-28 whitespace-nowrap sm:table-cell">
- Status
- </TableHead>
- <TableHead className="hidden w-28 whitespace-nowrap md:table-cell">
+ <TableHead className="hidden w-32 whitespace-nowrap md:table-cell">
  Publicação
  </TableHead>
- <TableHead className="w-20 pr-3 text-right whitespace-nowrap sm:pr-4">
- Ações
+ <TableHead className="w-12 pr-3 text-right whitespace-nowrap sm:pr-4">
+ <span className="sr-only">Ações</span>
  </TableHead>
  </TableRow>
  </TableHeader>
@@ -861,7 +875,7 @@ function Page() {
  {isLoading &&
  Array.from({ length: 6 }).map((_, i) => (
  <TableRow key={`sk-${i}`}>
- {Array.from({ length: 9 }).map((_, j) => (
+ {Array.from({ length: 8 }).map((_, j) => (
  <TableCell key={j} className="py-2">
  <Skeleton className="h-4 w-full" />
  </TableCell>
@@ -870,7 +884,7 @@ function Page() {
  ))}
  {!isLoading && (contratos?.length ?? 0) === 0 && (
  <TableRow>
- <TableCell colSpan={9}>
+ <TableCell colSpan={8}>
  <EmptyState
  icon={FileSignature}
  title={
@@ -929,7 +943,10 @@ function Page() {
  </TableCell>
  <TableCell>
  <div className="flex flex-col gap-1">
- <span className="inline-flex h-7 items-center rounded-md border border-input bg-card px-2.5 font-mono text-xs font-semibold text-foreground shadow-sm ">
+ <span
+ className={`inline-flex h-8 w-fit items-center rounded-md border px-2.5 font-mono text-[12px] font-semibold shadow-sm ${numeroBadgeClass(c.status_envio_m2a ?? "pendente")}`}
+ title={`Status M2A: ${ENVIO_STATUS_LABELS[c.status_envio_m2a ?? "pendente"] ?? "Pendente"}`}
+ >
  {c.numero_contrato}
  </span>
  <div className="truncate text-[12px] text-muted-foreground">
@@ -961,17 +978,6 @@ function Page() {
  </span>
  </div>
  <div className="mt-1 flex flex-wrap items-center gap-1.5 sm:hidden">
- <Badge
- variant="outline"
- className={`text-[10px] font-medium ${m2aBadgeClass(
- c.status_envio_m2a ??"pendente",
- )}`}
- >
- {ENVIO_STATUS_LABELS[
- c.status_envio_m2a ??"pendente"
- ] ??
- c.status_envio_m2a ??"Pendente"}
- </Badge>
  <span className="text-[11px] font-medium tabular-nums text-muted-foreground">
  {BRL.format(c.valor_total)}
  </span>
@@ -980,33 +986,30 @@ function Page() {
  <TableCell className="hidden py-2 text-right tabular-nums text-xs font-medium whitespace-nowrap sm:table-cell">
  {BRL.format(c.valor_total)}
  </TableCell>
- <TableCell className="hidden py-2 sm:table-cell">
- <Badge
- variant="outline"
- className={`text-[10px] font-medium ${m2aBadgeClass(c.status_envio_m2a ??"pendente")}`}
- >
- {ENVIO_STATUS_LABELS[c.status_envio_m2a ??"pendente"] ??
- c.status_envio_m2a ??"Pendente"}
- </Badge>
- </TableCell>
  <TableCell
  className="hidden py-2 md:table-cell"
  onClick={(e) => e.stopPropagation()}
  >
- <div className="flex items-center justify-center gap-1">
- <Button
- size="icon"
- variant="ghost"
- className={`size-7 ${c.impresso_assinado ?"text-emerald-600 hover:text-emerald-700" :"text-muted-foreground/50 hover:text-foreground"}`}
- title={c.impresso_assinado ?"Impresso/Assinado — clique para desmarcar" :"Marcar como impresso/assinado"}
+ <div className="flex items-center justify-center gap-1.5">
+ <button
+ type="button"
+ className={`inline-flex size-9 items-center justify-center rounded-lg border transition-all ${
+ c.impresso_assinado
+ ? "border-emerald-300 bg-emerald-100 text-emerald-700 shadow-sm hover:bg-emerald-200 dark:border-emerald-500/40 dark:bg-emerald-500/20 dark:text-emerald-300"
+ : "border-border bg-muted/40 text-muted-foreground hover:border-foreground/30 hover:bg-muted hover:text-foreground"
+ }`}
+ title={c.impresso_assinado ? "Impresso/Assinado — clique para desmarcar" : "Marcar como impresso/assinado"}
  onClick={() => handleToggleImpresso(c)}
  >
- <Printer className="size-4" />
- </Button>
- <Button
- size="icon"
- variant="ghost"
- className={`size-7 ${(c.publicado || c.publicado_at) ?"text-emerald-600 hover:text-emerald-700" :"text-muted-foreground/50 hover:text-foreground"}`}
+ <Printer className="size-[18px]" strokeWidth={2.25} />
+ </button>
+ <button
+ type="button"
+ className={`inline-flex size-9 items-center justify-center rounded-lg border transition-all disabled:opacity-50 ${
+ (c.publicado || c.publicado_at)
+ ? "border-emerald-300 bg-emerald-100 text-emerald-700 shadow-sm hover:bg-emerald-200 dark:border-emerald-500/40 dark:bg-emerald-500/20 dark:text-emerald-300"
+ : "border-border bg-muted/40 text-muted-foreground hover:border-foreground/30 hover:bg-muted hover:text-foreground"
+ }`}
  title={
  (c.publicado || c.publicado_at)
  ? `Publicado${c.publicado_at ? ` em ${formatDateBR(c.publicado_at)}` :""} — clique para desmarcar`
@@ -1015,39 +1018,46 @@ function Page() {
  disabled={togglingPub === c.id}
  onClick={() => handleTogglePublicado(c)}
  >
- <Megaphone className="size-4" />
- </Button>
+ <Megaphone className="size-[18px]" strokeWidth={2.25} />
+ </button>
  </div>
  </TableCell>
  <TableCell
  className="pr-3 py-2 text-right whitespace-nowrap sm:pr-4"
  onClick={(e) => e.stopPropagation()}
  >
- <div className="flex items-center justify-end gap-1">
+ <DropdownMenu>
+ <DropdownMenuTrigger asChild>
  <Button
  size="icon"
  variant="ghost"
  className="size-8"
- title="Abrir"
+ title="Ações"
+ >
+ <MoreVertical className="size-4" />
+ </Button>
+ </DropdownMenuTrigger>
+ <DropdownMenuContent align="end">
+ <DropdownMenuItem
  onClick={() =>
  navigate({
- to:"/contratos/$id",
+ to: "/contratos/$id",
  params: { id: c.id },
  })
  }
  >
  <Pencil className="size-4" />
- </Button>
- <Button
- size="icon"
- variant="ghost"
- className="size-8 text-destructive hover:text-destructive"
- title="Excluir"
+ Abrir
+ </DropdownMenuItem>
+ <DropdownMenuItem
+ className="text-destructive focus:text-destructive"
  onClick={() => setDeleting(c)}
  >
  <Trash2 className="size-4" />
- </Button>
- </div>
+ Excluir
+ </DropdownMenuItem>
+ </DropdownMenuContent>
+ </DropdownMenu>
  </TableCell>
  </TableRow>
  ))}
@@ -1099,7 +1109,7 @@ function Page() {
  {BRL.format(stats.total)}
  </TableCell>
  <TableCell
- colSpan={3}
+ colSpan={2}
  className="py-2 text-right text-[11px] text-muted-foreground pr-4"
  >
  Soma total
