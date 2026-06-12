@@ -481,6 +481,141 @@ export async function documentosRoutes(app) {
     await zip.finalize();
   });
 
+  // ─── /documentos/baixar/stream ────────────────────────────────────────────
+  // SSE: reporta progresso por documento enquanto monta o ZIP em memória.
+  // Ao final, registra o buffer em preparedZips e devolve { jobId, filename }.
+  app.post("/documentos/baixar/stream", async (req, reply) => {
+    const body = req.body || {};
+    const documentos = Array.isArray(body.documentos) ? body.documentos : [];
+    if (!documentos.length) {
+      return reply.code(400).send({ error: "documentos vazio" });
+    }
+    const filename = safeName(body.filename || "documentos.zip");
+    const total = documentos.length;
+
+    sseInit(reply);
+    sseSend(reply, "progress", { tipo: "inicio", total, filename });
+
+    const zip = archiver("zip", { zlib: { level: 6 } });
+    const chunks = [];
+    zip.on("data", (c) => chunks.push(c));
+    zip.on("warning", (err) => app.log.warn({ err }, "archiver warning"));
+    const zipDone = new Promise((resolve, reject) => {
+      zip.on("end", resolve);
+      zip.on("error", reject);
+    });
+
+    const used = new Set();
+    const safeUnique = (name) => {
+      let base = safeName(name);
+      let candidate = base;
+      let i = 2;
+      while (used.has(candidate.toLowerCase())) {
+        const dot = base.lastIndexOf(".");
+        if (dot > 0) candidate = `${base.slice(0, dot)} (${i})${base.slice(dot)}`;
+        else candidate = `${base} (${i})`;
+        i += 1;
+      }
+      used.add(candidate.toLowerCase());
+      return candidate;
+    };
+
+    let ok = 0;
+    let erro = 0;
+    for (let i = 0; i < documentos.length; i++) {
+      const doc = documentos[i];
+      const rotulo = doc?.nome || `documento ${i + 1}`;
+      sseSend(reply, "progress", {
+        tipo: "documento",
+        index: i + 1,
+        total,
+        nome: rotulo,
+        contrato_id: doc?.contrato_id ?? null,
+        status: "baixando",
+      });
+      try {
+        const r = await fetchOne(doc, null, app.log);
+        const ext = extFromContentType(r.contentType);
+        let nome = doc.nome || filenameFromHeader(r.contentDisposition) || "documento";
+        if (ext && !hasKnownExtension(nome)) nome += ext;
+        zip.append(r.bytes, { name: safeUnique(nome) });
+        ok += 1;
+        sseSend(reply, "progress", {
+          tipo: "documento",
+          index: i + 1,
+          total,
+          nome: rotulo,
+          contrato_id: doc?.contrato_id ?? null,
+          status: "ok",
+          bytes: r.bytes?.length ?? 0,
+        });
+      } catch (err) {
+        erro += 1;
+        app.log.warn({ err: err.message, doc }, "falha ao baixar documento");
+        zip.append(
+          `Falha ao baixar este documento.\nMotivo: ${err.message}\n`,
+          { name: safeUnique(`ERRO - ${rotulo}.txt`) },
+        );
+        sseSend(reply, "progress", {
+          tipo: "documento",
+          index: i + 1,
+          total,
+          nome: rotulo,
+          contrato_id: doc?.contrato_id ?? null,
+          status: "erro",
+          erro: err.message,
+        });
+      }
+    }
+
+    sseSend(reply, "progress", { tipo: "compactando", total });
+    zip.finalize();
+    try {
+      await zipDone;
+    } catch (err) {
+      sseSend(reply, "error", { error: err.message });
+      reply.raw.end();
+      return;
+    }
+
+    const buffer = Buffer.concat(chunks);
+    const jobId = randomJobId();
+    preparedZips.set(jobId, {
+      buffer,
+      filename,
+      expiresAt: Date.now() + ZIP_TTL_MS,
+    });
+    sseSend(reply, "done", {
+      jobId,
+      filename,
+      total,
+      ok,
+      erro,
+      size: buffer.length,
+    });
+    reply.raw.end();
+  });
+
+  // GET /documentos/baixar/arquivo/:jobId — entrega o ZIP preparado e descarta.
+  app.get("/documentos/baixar/arquivo/:jobId", async (req, reply) => {
+    const jobId = String(req.params?.jobId || "").trim();
+    const entry = preparedZips.get(jobId);
+    if (!entry) {
+      return reply.code(404).send({ error: "jobId não encontrado ou expirado" });
+    }
+    preparedZips.delete(jobId);
+    return reply
+      .header("Content-Type", "application/zip")
+      .header(
+        "Content-Disposition",
+        `attachment; filename="${safeName(entry.filename)}"`,
+      )
+      .header("Cache-Control", "no-store")
+      .send(entry.buffer);
+  });
+
+
+
   // Diagnóstico: retorna anchors/iframes/forms encontrados nas páginas do contrato
   // que referenciam o id do documento. Use pra descobrir a URL real do download.
   // POST /documentos/diagnostico  { contrato_id, id_m2a }
