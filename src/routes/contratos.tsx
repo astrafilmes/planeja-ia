@@ -863,14 +863,11 @@ function Page() {
  <TableHead className="hidden w-28 text-right whitespace-nowrap sm:table-cell">
  Valor
  </TableHead>
- <TableHead className="hidden w-28 whitespace-nowrap sm:table-cell">
- Status
- </TableHead>
- <TableHead className="hidden w-28 whitespace-nowrap md:table-cell">
+ <TableHead className="hidden w-32 whitespace-nowrap md:table-cell">
  Publicação
  </TableHead>
- <TableHead className="w-20 pr-3 text-right whitespace-nowrap sm:pr-4">
- Ações
+ <TableHead className="w-12 pr-3 text-right whitespace-nowrap sm:pr-4">
+ <span className="sr-only">Ações</span>
  </TableHead>
  </TableRow>
  </TableHeader>
