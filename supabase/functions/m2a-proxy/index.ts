@@ -118,6 +118,8 @@ Deno.serve(async (req) => {
     const text = await workerRes.text();
     return new Response(text, { status: workerRes.status, headers });
   }
-  const buf = await workerRes.arrayBuffer();
-  return new Response(buf, { status: workerRes.status, headers });
+  // Binário (pdf, zip, etc.): repassa o body como stream para evitar
+  // estourar memória e o erro "error reading a body from connection"
+  // quando o worker envia chunked transfer-encoding (zip streaming).
+  return new Response(workerRes.body, { status: workerRes.status, headers });
 });
