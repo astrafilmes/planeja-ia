@@ -164,6 +164,16 @@ function m2aBadgeClass(s: string) {
  return"border-border/60 bg-muted/40 text-muted-foreground dark:text-muted-foreground";
 }
 
+function numeroBadgeClass(s: string) {
+ if (["sucesso","enviado"].includes(s))
+ return"border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-200";
+ if (s ==="erro")
+ return"border-red-300 bg-red-50 text-red-700 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-300";
+ if (s ==="processando")
+ return"border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-500/40 dark:bg-blue-500/15 dark:text-blue-300";
+ return"border-input bg-card text-foreground";
+}
+
 function normalizeDocumentosM2A(
  value: unknown,
  contrato: { id: string; numero_contrato: string; m2a_contrato_id?: string | null },
