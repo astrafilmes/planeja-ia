@@ -942,17 +942,12 @@ function Page() {
  />
  </TableCell>
  <TableCell>
- <div className="flex flex-col gap-1">
  <span
  className={`inline-flex h-8 w-fit items-center rounded-md border px-2.5 font-mono text-[12px] font-semibold shadow-sm ${numeroBadgeClass(c.status_envio_m2a ?? "pendente")}`}
  title={`Status M2A: ${ENVIO_STATUS_LABELS[c.status_envio_m2a ?? "pendente"] ?? "Pendente"}`}
  >
  {c.numero_contrato}
  </span>
- <div className="truncate text-[12px] text-muted-foreground">
- {c.secretaria_sigla ??"Sem secretaria"}
- </div>
- </div>
  </TableCell>
  <TableCell className="hidden py-2 font-mono text-[13px] text-muted-foreground whitespace-nowrap md:table-cell">
  {formatDateBR(c.data ?? c.data_texto_legado)}
