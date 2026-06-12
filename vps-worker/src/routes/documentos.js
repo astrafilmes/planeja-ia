@@ -361,6 +361,39 @@ async function fetchOne(doc, _hrefMap, log) {
 
 
 
+// ─── Job store em memória p/ ZIPs preparados via SSE ──────────────────────────
+// O endpoint /stream prepara o ZIP enquanto reporta progresso por documento,
+// guarda o buffer aqui com um TTL curto, e devolve um jobId. O frontend
+// busca o ZIP pronto via /documentos/baixar/arquivo/:jobId logo em seguida.
+const ZIP_TTL_MS = 10 * 60 * 1000;
+const preparedZips = new Map(); // jobId -> { buffer, filename, expiresAt }
+
+function gcPreparedZips() {
+  const now = Date.now();
+  for (const [k, v] of preparedZips) {
+    if (v.expiresAt < now) preparedZips.delete(k);
+  }
+}
+const _gcTimer = setInterval(gcPreparedZips, 60_000);
+_gcTimer.unref?.();
+
+function randomJobId() {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function sseInit(reply) {
+  reply.raw.writeHead(200, {
+    "Content-Type": "text/event-stream; charset=utf-8",
+    "Cache-Control": "no-cache, no-transform",
+    Connection: "keep-alive",
+    "X-Accel-Buffering": "no",
+  });
+}
+function sseSend(reply, event, data) {
+  reply.raw.write(`event: ${event}\n`);
+  reply.raw.write(`data: ${JSON.stringify(data)}\n\n`);
+}
+
 
 export async function documentosRoutes(app) {
   app.post("/documentos/baixar", async (req, reply) => {
