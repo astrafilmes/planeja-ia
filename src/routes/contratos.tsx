@@ -875,7 +875,7 @@ function Page() {
  {isLoading &&
  Array.from({ length: 6 }).map((_, i) => (
  <TableRow key={`sk-${i}`}>
- {Array.from({ length: 9 }).map((_, j) => (
+ {Array.from({ length: 8 }).map((_, j) => (
  <TableCell key={j} className="py-2">
  <Skeleton className="h-4 w-full" />
  </TableCell>
@@ -884,7 +884,7 @@ function Page() {
  ))}
  {!isLoading && (contratos?.length ?? 0) === 0 && (
  <TableRow>
- <TableCell colSpan={9}>
+ <TableCell colSpan={8}>
  <EmptyState
  icon={FileSignature}
  title={
