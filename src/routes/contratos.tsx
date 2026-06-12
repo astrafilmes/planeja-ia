@@ -64,7 +64,7 @@ import {
  AlertDialogHeader,
  AlertDialogTitle,
 } from"@/components/ui/alert-dialog";
-import {
+ import {
  Plus,
  Search,
  Download,
@@ -79,6 +79,8 @@ import {
  Pencil,
  CheckCircle2,
  Circle,
+ Printer,
+ Megaphone,
 
 } from"lucide-react";
 import { toast } from"sonner";
@@ -235,7 +237,7 @@ function Page() {
  queryFn: async () => {
  let q = supabase
  .from("contratos")
- .select("id, numero_contrato, secretaria_id, secretaria_sigla, secretaria_nome, fornecedor_nome, preposto, objeto, fiscal, data, data_texto_legado, status, status_envio_m2a, m2a_contrato_id, m2a_documentos_gerados, link_contrato, created_at, publicado_at, publicado_por",
+ .select("id, numero_contrato, secretaria_id, secretaria_sigla, secretaria_nome, fornecedor_nome, preposto, objeto, fiscal, data, data_texto_legado, status, status_envio_m2a, m2a_contrato_id, m2a_documentos_gerados, link_contrato, created_at, publicado, publicado_at, publicado_por, impresso_assinado",
  )
  .is("deleted_at", null)
  .order("created_at", { ascending: false });
@@ -379,15 +381,15 @@ function Page() {
  async function handleTogglePublicado(c: any) {
  setTogglingPub(c.id);
  try {
- const isPub = !!c.publicado_at;
+ const isPub = !!c.publicado_at || !!c.publicado;
  const { data: userData } = await supabase.auth.getUser();
  const uid = userData.user?.id ?? null;
  const { error } = await supabase
  .from("contratos")
  .update(
  isPub
- ? { publicado_at: null, publicado_por: null }
- : { publicado_at: new Date().toISOString(), publicado_por: uid },
+ ? { publicado: false, publicado_at: null, publicado_por: null }
+ : { publicado: true, publicado_at: new Date().toISOString(), publicado_por: uid },
  )
  .eq("id", c.id);
  if (error) return toast.error(error.message);
@@ -399,9 +401,28 @@ function Page() {
  });
  toast.success(isPub ?"Marcado como não publicado" :"Marcado como publicado");
  qc.invalidateQueries({ queryKey: ["contratos"] });
+ qc.invalidateQueries({ queryKey: ["processo-detail"] });
  } finally {
  setTogglingPub(null);
  }
+ }
+
+ async function handleToggleImpresso(c: any) {
+ const next = !c.impresso_assinado;
+ const { error } = await supabase
+ .from("contratos")
+ .update({ impresso_assinado: next })
+ .eq("id", c.id);
+ if (error) return toast.error(error.message);
+ await logAudit({
+ action:"update",
+ entityType:"contrato",
+ entityId: c.id,
+ payload: { impresso_assinado: next },
+ });
+ toast.success(next ?"Marcado como impresso/assinado" :"Desmarcado");
+ qc.invalidateQueries({ queryKey: ["contratos"] });
+ qc.invalidateQueries({ queryKey: ["processo-detail"] });
  }
 
  async function handleBulkDelete() {
@@ -972,30 +993,31 @@ function Page() {
  className="hidden py-2 md:table-cell"
  onClick={(e) => e.stopPropagation()}
  >
+ <div className="flex items-center justify-center gap-1">
  <Button
- size="sm"
- variant={c.publicado_at ?"default" :"outline"}
- className={`h-7 gap-1.5 px-2 text-[11px] font-medium ${c.publicado_at ?"bg-emerald-600 text-white hover:bg-emerald-700" :"text-muted-foreground"}`}
- disabled={togglingPub === c.id}
- onClick={() => handleTogglePublicado(c)}
+ size="icon"
+ variant="ghost"
+ className={`size-7 ${c.impresso_assinado ?"text-emerald-600 hover:text-emerald-700" :"text-muted-foreground/50 hover:text-foreground"}`}
+ title={c.impresso_assinado ?"Impresso/Assinado — clique para desmarcar" :"Marcar como impresso/assinado"}
+ onClick={() => handleToggleImpresso(c)}
+ >
+ <Printer className="size-4" />
+ </Button>
+ <Button
+ size="icon"
+ variant="ghost"
+ className={`size-7 ${(c.publicado || c.publicado_at) ?"text-emerald-600 hover:text-emerald-700" :"text-muted-foreground/50 hover:text-foreground"}`}
  title={
- c.publicado_at
- ? `Publicado em ${formatDateBR(c.publicado_at)} — clique para desmarcar`
+ (c.publicado || c.publicado_at)
+ ? `Publicado${c.publicado_at ? ` em ${formatDateBR(c.publicado_at)}` :""} — clique para desmarcar`
  :"Marcar como publicado"
  }
+ disabled={togglingPub === c.id}
+ onClick={() => handleTogglePublicado(c)}
  >
- {c.publicado_at ? (
- <>
- <CheckCircle2 className="size-3.5" />
- Publicado
- </>
- ) : (
- <>
- <Circle className="size-3.5" />
- Marcar
- </>
- )}
+ <Megaphone className="size-4" />
  </Button>
+ </div>
  </TableCell>
  <TableCell
  className="pr-3 py-2 text-right whitespace-nowrap sm:pr-4"
