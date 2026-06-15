@@ -229,6 +229,19 @@ export async function atualizarProcesso(processoId, payload) {
   console.log(
     `[atualizarProcesso] camposAtuais (${Object.keys(camposAtuais).length}): ${JSON.stringify(camposAtuais)}`,
   );
+  if (Object.keys(camposAtuais).length === 0) {
+    const html = pageRes.html || "";
+    const nForms = $page("form").length;
+    const nInputs = $page("input").length;
+    const nSelects = $page("select").length;
+    const nTextareas = $page("textarea").length;
+    const idx = html.indexOf("<form");
+    const trecho =
+      idx >= 0 ? html.slice(idx, idx + 3000).replace(/\s+/g, " ") : "(sem <form)";
+    console.warn(
+      `[atualizarProcesso] FORM VAZIO — forms=${nForms} inputs=${nInputs} selects=${nSelects} textareas=${nTextareas} | trecho="${trecho}"`,
+    );
+  }
 
   const numeroLimpo = String(payload.numero ?? "")
     .replace(/[^0-9/]/g, "")
