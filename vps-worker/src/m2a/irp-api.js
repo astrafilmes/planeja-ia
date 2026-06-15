@@ -372,16 +372,25 @@ export async function listarItensIntencao(intencaoId) {
   // cada linha tem um checkbox .checkboxintencao_registro_itens com value=ITEM_INTENCAO_ID
   $("tr").each((_, tr) => {
     const $tr = $(tr);
-    const cb = $tr
+    // Procura o PRIMEIRO checkbox com value numérico real (ignora "on" do master selector).
+    let id = "";
+    $tr
       .find("input.checkboxintencao_registro_itens, input.checkboxes, input[type=checkbox]")
-      .first();
-    const id = cb.attr("value");
-    if (!id) return;
+      .each((_i, el) => {
+        if (id) return;
+        const v = $(el).attr("value") || "";
+        if (isValidNumericId(v)) id = v;
+      });
+    if (!isValidNumericId(id)) return;
     const texto = $tr.text().replace(/\s+/g, " ").trim();
     out.push({ itemIntencaoId: String(id), texto });
   });
+  console.log(
+    `[irp-api] listarItensIntencao(${intencaoId}) → ${out.length} itens (ids válidos)`,
+  );
   return out;
 }
+
 
 // =====================================================================
 // PASSO 7 — atualiza a quantidade que esta participante quer daquele item
