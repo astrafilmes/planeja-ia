@@ -24,6 +24,7 @@ type IrpJob = Database["public"]["Tables"]["irp_jobs"]["Row"];
 export interface IrpCabecalhoForm {
   objeto: string;
   data: string;
+  data_consolidacao: string;
   ano_orcamento: string;
   orgao_solicitante: string;
   unidade_orcamentaria: string;
