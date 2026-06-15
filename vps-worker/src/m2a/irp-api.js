@@ -384,11 +384,12 @@ export async function finalizarParaConsolidacao(intencaoId, dataISO) {
 // =====================================================================
 // PASSO 8.2 — consolidar oficialmente
 // =====================================================================
-export async function consolidarIntencao(intencaoId) {
+export async function consolidarIntencao(intencaoId, dataISO) {
   const csrf = await getCsrfGlobal();
   const body = new URLSearchParams();
   body.set("csrfmiddlewaretoken", csrf);
   body.set("text", "true");
+  if (dataISO) body.set("data_input", String(dataISO));
   const res = await m2a.request("POST", URL_CONSOLIDAR(intencaoId), {
     body: body.toString(),
     headers: {
