@@ -79,7 +79,7 @@ type Props = {
   busy: boolean;
   form: Form;
   rows: ImportRow[];
-  secRowByNumero: Map<string, SecRow>;
+  secRowByNumero: Map<string | number, SecRow>;
   onConfirm: () => void;
 };
 
