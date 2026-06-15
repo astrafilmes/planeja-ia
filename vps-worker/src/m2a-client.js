@@ -60,9 +60,13 @@ class M2aClient {
   }
 
   static isLoginPage(html, finalUrl = "") {
-    if (!html) return false;
-    if (/(?:\/login\/|\/usuario\/login\/)/i.test(finalUrl)) return true;
-    return /name=["']password["']/i.test(html);
+    // Só consideramos página de login quando a URL final aponta pra rota
+    // de login do portal. NÃO usar heurística por HTML (name="password"),
+    // porque várias páginas internas do M2A têm campo de "alterar senha"
+    // no menu do usuário e isso gera falso positivo — o que disparava
+    // re-login e invalidava o CSRF token do POST original (→ 403).
+    if (!finalUrl) return false;
+    return /(?:\/login\/|\/usuario\/login\/)/i.test(finalUrl);
   }
 
   rememberCsrf(html, sourceUrl) {
