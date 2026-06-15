@@ -254,7 +254,11 @@ export async function incluirItemNaDFD({
   especificacao,
   quantidade,
 }) {
-  const csrf = await getCsrfGlobal();
+  const beforeIds = await listarItensDFD(dfdId).catch((err) => {
+    console.warn(`[irp-api] não consegui listar itens da DFD antes do POST: ${err?.message ?? err}`);
+    return [];
+  });
+  const csrf = await m2a.getCsrf(URL_SOLICITACAO_ITEM(dfdId), { force: true });
   const fd = new FormData();
   fd.append("csrfmiddlewaretoken", csrf);
   fd.append("item_padronizado", String(itemPadronizadoId));
@@ -266,7 +270,13 @@ export async function incluirItemNaDFD({
   fd.append("_salvar", "");
 
   const res = await m2a.postMultipart(URL_SOLICITACAO_ITEM(dfdId), fd, {
-    headers: { Referer: `${m2a.http.defaults.baseURL || ""}/gestao_compras/formalizacao_demanda/${dfdId}/` },
+    ajax: false,
+    maxRedirects: 0,
+    headers: {
+      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      Origin: m2a.http.defaults.baseURL || "",
+      Referer: `${m2a.http.defaults.baseURL || ""}${URL_SOLICITACAO_ITEM(dfdId)}`,
+    },
   });
   if (res.status >= 400) {
     throw new Error(
@@ -274,7 +284,29 @@ export async function incluirItemNaDFD({
     );
   }
   ensureOkJson(res, "incluirItemNaDFD", String(itemPadronizadoId));
+  const afterIds = await listarItensDFD(dfdId);
+  const before = new Set(beforeIds.map(String));
+  const created = afterIds.filter((id) => !before.has(String(id)));
+  if (!created.length && afterIds.length <= beforeIds.length) {
+    throw new Error(
+      `incluirItemNaDFD (${itemPadronizadoId}): M2A aceitou o POST, mas o item não apareceu na tabela da DFD ${dfdId}.`,
+    );
+  }
+  console.log(
+    `[irp-api] item ${itemPadronizadoId} vinculado à DFD ${dfdId}; itens antes=${beforeIds.length} depois=${afterIds.length}`,
+  );
   return { ok: true };
+}
+
+export async function listarItensDFD(dfdId) {
+  const res = await m2a.get(URL_SOLICITACAO_ITEM_TABELA(dfdId));
+  if (res.status >= 400) throw new Error(`listarItensDFD(${dfdId}): status ${res.status}`);
+  const ids = extractIdsFromRows(
+    res.html,
+    "input.checkboxsolicitacao_item, input.checkbox-solicitacao-item, input.checkboxes, input[type=checkbox]",
+  );
+  console.log(`[irp-api] listarItensDFD(${dfdId}) → ${ids.length} itens`);
+  return ids;
 }
 
 // =====================================================================
