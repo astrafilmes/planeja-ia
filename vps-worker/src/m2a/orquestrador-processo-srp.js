@@ -59,6 +59,7 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
     numero: payload.numero,
     objeto: payload.objeto,
     data_processo: payload.data,
+    classificacao: payload.classificacao,
     unidade_orcamentaria_gerenciadora:
       payload.unidade_orcamentaria_gerenciadora || payload.unidade_orcamentaria,
   });
