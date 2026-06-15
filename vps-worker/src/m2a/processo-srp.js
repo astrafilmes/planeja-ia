@@ -235,17 +235,18 @@ function extrairErrosComCampo($) {
 }
 
 export async function atualizarProcesso(processoId, payload) {
-  const path = PROCESSO_ATUALIZAR_TPL(processoId);
+  const getPath = PROCESSO_ATUALIZAR_GET_TPL(processoId);
+  const postPath = PROCESSO_ATUALIZAR_POST_TPL(processoId);
 
   // 1) Carrega a página do form para ler o CSRF E todos os campos atuais
-  const pageRes = await m2a.get(path);
+  const pageRes = await m2a.get(getPath);
   if (pageRes.status >= 400) {
-    throw new Error(`Atualizar processo: GET ${path} status ${pageRes.status}`);
+    throw new Error(`Atualizar processo: GET ${getPath} status ${pageRes.status}`);
   }
   const $page = loadDoc(pageRes.html);
   const csrf =
     $page('input[name="csrfmiddlewaretoken"]').first().attr("value") ||
-    (await m2a.getCsrf(path, { force: true }));
+    (await m2a.getCsrf(getPath, { force: true }));
 
   const camposAtuais = extrairCamposFormAtual($page);
   console.log(
