@@ -175,14 +175,36 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
     );
   }
 
-  // 8. Para CADA intenção gerada: disponibilizar + manifestar + setar qty + finalizar + consolidar
+  // 8. Para cada intenção pareada com uma secretaria participante COM quantidade > 0:
+  //    disponibilizar + manifestar + setar qty + finalizar + consolidar.
+  //    Intenções órfãs (sem secretaria) ou de secretarias sem itens são ignoradas
+  //    silenciosamente — o Django retorna 500 ao tentar finalizar IRP vazia.
   const todasIntencoes = intencoes;
+  let ignoradasSemSecretaria = 0;
+  let ignoradasSemQuantidade = 0;
   for (let k = 0; k < todasIntencoes.length; k++) {
     const intencao = todasIntencoes[k];
     const secretaria = matchByIntencaoId.get(String(intencao.intencaoId)) || null;
-    const rotulo = secretaria
-      ? (secretaria.sigla || secretaria.nome)
-      : `intencao#${intencao.intencaoId}`;
+    if (!secretaria) {
+      ignoradasSemSecretaria++;
+      console.log(
+        `[irp] intenção ${intencao.intencaoId}: sem secretaria pareada → ignorada (não vou finalizar IRP vazia).`,
+      );
+      continue;
+    }
+    // Soma as quantidades previstas desta secretaria em todos os itens.
+    const somaQty = itensCriados.reduce((acc, { input }) => {
+      const q = Number(input?.quantidades?.[secretaria.numero] ?? 0);
+      return acc + (Number.isFinite(q) && q > 0 ? q : 0);
+    }, 0);
+    if (somaQty <= 0) {
+      ignoradasSemQuantidade++;
+      console.log(
+        `[irp] intenção ${intencao.intencaoId} (${secretaria.sigla || secretaria.nome}): todas as quantidades = 0 → ignorada.`,
+      );
+      continue;
+    }
+    const rotulo = secretaria.sigla || secretaria.nome;
     const baseProg = 55 + (k / Math.max(todasIntencoes.length, 1)) * 42;
     onProgress({
       etapa: "intencoes",
@@ -209,10 +231,8 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
       for (let j = 0; j < N; j++) {
         const itemIntencao = itensIntencao[j];
         const original = itensCriados[j].input;
-        // Se for órfã (sem secretaria pareada), injeta 0 para fechar o ciclo.
-        const qty = secretaria
-          ? Number(original?.quantidades?.[secretaria.numero] ?? 0)
-          : 0;
+        const qty = Number(original?.quantidades?.[secretaria.numero] ?? 0);
+        if (!Number.isFinite(qty) || qty <= 0) continue; // pula item sem demanda
         await atualizarQuantidadeItem({
           itemIntencaoId: itemIntencao.itemIntencaoId,
           intencaoId: intencao.intencaoId,
@@ -233,6 +253,11 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
         erro: msg,
       });
     }
+  }
+  if (ignoradasSemSecretaria || ignoradasSemQuantidade) {
+    console.log(
+      `[irp] resumo: ${ignoradasSemSecretaria} intenções órfãs ignoradas, ${ignoradasSemQuantidade} sem quantidade ignoradas.`,
+    );
   }
 
   onProgress({

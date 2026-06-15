@@ -7,29 +7,35 @@ import FormData from "form-data";
 import { m2a } from "../m2a-client.js";
 import { loadDoc, sleep, formatQuantidadeM2A, normalizeComparableText } from "./utils.js";
 
-// Sanitiza quantidade para o POST de inclusão de item na DFD.
-// Django rejeita "", null, undefined ou strings com ponto como decimal.
-// Regra: se inválido/<=0, força "1,000" (a Gerenciadora pode atualizar depois).
-function sanitizeQuantidadeDFD(value) {
+// Sanitiza quantidade para o Django M2A.
+// Regras:
+//  - aceita number, "1.500" (ponto = milhar do Excel) ou "1500,5" (vírgula = decimal);
+//  - inteiro vira string sem decimais ("1500");
+//  - decimal vira string com vírgula ("1500,5");
+//  - inválido/<0 → "0".
+export function sanitizeQuantidadeM2A(value) {
   let n;
   if (typeof value === "number") {
     n = value;
   } else {
     const raw = String(value ?? "").trim();
     if (!raw) {
-      n = NaN;
+      n = 0;
     } else if (raw.includes(",")) {
+      // formato BR: "1.500,75" → 1500.75
       n = Number(raw.replace(/\./g, "").replace(",", "."));
+    } else if ((raw.match(/\./g) || []).length > 1) {
+      // múltiplos pontos = separador de milhar ("1.500.000")
+      n = Number(raw.replace(/\./g, ""));
     } else {
       n = Number(raw);
     }
   }
-  if (!Number.isFinite(n) || n <= 0) n = 1;
-  return n.toLocaleString("pt-BR", {
-    minimumFractionDigits: 3,
-    maximumFractionDigits: 3,
-  });
+  if (!Number.isFinite(n) || n < 0) n = 0;
+  return Number.isInteger(n) ? String(n) : String(n).replace(".", ",");
 }
+// alias retrocompatível
+const sanitizeQuantidadeDFD = sanitizeQuantidadeM2A;
 import { resolverNaturezaId } from "./irp-naturezas.js";
 import { resolverUnidadeId, nomeUnidadeNormalizado } from "./irp-unidades.js";
 
@@ -492,11 +498,12 @@ export async function atualizarQuantidadeItem({
     );
   }
   const csrf = await getCsrfGlobal();
+  const qtyStr = sanitizeQuantidadeM2A(quantidade);
   // Bíblia M2A: application/x-www-form-urlencoded, sem _salvar.
   const body = new URLSearchParams();
   body.set("csrfmiddlewaretoken", csrf);
   body.set("intencao_registro_preco", String(intencaoId));
-  body.set("quantidade", formatQuantidadeM2A(quantidade));
+  body.set("quantidade", qtyStr);
   const res = await m2a.request("POST", URL_ATUALIZAR_QTD_ITEM(itemIntencaoId), {
     body: body.toString(),
     headers: {
@@ -510,7 +517,7 @@ export async function atualizarQuantidadeItem({
       `atualizarQuantidadeItem(${itemIntencaoId}): status ${res.status}`,
     );
   }
-  ensureOkJson(res, "atualizarQuantidadeItem", `item=${itemIntencaoId} qty=${formatQuantidadeM2A(quantidade)}`);
+  ensureOkJson(res, "atualizarQuantidadeItem", `item=${itemIntencaoId} qty=${qtyStr}`);
   return { ok: true };
 }
 
