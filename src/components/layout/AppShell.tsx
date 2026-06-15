@@ -87,7 +87,6 @@ const nav: NavEntry[] = [
     icon: ClipboardList,
     items: [
       { to: "/secretarias", label: "Secretarias", icon: Building2 },
-      { to: "/agentes-planejamento", label: "Agentes de planejamento", icon: UserCheck },
       { to: "/fornecedores", label: "Fornecedores", icon: HandCoins },
       { to: "/fiscais", label: "Fiscais", icon: UserCheck },
       { to: "/gestores", label: "Gestores", icon: Users },
