@@ -45,7 +45,7 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
     mensagem: "Localizando IDs da DFD e do processo…",
     progresso: 25,
   });
-  const { dfdId, processoId } = await capturarIdsProcesso({
+  const { dfdId, processoId, numero: numeroPortal } = await capturarIdsProcesso({
     objeto: payload.objeto,
   });
 
@@ -53,10 +53,11 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
     etapa: "atualizar_processo",
     mensagem: `Atualizando processo ${processoId}…`,
     progresso: 45,
-    payload: { dfdId, processoId },
+    payload: { dfdId, processoId, numero: numeroPortal },
   });
   await atualizarProcesso(processoId, {
-    numero: payload.numero,
+    // numero gerado pelo portal SEMPRE tem prioridade; só usa fallback do frontend se não veio
+    numero: numeroPortal || payload.numero,
     objeto: payload.objeto,
     data_processo: payload.data,
     classificacao: payload.classificacao,
