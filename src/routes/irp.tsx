@@ -302,7 +302,9 @@ function Page() {
  queryFn: async () => {
  const { data, error } = await supabase
  .from("irp_job_secretarias")
- .select("id, unidade_id, numero, nome")
+ .select(
+ "id, unidade_id, numero, nome, dotacao_orgao, dotacao_uo, dotacao_projeto_atividade, fiscal_servidor_id, gestor_servidor_id, m2a_status, m2a_mensagem",
+ )
  .eq("job_id", jobId!);
  if (error) throw error;
  return data ?? [];
