@@ -80,9 +80,14 @@ export function IrpCabecalhoCard({
       (initialJob as any).unidade_orcamentaria_m2a_pk ??
       form.unidade_orcamentaria;
     const mapping = getOrgaoMapping(orgao);
+    const dataDfd = initialJob.data_processo ?? form.data;
     onChange({
       objeto: initialJob.objeto ?? form.objeto,
-      data: initialJob.data_processo ?? form.data,
+      data: dataDfd,
+      data_consolidacao:
+        (initialJob as any).data_consolidacao ??
+        form.data_consolidacao ??
+        proximoDiaUtil(dataDfd),
       ano_orcamento:
         initialJob.ano_orcamento != null
           ? String(initialJob.ano_orcamento)
