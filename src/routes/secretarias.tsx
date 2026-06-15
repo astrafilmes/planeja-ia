@@ -709,12 +709,10 @@ function Page() {
  title={actor?.nome ?? fallbackName ??""}
  >
  {actor?.nome ?? fallbackName}
- </div>
       </div>
-
- </div>
- );
- };
+    </div>
+  );
+};
 
  return (
  <AppShell
