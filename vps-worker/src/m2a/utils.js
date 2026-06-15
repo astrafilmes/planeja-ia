@@ -272,20 +272,16 @@ export function normalizeAtaItemId(value) {
 }
 
 export function formatQuantidadeM2A(value) {
-  if (value === null || value === undefined || value === "") return "0,00";
-  if (typeof value === "number") {
-    return value.toLocaleString("pt-BR", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 4,
-    });
-  }
+  if (value === null || value === undefined || value === "") return "0,000";
   const raw = String(value).trim();
-  if (raw.includes(",")) return raw;
-  const numeric = Number(raw);
+  const numeric =
+    typeof value === "number"
+      ? value
+      : Number(raw.replace(/\./g, "").replace(",", "."));
   if (Number.isFinite(numeric)) {
     return numeric.toLocaleString("pt-BR", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 4,
+      minimumFractionDigits: 3,
+      maximumFractionDigits: 3,
     });
   }
   return raw;
