@@ -229,9 +229,14 @@ export async function obterUnidadeFornecimento(itemPadronizadoId) {
   }
   // o portal devolve { unidade_fornecimento: { id: 92797, ... } } ou
   // {unidades_fornecimento: [{id, ...}]} — cobrimos os dois.
+  // A Bíblia da M2A define a forma canônica: unidade_fornecimento[0].id (array).
+  // Mantemos fallbacks defensivos para outras formas já vistas em produção.
   const ufId =
+    json?.unidade_fornecimento?.[0]?.id ??
     json?.unidade_fornecimento?.id ??
-    json?.unidade_fornecimento ??
+    (typeof json?.unidade_fornecimento === "number" || typeof json?.unidade_fornecimento === "string"
+      ? json.unidade_fornecimento
+      : null) ??
     json?.unidades_fornecimento?.[0]?.id ??
     json?.id_unidade_fornecimento ??
     null;
