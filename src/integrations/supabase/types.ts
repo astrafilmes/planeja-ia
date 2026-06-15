@@ -1016,39 +1016,6 @@ export type Database = {
           },
         ]
       }
-      m2a_agentes_planejamento: {
-        Row: {
-          ativo: boolean
-          created_at: string
-          data_referencia: string | null
-          id_local: string
-          nome: string
-          servidor_m2a_id: string
-          unidade_m2a_id: string
-          updated_at: string
-        }
-        Insert: {
-          ativo?: boolean
-          created_at?: string
-          data_referencia?: string | null
-          id_local?: string
-          nome: string
-          servidor_m2a_id: string
-          unidade_m2a_id: string
-          updated_at?: string
-        }
-        Update: {
-          ativo?: boolean
-          created_at?: string
-          data_referencia?: string | null
-          id_local?: string
-          nome?: string
-          servidor_m2a_id?: string
-          unidade_m2a_id?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       m2a_atas: {
         Row: {
           created_at: string
@@ -1367,36 +1334,6 @@ export type Database = {
           m2a_id?: string
           nome?: string
           sigla?: string | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      m2a_unidades_orcamentarias: {
-        Row: {
-          ativa: boolean
-          created_at: string
-          id_local: string
-          m2a_id: string
-          nome: string
-          orgao_m2a_id: string
-          updated_at: string
-        }
-        Insert: {
-          ativa?: boolean
-          created_at?: string
-          id_local?: string
-          m2a_id: string
-          nome: string
-          orgao_m2a_id: string
-          updated_at?: string
-        }
-        Update: {
-          ativa?: boolean
-          created_at?: string
-          id_local?: string
-          m2a_id?: string
-          nome?: string
-          orgao_m2a_id?: string
           updated_at?: string
         }
         Relationships: []
