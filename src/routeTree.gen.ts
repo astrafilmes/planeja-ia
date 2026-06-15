@@ -23,6 +23,7 @@ import { Route as FornecedoresRouteImport } from './routes/fornecedores'
 import { Route as FiscaisRouteImport } from './routes/fiscais'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ContratosRouteImport } from './routes/contratos'
+import { Route as AgentesPlanejamentoRouteImport } from './routes/agentes-planejamento'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProcessosIdRouteImport } from './routes/processos.$id'
 import { Route as ContratosIdRouteImport } from './routes/contratos.$id'
@@ -97,6 +98,11 @@ const ContratosRoute = ContratosRouteImport.update({
   path: '/contratos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AgentesPlanejamentoRoute = AgentesPlanejamentoRouteImport.update({
+  id: '/agentes-planejamento',
+  path: '/agentes-planejamento',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -115,6 +121,7 @@ const ContratosIdRoute = ContratosIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/agentes-planejamento': typeof AgentesPlanejamentoRoute
   '/contratos': typeof ContratosRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/fiscais': typeof FiscaisRoute
@@ -134,6 +141,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/agentes-planejamento': typeof AgentesPlanejamentoRoute
   '/contratos': typeof ContratosRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/fiscais': typeof FiscaisRoute
@@ -154,6 +162,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/agentes-planejamento': typeof AgentesPlanejamentoRoute
   '/contratos': typeof ContratosRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/fiscais': typeof FiscaisRoute
@@ -175,6 +184,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/agentes-planejamento'
     | '/contratos'
     | '/dashboard'
     | '/fiscais'
@@ -194,6 +204,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/agentes-planejamento'
     | '/contratos'
     | '/dashboard'
     | '/fiscais'
@@ -213,6 +224,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/agentes-planejamento'
     | '/contratos'
     | '/dashboard'
     | '/fiscais'
@@ -233,6 +245,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AgentesPlanejamentoRoute: typeof AgentesPlanejamentoRoute
   ContratosRoute: typeof ContratosRouteWithChildren
   DashboardRoute: typeof DashboardRoute
   FiscaisRoute: typeof FiscaisRoute
@@ -349,6 +362,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ContratosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/agentes-planejamento': {
+      id: '/agentes-planejamento'
+      path: '/agentes-planejamento'
+      fullPath: '/agentes-planejamento'
+      preLoaderRoute: typeof AgentesPlanejamentoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -399,6 +419,7 @@ const ProcessosRouteWithChildren = ProcessosRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AgentesPlanejamentoRoute: AgentesPlanejamentoRoute,
   ContratosRoute: ContratosRouteWithChildren,
   DashboardRoute: DashboardRoute,
   FiscaisRoute: FiscaisRoute,

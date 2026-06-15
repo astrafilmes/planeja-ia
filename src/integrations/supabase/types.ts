@@ -805,6 +805,7 @@ export type Database = {
       }
       irp_jobs: {
         Row: {
+          agente_planejamento_m2a_pk: string | null
           ano_orcamento: number | null
           classificacao: string | null
           comissao_planejamento: string | null
@@ -839,10 +840,12 @@ export type Database = {
           total_secretarias: number
           total_valor: number
           unidade_orcamentaria_id: string | null
+          unidade_orcamentaria_m2a_pk: string | null
           updated_at: string
           upload_file_id: string | null
         }
         Insert: {
+          agente_planejamento_m2a_pk?: string | null
           ano_orcamento?: number | null
           classificacao?: string | null
           comissao_planejamento?: string | null
@@ -877,10 +880,12 @@ export type Database = {
           total_secretarias?: number
           total_valor?: number
           unidade_orcamentaria_id?: string | null
+          unidade_orcamentaria_m2a_pk?: string | null
           updated_at?: string
           upload_file_id?: string | null
         }
         Update: {
+          agente_planejamento_m2a_pk?: string | null
           ano_orcamento?: number | null
           classificacao?: string | null
           comissao_planejamento?: string | null
@@ -915,6 +920,7 @@ export type Database = {
           total_secretarias?: number
           total_valor?: number
           unidade_orcamentaria_id?: string | null
+          unidade_orcamentaria_m2a_pk?: string | null
           updated_at?: string
           upload_file_id?: string | null
         }
@@ -1009,6 +1015,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      m2a_agentes_planejamento: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          data_referencia: string | null
+          id_local: string
+          nome: string
+          servidor_m2a_id: string
+          unidade_m2a_id: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          data_referencia?: string | null
+          id_local?: string
+          nome: string
+          servidor_m2a_id: string
+          unidade_m2a_id: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          data_referencia?: string | null
+          id_local?: string
+          nome?: string
+          servidor_m2a_id?: string
+          unidade_m2a_id?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       m2a_atas: {
         Row: {
@@ -1328,6 +1367,36 @@ export type Database = {
           m2a_id?: string
           nome?: string
           sigla?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      m2a_unidades_orcamentarias: {
+        Row: {
+          ativa: boolean
+          created_at: string
+          id_local: string
+          m2a_id: string
+          nome: string
+          orgao_m2a_id: string
+          updated_at: string
+        }
+        Insert: {
+          ativa?: boolean
+          created_at?: string
+          id_local?: string
+          m2a_id: string
+          nome: string
+          orgao_m2a_id: string
+          updated_at?: string
+        }
+        Update: {
+          ativa?: boolean
+          created_at?: string
+          id_local?: string
+          m2a_id?: string
+          nome?: string
+          orgao_m2a_id?: string
           updated_at?: string
         }
         Relationships: []
