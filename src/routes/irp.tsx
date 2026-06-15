@@ -1217,15 +1217,6 @@ function Page() {
  <StatusBadge status={r.status} />
  </TableCell>
   <TableCell className="text-right">
- <div className="flex items-center justify-end gap-1">
- <Button
- size="sm"
- variant="ghost"
- onClick={() => setConfigModal({ rowId: r.id, nome: r.nome })}
- title="Configurar dotação / fiscal / gestor"
- >
- <Settings2 className="size-4" />
- </Button>
  <Button
  size="sm"
  variant="ghost"
@@ -1234,7 +1225,6 @@ function Page() {
  >
  <Download className="size-4" />
  </Button>
- </div>
  </TableCell>
  </TableRow>
  ))}
