@@ -974,146 +974,25 @@ function Page() {
  )}
  </CardHeader>
  <CardContent>
- {(analise || resultadoSalvo) && (
- <div className="mb-4 rounded-xl border border-border/60 bg-muted/40 p-3 dark:bg-muted/30">
- <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
- <div>
- <div className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
- Processo SRP no M2A
- </div>
- <div className="mt-0.5 text-[13px] text-muted-foreground">
- {selectedImportRows.length} de {importableRows.length}{""}
- planilha(s) selecionada(s)
- {rowsMissingM2A.length > 0
- ? ` · ${rowsMissingM2A.length} sem cadastro M2A`
- :""}
- </div>
- </div>
- <Button
- type="button"
- size="sm"
- onClick={abrirConfirmacaoProcessoM2A}
- disabled={
+  {jobId && (analise || resultadoSalvo) && (
+ <div className="mb-4">
+ <IrpCabecalhoCard
+ jobId={jobId}
+ initialJob={resultadoSalvo?.job ?? null}
+ form={processoM2AForm}
+ onChange={setProcessoM2AForm}
+ onSubmit={abrirConfirmacaoProcessoM2A}
+ submitDisabled={
  busy ||
  selectedImportRows.length === 0 ||
  rowsMissingM2A.length > 0
  }
- >
- <Send className="size-4" />
- Criar no M2A
- </Button>
- </div>
-
- <div className="grid gap-3 md:grid-cols-3">
- <div className="flex flex-col gap-1.5 md:col-span-3">
- <Label>Objeto *</Label>
- <Textarea
- value={processoM2AForm.objeto}
- onChange={(e) =>
- updateProcessoM2AField("objeto", e.target.value)
- }
- placeholder="Objeto do processo de registro de precos"
- className="min-h-20"
- />
- </div>
- <div className="flex flex-col gap-1.5">
- <Label>Data *</Label>
- <Input
- type="date"
- value={processoM2AForm.data}
- onChange={(e) =>
- updateProcessoM2AField("data", e.target.value)
+ submitHelper={
+ rowsMissingM2A.length > 0
+ ? `${rowsMissingM2A.length} secretaria(s) sem cadastro M2A. Configure em /secretarias.`
+ : `${selectedImportRows.length} de ${importableRows.length} planilha(s) selecionada(s).`
  }
  />
- </div>
- <div className="flex flex-col gap-1.5">
- <Label>Ano orcamentario *</Label>
- <Input
- value={processoM2AForm.ano_orcamento}
- onChange={(e) =>
- updateProcessoM2AField("ano_orcamento", e.target.value)
- }
- placeholder="2026"
- />
- </div>
- <div className="flex flex-col gap-1.5">
- <Label>Classificacao *</Label>
- <select
- className="h-10 rounded-md border border-input bg-card px-3 text-sm "
- value={processoM2AForm.classificacao}
- onChange={(e) =>
- updateProcessoM2AField("classificacao", e.target.value)
- }
- >
- <option value="1">1</option>
- <option value="2">2</option>
- <option value="3">3</option>
- <option value="4">4</option>
- </select>
- </div>
- <div className="flex flex-col gap-1.5">
- <Label>Orgao solicitante *</Label>
- <Input
- value={processoM2AForm.orgao_solicitante}
- onChange={(e) =>
- updateProcessoM2AField("orgao_solicitante",
- e.target.value,
- )
- }
- placeholder={selectedImportRows[0]?.orgaoPk ??"ID M2A"}
- />
- </div>
- <div className="flex flex-col gap-1.5">
- <Label>Unidade orcamentaria *</Label>
- <Input
- value={processoM2AForm.unidade_orcamentaria}
- onChange={(e) =>
- updateProcessoM2AField("unidade_orcamentaria",
- e.target.value,
- )
- }
- placeholder={selectedImportRows[0]?.unidadePk ??"ID M2A"}
- />
- </div>
- <div className="flex flex-col gap-1.5">
- <Label>UO gerenciadora</Label>
- <Input
- value={processoM2AForm.unidade_orcamentaria_gerenciadora}
- onChange={(e) =>
- updateProcessoM2AField("unidade_orcamentaria_gerenciadora",
- e.target.value,
- )
- }
- placeholder={
- processoM2AForm.unidade_orcamentaria ||"ID M2A"
- }
- />
- </div>
- <div className="flex flex-col gap-1.5">
- <Label>Agente responsavel *</Label>
- <Input
- value={processoM2AForm.responsavel_dfd}
- onChange={(e) =>
- updateProcessoM2AField("responsavel_dfd",
- e.target.value,
- )
- }
- placeholder="ID M2A"
- />
- </div>
- <div className="flex flex-col gap-1.5 md:col-span-2">
- <Label>Comissao de planejamento *</Label>
- <Input
- value={processoM2AForm.comissao_planejamento}
- onChange={(e) =>
- updateProcessoM2AField("comissao_planejamento",
- e.target.value,
- )
- }
- placeholder="ID M2A"
- />
- </div>
- </div>
  </div>
  )}
  {!analise && !resultadoSalvo ? (
