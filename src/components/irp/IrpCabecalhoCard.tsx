@@ -244,6 +244,8 @@ export function IrpCabecalhoCard({
             geralmente 1 dia útil após a data da DFD.
           </p>
         </div>
+        <div className="flex flex-col gap-1.5">
+          <Label>Ano orçamentário *</Label>
           <Input
             value={form.ano_orcamento}
             onChange={(e) => update({ ano_orcamento: e.target.value })}
