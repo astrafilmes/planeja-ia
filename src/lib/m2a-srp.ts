@@ -21,15 +21,21 @@ export type M2ASrpProgressEvent =
     }
   | { type: "error"; error: string };
 
-export interface M2ASrpDocumento {
-  orgao_pk: string;
-  unidade_orcamentaria_pk: string;
-  nome?: string;
-  arquivo_xlsx: {
-    bytesBase64: string;
-    filename: string;
-    mimeType?: string;
-  };
+export interface M2ASrpItemIRP {
+  descricao: string;
+  especificacao: string;
+  natureza: string;          // ex: "33903000"
+  unidade: string;           // nome completo, ex: "UNIDADE", "SERVICO"
+  valorReferencia?: number;
+  /** Mapa numero_secretaria → quantidade */
+  quantidades: Record<string, number>;
+}
+
+export interface M2ASrpSecretariaParticipante {
+  numero: number;
+  sigla: string;
+  nome: string;
+  m2a_orgao_id: string | null;
 }
 
 export interface M2ASrpPayload {
@@ -43,7 +49,10 @@ export interface M2ASrpPayload {
   comissao_planejamento: string;
   classificacao?: string;
   numero?: string;
-  listaImportacoes: M2ASrpDocumento[];
+  /** numero da secretaria gerenciadora (para diferenciá-la das participantes) */
+  gerenciadora_numero: number;
+  itens: M2ASrpItemIRP[];
+  secretariasParticipantes: M2ASrpSecretariaParticipante[];
 }
 
 const PROXY_URL = `${(import.meta as any).env.VITE_SUPABASE_URL}/functions/v1/m2a-proxy`;
