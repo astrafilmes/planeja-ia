@@ -153,8 +153,14 @@ export async function capturarIdsProcesso({ objeto }) {
 // (modalidade, modo_disputa, fundamentacao_legal, classificacao,
 // criterio_julgamento, valor_aceitavel). Sem isso o portal devolve 200
 // mas silenciosamente ignora as alterações.
-const PROCESSO_ATUALIZAR_TPL = (id) =>
+// GET usa ?detail=true para renderizar o form COMPLETO com todos os campos.
+// POST vai SEM ?detail=true (igual ao capture do navegador) — esse é o
+// endpoint que de fato persiste o registro. O ?detail=true no POST devolve
+// um JSON curto (~51 bytes) mas ignora silenciosamente as alterações.
+const PROCESSO_ATUALIZAR_GET_TPL = (id) =>
   `/processo_administrativo/atualizar/${id}/?detail=true`;
+const PROCESSO_ATUALIZAR_POST_TPL = (id) =>
+  `/processo_administrativo/atualizar/${id}/`;
 
 // Lê todos os inputs/selects/textareas do form de edição e devolve um
 // objeto name->value preservando os valores atuais (que o M2A já gravou
@@ -229,17 +235,18 @@ function extrairErrosComCampo($) {
 }
 
 export async function atualizarProcesso(processoId, payload) {
-  const path = PROCESSO_ATUALIZAR_TPL(processoId);
+  const getPath = PROCESSO_ATUALIZAR_GET_TPL(processoId);
+  const postPath = PROCESSO_ATUALIZAR_POST_TPL(processoId);
 
   // 1) Carrega a página do form para ler o CSRF E todos os campos atuais
-  const pageRes = await m2a.get(path);
+  const pageRes = await m2a.get(getPath);
   if (pageRes.status >= 400) {
-    throw new Error(`Atualizar processo: GET ${path} status ${pageRes.status}`);
+    throw new Error(`Atualizar processo: GET ${getPath} status ${pageRes.status}`);
   }
   const $page = loadDoc(pageRes.html);
   const csrf =
     $page('input[name="csrfmiddlewaretoken"]').first().attr("value") ||
-    (await m2a.getCsrf(path, { force: true }));
+    (await m2a.getCsrf(getPath, { force: true }));
 
   const camposAtuais = extrairCamposFormAtual($page);
   console.log(
@@ -326,25 +333,27 @@ export async function atualizarProcesso(processoId, payload) {
     payloadDebug[k] = v;
   }
   console.log(
-    `[atualizarProcesso] POST ${path} payload(${Object.keys(payloadDebug).length} campos)=${JSON.stringify(payloadDebug)}`,
+    `[atualizarProcesso] POST ${postPath} payload(${Object.keys(payloadDebug).length} campos)=${JSON.stringify(payloadDebug)}`,
   );
 
-  const res = await m2a.request("POST", path, {
+  const res = await m2a.request("POST", postPath, {
     body: body.toString(),
     headers: {
       "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
       "X-Requested-With": "XMLHttpRequest",
-      Referer: `${m2a.http.defaults.baseURL || ""}${path}`,
+      Referer: `${m2a.http.defaults.baseURL || ""}${postPath}`,
     },
   });
 
   if (res.status >= 400) {
     throw new Error(`Atualizar processo: status ${res.status}`);
   }
+  const bodyPreview = String(res.html || "").slice(0, 800).replace(/\s+/g, " ");
+  console.log(
+    `[atualizarProcesso] resp status=${res.status} bytes=${(res.html || "").length} ct=${res.contentType || "-"} finalUrl=${res.finalUrl} body="${bodyPreview}"`,
+  );
   const $ = loadDoc(res.html);
-  // Correlação errorlist→campo (mostra "name: mensagem")
   const errosComCampo = extrairErrosComCampo($);
-  // Alertas globais (alert-danger / messages)
   const alertasGlobais = $(".alert-danger, .alert-error, .messages .error")
     .map((_, el) => $(el).text().replace(/\s+/g, " ").trim())
     .get()
@@ -354,12 +363,34 @@ export async function atualizarProcesso(processoId, payload) {
     .get()
     .filter(Boolean);
   console.log(
-    `[atualizarProcesso] resp bytes=${res.html.length} finalUrl=${res.finalUrl} errosComCampo=${JSON.stringify(errosComCampo)} alertasGlobais=${JSON.stringify(alertasGlobais)} sucesso=${JSON.stringify(msgsSucesso)}`,
+    `[atualizarProcesso] errosComCampo=${JSON.stringify(errosComCampo)} alertasGlobais=${JSON.stringify(alertasGlobais)} sucesso=${JSON.stringify(msgsSucesso)}`,
   );
   const todosErros = [...errosComCampo, ...alertasGlobais];
   if (todosErros.length) {
     throw new Error(`Atualizar processo rejeitado: ${todosErros.join(" | ")}`);
   }
+
+  // Verifica de fato que o objeto persistiu — se NÃO persistiu, importação
+  // vai falhar com "Objeto não informado".
+  try {
+    const verif = await m2a.get(getPath);
+    const $v = loadDoc(verif.html);
+    const camposPos = extrairCamposFormAtual($v);
+    const objetoPos = String(camposPos.objeto || "").trim();
+    const numeroPos = String(camposPos.numero || "").trim();
+    console.log(
+      `[atualizarProcesso] VERIFICACAO objeto="${objetoPos}" numero="${numeroPos}" unidade_orcamentaria_gerenciadora="${camposPos.unidade_orcamentaria_gerenciadora || ""}"`,
+    );
+    if (!objetoPos) {
+      throw new Error(
+        "Atualizar processo: o campo 'objeto' não persistiu após o POST (provável endpoint errado ou campo obrigatório faltando).",
+      );
+    }
+  } catch (err) {
+    if (String(err?.message || "").includes("não persistiu")) throw err;
+    console.warn(`[atualizarProcesso] verificacao falhou: ${err.message}`);
+  }
+
   return { ok: true };
 }
 
