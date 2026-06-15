@@ -295,6 +295,27 @@ function Page() {
  },
  });
 
+ const { data: jobSecretariaRows = [] } = useQuery({
+ queryKey: ["irp-job-sec-rows", jobId],
+ enabled: !!jobId,
+ queryFn: async () => {
+ const { data, error } = await supabase
+ .from("irp_job_secretarias")
+ .select("id, unidade_id, numero, nome")
+ .eq("job_id", jobId!);
+ if (error) throw error;
+ return data ?? [];
+ },
+ });
+ const secRowByUnidadeId = useMemo(
+ () => new Map(jobSecretariaRows.map((r) => [r.unidade_id ?? "", r])),
+ [jobSecretariaRows],
+ );
+ const secRowByNumero = useMemo(
+ () => new Map(jobSecretariaRows.map((r) => [r.numero, r])),
+ [jobSecretariaRows],
+ );
+
  useEffect(() => {
  if (!search.job) {
  setResultadoSalvo(null);
