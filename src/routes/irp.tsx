@@ -1335,6 +1335,12 @@ function Page() {
  </DialogFooter>
  </DialogContent>
  </Dialog>
+ <IrpSecretariaConfigModal
+ open={!!configModal}
+ onOpenChange={(open) => !open && setConfigModal(null)}
+ secretariaRowId={configModal?.rowId ?? null}
+ secretariaNome={configModal?.nome ?? ""}
+ />
  </AppShell>
  );
 }
