@@ -31,7 +31,7 @@ import {
  DialogHeader,
  DialogTitle,
 } from"@/components/ui/dialog";
-import { Upload, FileSpreadsheet, Download, Package, Send, Settings2 } from"lucide-react";
+import { Upload, FileSpreadsheet, Download, Package, Send } from"lucide-react";
 import { toast } from"sonner";
 import {
  listenM2AProcessCreationProgress,
@@ -55,7 +55,7 @@ const saveAs =
  (FileSaver as any).default;
 import { logAudit } from"@/lib/audit";
 import { IrpCabecalhoCard } from"@/components/irp/IrpCabecalhoCard";
-import { IrpSecretariaConfigModal } from"@/components/irp/IrpSecretariaConfigModal";
+
 import { IrpConfirmacaoProcessoModal } from"@/components/irp/IrpConfirmacaoProcessoModal";
 import { criarProcessoSrpM2A, blobToBase64, type M2ASrpPayload } from"@/lib/m2a-srp";
 
@@ -269,7 +269,7 @@ function Page() {
  [],
  );
  const [m2aConfirmOpen, setM2aConfirmOpen] = useState(false);
- const [configModal, setConfigModal] = useState<{ rowId: string; nome: string } | null>(null);
+ 
  const [processoM2AForm, setProcessoM2AForm] = useState({
  objeto:"",
  data: todayISO(),
@@ -1120,19 +1120,6 @@ function Page() {
  <StatusBadge status={r.status} />
  </TableCell>
   <TableCell className="text-right">
- <div className="flex items-center justify-end gap-1">
- <Button
- size="sm"
- variant="ghost"
- disabled={r.itens.length === 0 || !secRowByUnidadeId.get(r.unidade.id)}
- onClick={() => {
- const row = secRowByUnidadeId.get(r.unidade.id);
- if (row) setConfigModal({ rowId: row.id, nome: r.unidade.nome });
- }}
- title="Configurar dotação / fiscal / gestor"
- >
- <Settings2 className="size-4" />
- </Button>
  <Button
  size="sm"
  variant="ghost"
@@ -1141,7 +1128,6 @@ function Page() {
  >
  <Download className="size-4" />
  </Button>
- </div>
  </TableCell>
  </TableRow>
  ))}
@@ -1231,15 +1217,6 @@ function Page() {
  <StatusBadge status={r.status} />
  </TableCell>
   <TableCell className="text-right">
- <div className="flex items-center justify-end gap-1">
- <Button
- size="sm"
- variant="ghost"
- onClick={() => setConfigModal({ rowId: r.id, nome: r.nome })}
- title="Configurar dotação / fiscal / gestor"
- >
- <Settings2 className="size-4" />
- </Button>
  <Button
  size="sm"
  variant="ghost"
@@ -1248,7 +1225,6 @@ function Page() {
  >
  <Download className="size-4" />
  </Button>
- </div>
  </TableCell>
  </TableRow>
  ))}
@@ -1276,12 +1252,6 @@ function Page() {
           secRowByNumero={secRowByNumero}
           onConfirm={confirmarCriacaoProcessoM2A}
         />
- <IrpSecretariaConfigModal
- open={!!configModal}
- onOpenChange={(open) => !open && setConfigModal(null)}
- secretariaRowId={configModal?.rowId ?? null}
- secretariaNome={configModal?.nome ?? ""}
- />
  </AppShell>
  );
 }

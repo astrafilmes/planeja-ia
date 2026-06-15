@@ -235,10 +235,12 @@ export function IrpCabecalhoCard({
             onChange={(e) => {
               const novoOrgao = e.target.value;
               const m = getOrgaoMapping(novoOrgao);
+              const primeiraUo = m?.unidades?.[0];
+              const uoId = primeiraUo ? String(primeiraUo.id) : "";
               update({
                 orgao_solicitante: novoOrgao,
-                unidade_orcamentaria: "",
-                unidade_orcamentaria_gerenciadora: novoOrgao,
+                unidade_orcamentaria: uoId,
+                unidade_orcamentaria_gerenciadora: uoId,
                 responsavel_dfd: m ? String(m.responsavel_dfd_id) : "",
               });
               setTimeout(persist, 0);
