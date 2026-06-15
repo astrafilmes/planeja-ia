@@ -849,7 +849,7 @@ function Page() {
 
  await criarProcessoSrpM2A(payload, async (evt) => {
  if (evt.type === "progress") {
- updateProgress(evt.progresso ?? undefined, evt.mensagem);
+ updateProgress(evt.progresso ?? 0, evt.mensagem);
  if (jobId) {
  await supabase
  .from("irp_jobs")
