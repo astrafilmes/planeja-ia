@@ -10,11 +10,15 @@ export async function processosSrpRoutes(app) {
       !payload ||
       typeof payload !== "object" ||
       !payload.objeto ||
-      !Array.isArray(payload.listaImportacoes)
+      !Array.isArray(payload.itens) ||
+      payload.itens.length === 0 ||
+      !Array.isArray(payload.secretariasParticipantes) ||
+      !payload.gerenciadora_numero
     ) {
-      return reply
-        .code(400)
-        .send({ error: "payload inválido (objeto e listaImportacoes obrigatórios)" });
+      return reply.code(400).send({
+        error:
+          "payload inválido (objeto, itens[], secretariasParticipantes[] e gerenciadora_numero obrigatórios)",
+      });
     }
 
     // Configura SSE
