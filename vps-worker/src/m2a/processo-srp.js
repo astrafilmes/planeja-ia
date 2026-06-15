@@ -148,13 +148,35 @@ export async function atualizarProcesso(processoId, payload) {
     .replace(/[^0-9/]/g, "")
     .trim();
 
+  // Valida classificacao contra a API do portal
+  // (1=Compras, 2=Compras e serviços, 3=Serviços comuns, 4=Serviços de engenharia comuns)
+  let classificacao = String(payload.classificacao || "").trim();
+  try {
+    const r = await m2a.get(
+      "/processo_administrativo/classificacao/?modalidade=7&fundamentacao_legal=66",
+      { headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" } },
+    );
+    const json = JSON.parse(r.html || "{}");
+    const validos = (json.results || []).map((x) => String(x.id));
+    if (!validos.includes(classificacao)) {
+      const fallback = validos.includes("3") ? "3" : validos[0] || "3";
+      console.warn(
+        `[m2a] classificacao "${classificacao}" inválida (válidas: ${validos.join(",")}). usando "${fallback}".`,
+      );
+      classificacao = fallback;
+    }
+  } catch (err) {
+    console.warn(`[m2a] falha ao validar classificacao: ${err.message}. usando "3".`);
+    if (!classificacao) classificacao = "3";
+  }
+
   const body = new URLSearchParams();
   body.set("csrfmiddlewaretoken", csrf);
   // Fixos conforme spec (form completo de edição)
   body.set("modalidade", "7");
   body.set("modo_disputa", "1");
   body.set("fundamentacao_legal", "66");
-  body.set("classificacao", String(payload.classificacao || "3"));
+  body.set("classificacao", classificacao);
   body.set("criterio_julgamento", "1");
   body.set("processo_administrativo_pre_qualificacao", "");
   body.set("valor_aceitavel", "1");
