@@ -272,17 +272,28 @@ function Page() {
  );
  const [m2aConfirmOpen, setM2aConfirmOpen] = useState(false);
  
- const [processoM2AForm, setProcessoM2AForm] = useState({
- objeto:"",
- data: todayISO(),
- ano_orcamento: String(new Date().getFullYear()),
- orgao_solicitante:"",
- unidade_orcamentaria:"",
- unidade_orcamentaria_gerenciadora:"",
- responsavel_dfd:"",
- comissao_planejamento:"3911",
- classificacao:"1",
- });
+  const [processoM2AForm, setProcessoM2AForm] = useState(() => {
+    const hoje = todayISO();
+    const proxima = (() => {
+      const [y, m, d] = hoje.split("-").map(Number);
+      const dt = new Date(Date.UTC(y, m - 1, d));
+      do { dt.setUTCDate(dt.getUTCDate() + 1); }
+      while (dt.getUTCDay() === 0 || dt.getUTCDay() === 6);
+      return dt.toISOString().slice(0, 10);
+    })();
+    return {
+      objeto: "",
+      data: hoje,
+      data_consolidacao: proxima,
+      ano_orcamento: String(new Date().getFullYear()),
+      orgao_solicitante: "",
+      unidade_orcamentaria: "",
+      unidade_orcamentaria_gerenciadora: "",
+      responsavel_dfd: "",
+      comissao_planejamento: "3911",
+      classificacao: "1",
+    };
+  });
 
  const { data: unidades } = useQuery({
  queryKey: ["unidades"],
