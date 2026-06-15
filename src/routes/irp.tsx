@@ -258,6 +258,7 @@ function Page() {
  [],
  );
  const [m2aConfirmOpen, setM2aConfirmOpen] = useState(false);
+ const [configModal, setConfigModal] = useState<{ rowId: string; nome: string } | null>(null);
  const [processoM2AForm, setProcessoM2AForm] = useState({
  objeto:"",
  data: todayISO(),
