@@ -466,13 +466,12 @@ export async function importarPlanilha({
   if (objetoNormalizado) fd.append("objeto", objetoNormalizado);
   if (numeroLimpo) fd.append("numero", numeroLimpo);
   fd.append("orgao_pk", orgaoLimpo);
-  fd.append("orgao", orgaoLimpo);
-  fd.append("unidade_gestora_pk", orgaoLimpo);
   fd.append("unidade_orcamentaria_pk", unidadeLimpa);
-  fd.append("unidade_orcamentaria", unidadeLimpa);
   fd.append("data_aviso", String(dataAviso));
   fd.append("data_consolidacao", dataConsolidacao);
   fd.append("data_manifestacao", dataManifestacao);
+  fd.append("data_pesquisa_finalizada", "");
+  fd.append("responsavel_pesquisa_pk", "");
   fd.append("valores_pesquisa_importacao", "false");
   fd.append("FileUpload", arquivoBytes, {
     filename: arquivoFilename,
@@ -480,7 +479,7 @@ export async function importarPlanilha({
   });
 
   console.log(
-    `[importarPlanilha] POST ${path} csrf=${csrf ? `len=${csrf.length}` : "AUSENTE"} objeto=${objetoNormalizado ? `len=${objetoNormalizado.length}` : "AUSENTE"} numero=${numeroLimpo || "AUSENTE"} orgao_pk=${orgaoLimpo} orgao=${orgaoLimpo} unidade_gestora_pk=${orgaoLimpo} unidade_orcamentaria_pk=${unidadeLimpa} unidade_orcamentaria=${unidadeLimpa} data_aviso=${dataAviso} data_consolidacao=${dataConsolidacao} data_manifestacao=${dataManifestacao} file=${arquivoFilename} bytes=${arquivoBytes.length} mime=${arquivoMime}`,
+    `[importarPlanilha] POST ${path} csrf=${csrf ? `len=${csrf.length}` : "AUSENTE"} objeto=${objetoNormalizado ? `len=${objetoNormalizado.length}` : "AUSENTE"} numero=${numeroLimpo || "AUSENTE"} orgao_pk=${orgaoLimpo} unidade_orcamentaria_pk=${unidadeLimpa} data_aviso=${dataAviso} data_consolidacao=${dataConsolidacao} data_manifestacao=${dataManifestacao} data_pesquisa_finalizada=(vazio) responsavel_pesquisa_pk=(vazio) file=${arquivoFilename} bytes=${arquivoBytes.length} mime=${arquivoMime}`,
   );
 
   const res = await m2a.postMultipart(path, fd, {
