@@ -181,23 +181,9 @@ export function IrpConfirmacaoProcessoModal({
                 mono
               />
               <Field
-                label="UO gerenciadora"
-                value={
-                  form.unidade_orcamentaria_gerenciadora ||
-                  form.unidade_orcamentaria ||
-                  "—"
-                }
-                mono
-              />
-              <Field
                 icon={<User className="size-3.5" />}
-                label="Responsável DFD"
+                label="Agente de planejamento"
                 value={form.responsavel_dfd || "—"}
-                mono
-              />
-              <Field
-                label="Comissão de planejamento"
-                value={form.comissao_planejamento || "—"}
                 mono
               />
             </div>
