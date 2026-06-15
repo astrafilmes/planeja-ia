@@ -24,6 +24,7 @@ type IrpJob = Database["public"]["Tables"]["irp_jobs"]["Row"];
 export interface IrpCabecalhoForm {
   objeto: string;
   data: string;
+  data_consolidacao: string;
   ano_orcamento: string;
   orgao_solicitante: string;
   unidade_orcamentaria: string;
@@ -52,6 +53,18 @@ const CLASSIFICACAO_OPTIONS = [
 
 const ORGAOS = listarOrgaosOrdenados();
 
+/** Soma 1 dia útil (pula sáb/dom). Aceita ISO YYYY-MM-DD; retorna ISO. */
+export function proximoDiaUtil(iso: string): string {
+  if (!iso) return iso;
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d) return iso;
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  do {
+    dt.setUTCDate(dt.getUTCDate() + 1);
+  } while (dt.getUTCDay() === 0 || dt.getUTCDay() === 6);
+  return dt.toISOString().slice(0, 10);
+}
+
 export function IrpCabecalhoCard({
   jobId,
   initialJob,
@@ -79,9 +92,14 @@ export function IrpCabecalhoCard({
       (initialJob as any).unidade_orcamentaria_m2a_pk ??
       form.unidade_orcamentaria;
     const mapping = getOrgaoMapping(orgao);
+    const dataDfd = initialJob.data_processo ?? form.data;
     onChange({
       objeto: initialJob.objeto ?? form.objeto,
-      data: initialJob.data_processo ?? form.data,
+      data: dataDfd,
+      data_consolidacao:
+        (initialJob as any).data_consolidacao ??
+        form.data_consolidacao ??
+        proximoDiaUtil(dataDfd),
       ano_orcamento:
         initialJob.ano_orcamento != null
           ? String(initialJob.ano_orcamento)
@@ -193,13 +211,38 @@ export function IrpCabecalhoCard({
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label>Data *</Label>
+          <Label>Data DFD / IRP *</Label>
           <Input
             type="date"
             value={form.data}
-            onChange={(e) => update({ data: e.target.value })}
+            onChange={(e) => {
+              const novaData = e.target.value;
+              // se a consolidação ainda era o "próximo dia útil" da data anterior,
+              // recalcula automaticamente. Caso contrário, mantém o valor manual.
+              const auto = proximoDiaUtil(form.data);
+              const next: Partial<IrpCabecalhoForm> = { data: novaData };
+              if (!form.data_consolidacao || form.data_consolidacao === auto) {
+                next.data_consolidacao = proximoDiaUtil(novaData);
+              }
+              onChange({ ...form, ...next });
+            }}
             onBlur={persist}
           />
+          <p className="text-[10px] text-muted-foreground">
+            usada como data do processo, manifestação e finalização da IRP.
+          </p>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label>Data Consolidação *</Label>
+          <Input
+            type="date"
+            value={form.data_consolidacao}
+            onChange={(e) => update({ data_consolidacao: e.target.value })}
+            onBlur={persist}
+          />
+          <p className="text-[10px] text-muted-foreground">
+            geralmente 1 dia útil após a data da DFD.
+          </p>
         </div>
         <div className="flex flex-col gap-1.5">
           <Label>Ano orçamentário *</Label>

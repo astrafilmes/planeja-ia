@@ -198,7 +198,7 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
         });
       }
       await finalizarParaConsolidacao(intencao.intencaoId, payload.data);
-      await consolidarIntencao(intencao.intencaoId);
+      await consolidarIntencao(intencao.intencaoId, payload.data_consolidacao || payload.data);
     } catch (err) {
       const msg = String(err?.message ?? err);
       console.error(

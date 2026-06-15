@@ -40,7 +40,8 @@ export interface M2ASrpSecretariaParticipante {
 
 export interface M2ASrpPayload {
   objeto: string;
-  data: string; // YYYY-MM-DD
+  data: string; // YYYY-MM-DD — usada como data DFD/IRP/manifestação/finalização
+  data_consolidacao?: string; // YYYY-MM-DD — usada no passo "consolidar"
   ano_orcamento: string | number;
   orgao_solicitante: string;
   unidade_orcamentaria: string;

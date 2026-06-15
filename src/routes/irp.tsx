@@ -272,17 +272,28 @@ function Page() {
  );
  const [m2aConfirmOpen, setM2aConfirmOpen] = useState(false);
  
- const [processoM2AForm, setProcessoM2AForm] = useState({
- objeto:"",
- data: todayISO(),
- ano_orcamento: String(new Date().getFullYear()),
- orgao_solicitante:"",
- unidade_orcamentaria:"",
- unidade_orcamentaria_gerenciadora:"",
- responsavel_dfd:"",
- comissao_planejamento:"3911",
- classificacao:"1",
- });
+  const [processoM2AForm, setProcessoM2AForm] = useState(() => {
+    const hoje = todayISO();
+    const proxima = (() => {
+      const [y, m, d] = hoje.split("-").map(Number);
+      const dt = new Date(Date.UTC(y, m - 1, d));
+      do { dt.setUTCDate(dt.getUTCDate() + 1); }
+      while (dt.getUTCDay() === 0 || dt.getUTCDay() === 6);
+      return dt.toISOString().slice(0, 10);
+    })();
+    return {
+      objeto: "",
+      data: hoje,
+      data_consolidacao: proxima,
+      ano_orcamento: String(new Date().getFullYear()),
+      orgao_solicitante: "",
+      unidade_orcamentaria: "",
+      unidade_orcamentaria_gerenciadora: "",
+      responsavel_dfd: "",
+      comissao_planejamento: "3911",
+      classificacao: "1",
+    };
+  });
 
  const { data: unidades } = useQuery({
  queryKey: ["unidades"],
@@ -854,23 +865,25 @@ function Page() {
  try {
   const { itens, secretariasParticipantes, gerenciadora_numero } =
    await buildM2AIrpPayload();
-  const payload: M2ASrpPayload = {
-   objeto: processoM2AForm.objeto.trim(),
-   data: processoM2AForm.data,
-   ano_orcamento: processoM2AForm.ano_orcamento.trim(),
-   orgao_solicitante: processoM2AForm.orgao_solicitante.trim(),
-   unidade_orcamentaria: processoM2AForm.unidade_orcamentaria.trim(),
-   unidade_orcamentaria_gerenciadora:
-    processoM2AForm.unidade_orcamentaria_gerenciadora.trim() ||
-    processoM2AForm.unidade_orcamentaria.trim(),
-   responsavel_dfd: processoM2AForm.responsavel_dfd.trim(),
-   comissao_planejamento:
-    processoM2AForm.comissao_planejamento.trim() || "3911",
-   classificacao: processoM2AForm.classificacao.trim(),
-   gerenciadora_numero,
-   itens,
-   secretariasParticipantes,
-  };
+   const payload: M2ASrpPayload = {
+    objeto: processoM2AForm.objeto.trim(),
+    data: processoM2AForm.data,
+    data_consolidacao:
+      processoM2AForm.data_consolidacao || processoM2AForm.data,
+    ano_orcamento: processoM2AForm.ano_orcamento.trim(),
+    orgao_solicitante: processoM2AForm.orgao_solicitante.trim(),
+    unidade_orcamentaria: processoM2AForm.unidade_orcamentaria.trim(),
+    unidade_orcamentaria_gerenciadora:
+     processoM2AForm.unidade_orcamentaria_gerenciadora.trim() ||
+     processoM2AForm.unidade_orcamentaria.trim(),
+    responsavel_dfd: processoM2AForm.responsavel_dfd.trim(),
+    comissao_planejamento:
+     processoM2AForm.comissao_planejamento.trim() || "3911",
+    classificacao: processoM2AForm.classificacao.trim(),
+    gerenciadora_numero,
+    itens,
+    secretariasParticipantes,
+   };
 
  setM2aConfirmOpen(false);
  if (jobId) {
