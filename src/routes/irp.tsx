@@ -792,53 +792,60 @@ function Page() {
  setM2aConfirmOpen(true);
  }
 
- async function buildM2AImportacoes(): Promise<M2ASrpPayload["listaImportacoes"]> {
- const lista: M2ASrpPayload["listaImportacoes"] = [];
- for (const [index, row] of selectedImportRows.entries()) {
- updateProgress(
- 8 + (index / Math.max(selectedImportRows.length, 1)) * 12,
- `Preparando planilha ${index + 1} de ${selectedImportRows.length}...`,
- );
- let blob: Blob;
- let filename: string;
- let mimeType = XLSX_MIME;
- if (row.resultado) {
- const gen = await gerarPlanilhaSecretaria(row.resultado);
- blob = gen.blob;
- filename = gen.filename;
- } else if (row.arquivo) {
- const { data, error } = await supabase.storage
- .from(row.arquivo.bucket)
- .createSignedUrl(row.arquivo.storage_path, 300);
- if (error || !data) throw error ?? new Error("Falha ao assinar URL.");
- const resp = await fetch(data.signedUrl);
- blob = await resp.blob();
- filename = row.arquivo.original_name;
- mimeType = row.arquivo.mime_type ?? XLSX_MIME;
- } else {
- throw new Error(`Arquivo nao encontrado para ${row.nome}.`);
- }
- const bytesBase64 = await blobToBase64(blob);
- lista.push({
-  orgao_pk: row.importOrgaoPk!,
- unidade_orcamentaria_pk: row.unidadePk!,
- nome: row.nome,
- arquivo_xlsx: { bytesBase64, filename, mimeType },
- });
-  }
-  // Garante que a UO gerenciadora seja a PRIMEIRA planilha importada.
-  // O portal M2A trata a primeira importação como referência do processo.
-  const uoGerenciadora =
+ async function buildM2AIrpPayload(): Promise<{
+  itens: M2ASrpPayload["itens"];
+  secretariasParticipantes: M2ASrpPayload["secretariasParticipantes"];
+  gerenciadora_numero: number;
+ }> {
+  // 1) Resolve gerenciadora pelo m2a_uo_id casado no form
+  const uoGerenciadora = (
    processoM2AForm.unidade_orcamentaria_gerenciadora.trim() ||
-   processoM2AForm.unidade_orcamentaria.trim();
-  if (uoGerenciadora) {
-   lista.sort((a, b) => {
-    const aIs = String(a.unidade_orcamentaria_pk) === uoGerenciadora ? 0 : 1;
-    const bIs = String(b.unidade_orcamentaria_pk) === uoGerenciadora ? 0 : 1;
-    return aIs - bIs;
-   });
+   processoM2AForm.unidade_orcamentaria.trim()
+  );
+  const rowGerenciadora =
+   selectedImportRows.find((r) => r.unidadePk && r.unidadePk === uoGerenciadora) ||
+   selectedImportRows[0];
+  if (!rowGerenciadora?.secretaria) {
+   throw new Error("Secretaria gerenciadora não identificada.");
   }
-  return lista;
+  const gerenciadora_numero = rowGerenciadora.secretaria.numero;
+
+  // 2) Lista de secretarias (gerenciadora + participantes) que entram no IRP
+  const secretariasParticipantes: M2ASrpPayload["secretariasParticipantes"] =
+   selectedImportRows
+    .filter((r) => r.secretaria)
+    .map((r) => ({
+     numero: r.secretaria!.numero,
+     sigla: r.secretaria!.sigla,
+     nome: r.secretaria!.nome,
+     m2a_orgao_id: r.secretaria!.m2a_orgao_id,
+    }));
+
+  // 3) Lista mestre de itens (dedup pelo sourceRow|identificador) + qtd por secretaria
+  type ItemAgreg = M2ASrpPayload["itens"][number] & { _key: string };
+  const map = new Map<string, ItemAgreg>();
+  for (const row of selectedImportRows) {
+   if (!row.resultado || !row.secretaria) continue;
+   for (const it of row.resultado.itens) {
+    const key = `${it.sourceRow}|${it.identificador || ""}|${it.descricao}`;
+    let agg = map.get(key);
+    if (!agg) {
+     agg = {
+      _key: key,
+      descricao: it.descricao,
+      especificacao: it.especificacao,
+      natureza: it.natureza,
+      unidade: it.unidade,
+      valorReferencia: it.valorReferencia || 0,
+      quantidades: {},
+     };
+     map.set(key, agg);
+    }
+    agg.quantidades[String(row.secretaria.numero)] = it.quantidade;
+   }
+  }
+  const itens = Array.from(map.values()).map(({ _key: _k, ...rest }) => rest);
+  return { itens, secretariasParticipantes, gerenciadora_numero };
  }
 
  async function confirmarCriacaoProcessoM2A() {
