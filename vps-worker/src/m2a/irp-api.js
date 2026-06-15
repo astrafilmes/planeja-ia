@@ -528,7 +528,7 @@ export async function consolidarIntencao(intencaoId, dataISO) {
   const body = new URLSearchParams();
   body.set("csrfmiddlewaretoken", csrf);
   body.set("text", "true");
-  if (dataISO) body.set("data_input", String(dataISO));
+  // Bíblia M2A: consolidar não recebe data_input (só csrf + text=true).
   const res = await m2a.request("POST", URL_CONSOLIDAR(intencaoId), {
     body: body.toString(),
     headers: {
