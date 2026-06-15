@@ -31,7 +31,7 @@ import {
  DialogHeader,
  DialogTitle,
 } from"@/components/ui/dialog";
-import { Upload, FileSpreadsheet, Download, Package, Send, Settings2 } from"lucide-react";
+import { Upload, FileSpreadsheet, Download, Package, Send } from"lucide-react";
 import { toast } from"sonner";
 import {
  listenM2AProcessCreationProgress,
