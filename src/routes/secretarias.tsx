@@ -258,9 +258,9 @@ function groupRows(
  return {
  key,
  title: unidade?.nome ?? principal.nome,
- subtitle: unidade
- ? `${unidade.sigla ?? principal.sigla} · ID ${unidade.m2a_id}`
- : `${principal.sigla} · Unidade Gestora não vinculada`,
+      subtitle: unidade
+        ? (unidade.nome ?? principal.nome)
+        : "Unidade Gestora não vinculada",
  unidadeM2AId: unidade?.m2a_id ?? principal.m2a_orgao_id ?? null,
  rows: sortedRows,
  principal,
@@ -710,11 +710,8 @@ function Page() {
  >
  {actor?.nome ?? fallbackName}
  </div>
- {actor?.m2a_id && (
- <div className="font-mono text-[11px] text-muted-foreground">
- ID {actor.m2a_id}
- </div>
- )}
+      </div>
+
  </div>
  );
  };
@@ -1030,7 +1027,7 @@ function Page() {
  </SelectItem>
  {unidadesGestoras.map((unidade) => (
  <SelectItem key={unidade.id_local} value={unidade.m2a_id}>
- {unidade.nome} - ID {unidade.m2a_id}
+                          {unidade.nome}
  </SelectItem>
  ))}
  </SelectContent>
@@ -1084,7 +1081,7 @@ function Page() {
  </SelectItem>
  {groupFiscais.map((fiscal) => (
  <SelectItem key={fiscal.id_local} value={fiscal.m2a_id}>
- {fiscal.nome} - ID {fiscal.m2a_id}
+ {fiscal.nome}
  </SelectItem>
  ))}
  </SelectContent>
@@ -1114,7 +1111,7 @@ function Page() {
  </SelectItem>
  {groupGestores.map((gestor) => (
  <SelectItem key={gestor.id_local} value={gestor.m2a_id}>
- {gestor.nome} - ID {gestor.m2a_id}
+ {gestor.nome}
  </SelectItem>
  ))}
  </SelectContent>
@@ -1199,7 +1196,7 @@ function Page() {
  key={unidade.id_local}
  value={unidade.m2a_id}
  >
- {unidade.nome} - ID {unidade.m2a_id}
+ {unidade.nome}
  </SelectItem>
  ))}
  </SelectContent>
@@ -1311,7 +1308,7 @@ function ActorSelect({
  </SelectItem>
  {servidores.map((servidor) => (
  <SelectItem key={servidor.id_local} value={servidor.m2a_id}>
- {servidor.nome} - ID {servidor.m2a_id}
+ {servidor.nome}
  </SelectItem>
  ))}
  </SelectContent>

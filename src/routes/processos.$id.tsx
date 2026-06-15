@@ -1780,7 +1780,7 @@ function Page() {
  value={f.m2a_id}
  className="text-xs"
  >
- {f.nome} - ID {f.m2a_id}
+ {f.nome}
  </SelectItem>
  ))}
  </SelectContent>
