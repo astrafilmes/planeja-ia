@@ -285,18 +285,21 @@ export async function listarIntencoes(dfdId) {
   const out = [];
   for (const tr of linhas) {
     const $tr = $(tr);
-    let id =
-      $tr.find("input.checkboxes, input.checkbox-intencao, input[type=checkbox]")
-        .first()
-        .attr("value") || "";
+    // Procura o PRIMEIRO checkbox com value numérico real (ignora "selecionar todos" cujo value="on").
+    let id = "";
+    $tr
+      .find("input.checkboxes, input.checkbox-intencao, input[type=checkbox]")
+      .each((_i, el) => {
+        if (id) return;
+        const v = $(el).attr("value") || "";
+        if (isValidNumericId(v)) id = v;
+      });
     if (!id) {
       const m = ($tr.attr("id") || "").match(/(\d+)$/);
-      if (m) id = m[1];
+      if (m && isValidNumericId(m[1])) id = m[1];
     }
-    if (!id) continue;
-    // texto da linha para casar com m2a_orgao_id ou nome
+    if (!isValidNumericId(id)) continue;
     const textoLinha = $tr.text().replace(/\s+/g, " ").trim();
-    // tenta pegar data-orgao / data-orgao-id se existirem em algum filho
     const orgaoAttr =
       $tr.attr("data-orgao") ||
       $tr.attr("data-orgao-id") ||
@@ -309,6 +312,7 @@ export async function listarIntencoes(dfdId) {
       texto: textoLinha,
     });
   }
+
   console.log(
     `[irp-api] listarIntencoes dfd=${dfdId} encontrou ${out.length} intenções`,
   );
