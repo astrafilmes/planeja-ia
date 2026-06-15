@@ -56,6 +56,7 @@ const saveAs =
 import { logAudit } from"@/lib/audit";
 import { IrpCabecalhoCard } from"@/components/irp/IrpCabecalhoCard";
 import { IrpSecretariaConfigModal } from"@/components/irp/IrpSecretariaConfigModal";
+import { criarProcessoSrpM2A, blobToBase64, type M2ASrpPayload } from"@/lib/m2a-srp";
 
 type AppFile = Database["public"]["Tables"]["app_files"]["Row"];
 type IrpJob = Database["public"]["Tables"]["irp_jobs"]["Row"];
