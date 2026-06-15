@@ -777,68 +777,51 @@ function Page() {
  setM2aConfirmOpen(true);
  }
 
- async function buildM2AImportacoes() {
- const listaImportacoes: M2AProcessCreationPayload["listaImportacoes"] = [];
-
+ async function buildM2AImportacoes(): Promise<M2ASrpPayload["listaImportacoes"]> {
+ const lista: M2ASrpPayload["listaImportacoes"] = [];
  for (const [index, row] of selectedImportRows.entries()) {
  updateProgress(
  8 + (index / Math.max(selectedImportRows.length, 1)) * 12,
  `Preparando planilha ${index + 1} de ${selectedImportRows.length}...`,
  );
-
+ let blob: Blob;
+ let filename: string;
+ let mimeType = XLSX_MIME;
  if (row.resultado) {
- const { filename, blob } = await gerarPlanilhaSecretaria(row.resultado);
- listaImportacoes.push({
- orgao_pk: row.orgaoPk!,
- unidade_orcamentaria_pk: row.unidadePk!,
- filename,
- nome: row.nome,
- arquivo_xlsx: {
- dataUrl: await blobToDataUrl(blob),
- filename,
- mimeType: XLSX_MIME,
- },
- });
- continue;
- }
-
- if (!row.arquivo) {
- throw new Error(`Arquivo nao encontrado para ${row.nome}.`);
- }
+ const gen = await gerarPlanilhaSecretaria(row.resultado);
+ blob = gen.blob;
+ filename = gen.filename;
+ } else if (row.arquivo) {
  const { data, error } = await supabase.storage
  .from(row.arquivo.bucket)
  .createSignedUrl(row.arquivo.storage_path, 300);
  if (error || !data) throw error ?? new Error("Falha ao assinar URL.");
- listaImportacoes.push({
+ const resp = await fetch(data.signedUrl);
+ blob = await resp.blob();
+ filename = row.arquivo.original_name;
+ mimeType = row.arquivo.mime_type ?? XLSX_MIME;
+ } else {
+ throw new Error(`Arquivo nao encontrado para ${row.nome}.`);
+ }
+ const bytesBase64 = await blobToBase64(blob);
+ lista.push({
  orgao_pk: row.orgaoPk!,
  unidade_orcamentaria_pk: row.unidadePk!,
- filename: row.arquivo.original_name,
  nome: row.nome,
- arquivo_xlsx: {
- signedUrl: data.signedUrl,
- filename: row.arquivo.original_name,
- mimeType: row.arquivo.mime_type ?? XLSX_MIME,
- },
+ arquivo_xlsx: { bytesBase64, filename, mimeType },
  });
  }
-
- return listaImportacoes;
+ return lista;
  }
 
  async function confirmarCriacaoProcessoM2A() {
- const requestId = `processo_srp_${Date.now()}_${Math.random()
- .toString(36)
- .slice(2, 8)}`;
  setBusy(true);
  startTask("Criando processo SRP no M2A","Preparando planilhas...");
  try {
  const listaImportacoes = await buildM2AImportacoes();
- const payload: M2AProcessCreationPayload = {
- requestId,
- tipo:"processo_srp",
+ const payload: M2ASrpPayload = {
  objeto: processoM2AForm.objeto.trim(),
  data: processoM2AForm.data,
- data_aviso: processoM2AForm.data,
  ano_orcamento: processoM2AForm.ano_orcamento.trim(),
  orgao_solicitante: processoM2AForm.orgao_solicitante.trim(),
  unidade_orcamentaria: processoM2AForm.unidade_orcamentaria.trim(),
@@ -851,53 +834,73 @@ function Page() {
  listaImportacoes,
  };
 
- m2aProcessOffRef.current?.();
- m2aProcessOffRef.current = listenM2AProcessCreationProgress(
- requestId,
- (event) => {
- if (event.etapa ==="erro" || event.status ==="erro") {
- failTask(event.mensagem ||"Falha ao criar processo no M2A.");
- toast.error("Falha ao criar processo M2A", {
- description: event.mensagem,
- });
- setBusy(false);
- m2aProcessOffRef.current?.();
- m2aProcessOffRef.current = null;
- return;
- }
-
- if (event.etapa ==="concluido" || event.status ==="concluido") {
- finishTask("Processo SRP criado no M2A.");
- toast.success("Processo SRP criado no M2A", {
- description: event.numeroProcesso
- ? `Processo ${event.numeroProcesso}`
- : undefined,
- });
- if (jobId) {
- void logAudit({
- action:"m2a_process_create",
- entityType:"irp_job",
- entityId: jobId,
- payload: {
- requestId,
- processoId: event.processoId,
- numeroProcesso: event.numeroProcesso,
- planilhas: listaImportacoes.length,
- },
- });
- }
- setBusy(false);
- m2aProcessOffRef.current?.();
- m2aProcessOffRef.current = null;
- return;
- }
-
- updateProgress(getProcessProgressPercent(event), event.mensagem);
- },
- );
- updateProgress(20,"Enviando comando para a extensao M2A...");
- requestM2AProcessCreation(payload);
  setM2aConfirmOpen(false);
+ if (jobId) {
+ await supabase
+ .from("irp_jobs")
+ .update({
+ m2a_envio_status: "em_andamento",
+ m2a_envio_etapa: "iniciando",
+ m2a_envio_mensagem: "Enviando ao M2A...",
+ m2a_envio_started_at: new Date().toISOString(),
+ })
+ .eq("id", jobId);
+ }
+
+ await criarProcessoSrpM2A(payload, async (evt) => {
+ if (evt.type === "progress") {
+ updateProgress(evt.progresso ?? undefined, evt.mensagem);
+ if (jobId) {
+ await supabase
+ .from("irp_jobs")
+ .update({
+ m2a_envio_etapa: evt.etapa,
+ m2a_envio_mensagem: evt.mensagem,
+ })
+ .eq("id", jobId);
+ }
+ } else if (evt.type === "done") {
+ if (jobId) {
+ await supabase
+ .from("irp_jobs")
+ .update({
+ m2a_processo_id: evt.processoId,
+ m2a_envio_status: evt.erros.length ? "concluido_com_erros" : "concluido",
+ m2a_envio_etapa: "concluido",
+ m2a_envio_mensagem: evt.erros.length
+ ? `Concluído com ${evt.erros.length} erro(s)`
+ : "Processo SRP criado.",
+ m2a_envio_completed_at: new Date().toISOString(),
+ })
+ .eq("id", jobId);
+ await logAudit({
+ action: "m2a_process_create",
+ entityType: "irp_job",
+ entityId: jobId,
+ payload: { processoId: evt.processoId, dfdId: evt.dfdId, erros: evt.erros },
+ });
+ }
+ finishTask(`Processo SRP ${evt.processoId} criado.`);
+ toast.success("Processo SRP criado no M2A", {
+ description: `Processo ${evt.processoId} · ${evt.totalPlanilhas - evt.erros.length}/${evt.totalPlanilhas} planilhas OK`,
+ });
+ setBusy(false);
+ } else if (evt.type === "error") {
+ if (jobId) {
+ await supabase
+ .from("irp_jobs")
+ .update({
+ m2a_envio_status: "erro",
+ m2a_envio_mensagem: evt.error,
+ m2a_envio_completed_at: new Date().toISOString(),
+ })
+ .eq("id", jobId);
+ }
+ failTask(evt.error);
+ toast.error("Falha ao criar processo M2A", { description: evt.error });
+ setBusy(false);
+ }
+ });
  } catch (e: any) {
  failTask(e?.message ??"Falha ao iniciar criacao do processo M2A.");
  toast.error("Falha ao iniciar processo M2A", { description: e?.message });
