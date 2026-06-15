@@ -405,6 +405,7 @@ function Page() {
  .map((r) => {
  const unidade = r.unidade as UnidadeIrp;
  const secretaria = resolveSecretariaM2A(unidade, unidade.numero);
+  const importOrgaoPk = secretaria?.m2a_dot_orgao_id ?? secretaria?.m2a_orgao_id ?? null;
  return {
  key: `analise:${unidade.id}`,
  nome: unidade.nome,
@@ -413,6 +414,7 @@ function Page() {
  valor: r.somaValor,
  cabecalhoColuna: r.cabecalhoColuna,
  orgaoPk: secretaria?.m2a_orgao_id ?? null,
+  importOrgaoPk,
  unidadePk: secretaria?.m2a_uo_id ?? null,
  filename: null,
  resultado: r,
@@ -427,6 +429,7 @@ function Page() {
  .map((r) => {
  const unidade = r.unidade_id ? unidadeById.get(r.unidade_id) : null;
  const secretaria = resolveSecretariaM2A(unidade, r.numero);
+  const importOrgaoPk = secretaria?.m2a_dot_orgao_id ?? secretaria?.m2a_orgao_id ?? null;
  return {
  key: `salvo:${r.id}`,
  nome: r.nome,
@@ -435,6 +438,7 @@ function Page() {
  valor: Number(r.soma_valor),
  cabecalhoColuna: r.cabecalho_coluna,
  orgaoPk: secretaria?.m2a_orgao_id ?? null,
+  importOrgaoPk,
  unidadePk: secretaria?.m2a_uo_id ?? null,
  filename: r.arquivo?.original_name ?? r.output_filename ?? null,
  arquivo: r.arquivo ?? null,
