@@ -819,8 +819,20 @@ function Page() {
  nome: row.nome,
  arquivo_xlsx: { bytesBase64, filename, mimeType },
  });
- }
- return lista;
+  }
+  // Garante que a UO gerenciadora seja a PRIMEIRA planilha importada.
+  // O portal M2A trata a primeira importação como referência do processo.
+  const uoGerenciadora =
+   processoM2AForm.unidade_orcamentaria_gerenciadora.trim() ||
+   processoM2AForm.unidade_orcamentaria.trim();
+  if (uoGerenciadora) {
+   lista.sort((a, b) => {
+    const aIs = String(a.unidade_orcamentaria_pk) === uoGerenciadora ? 0 : 1;
+    const bIs = String(b.unidade_orcamentaria_pk) === uoGerenciadora ? 0 : 1;
+    return aIs - bIs;
+   });
+  }
+  return lista;
  }
 
  async function confirmarCriacaoProcessoM2A() {
