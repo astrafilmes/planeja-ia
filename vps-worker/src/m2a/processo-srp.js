@@ -465,8 +465,11 @@ export async function importarPlanilha({
   // processo não basta para esse endpoint.
   if (objetoNormalizado) fd.append("objeto", objetoNormalizado);
   if (numeroLimpo) fd.append("numero", numeroLimpo);
-  fd.append("orgao_pk", orgaoLimpo);
-  fd.append("unidade_orcamentaria_pk", unidadeLimpa);
+  // O endpoint Django da M2A valida os nomes nativos do form HTML.
+  // Se enviar `orgao_pk` / `unidade_orcamentaria_pk`, o backend ignora e
+  // responde "Órgão não informado" mesmo com valor presente no multipart.
+  fd.append("orgao", orgaoLimpo);
+  fd.append("unidade_orcamentaria", unidadeLimpa);
   fd.append("data_aviso", String(dataAviso));
   fd.append("data_consolidacao", dataConsolidacao);
   fd.append("data_manifestacao", dataManifestacao);
@@ -479,7 +482,7 @@ export async function importarPlanilha({
   });
 
   console.log(
-    `[importarPlanilha] POST ${path} csrf=${csrf ? `len=${csrf.length}` : "AUSENTE"} objeto=${objetoNormalizado ? `len=${objetoNormalizado.length}` : "AUSENTE"} numero=${numeroLimpo || "AUSENTE"} orgao_pk=${orgaoLimpo} unidade_orcamentaria_pk=${unidadeLimpa} data_aviso=${dataAviso} data_consolidacao=${dataConsolidacao} data_manifestacao=${dataManifestacao} data_pesquisa_finalizada=(vazio) responsavel_pesquisa_pk=(vazio) file=${arquivoFilename} bytes=${arquivoBytes.length} mime=${arquivoMime}`,
+    `[importarPlanilha] POST ${path} csrf=${csrf ? `len=${csrf.length}` : "AUSENTE"} objeto=${objetoNormalizado ? `len=${objetoNormalizado.length}` : "AUSENTE"} numero=${numeroLimpo || "AUSENTE"} orgao=${orgaoLimpo} unidade_orcamentaria=${unidadeLimpa} data_aviso=${dataAviso} data_consolidacao=${dataConsolidacao} data_manifestacao=${dataManifestacao} data_pesquisa_finalizada=(vazio) responsavel_pesquisa_pk=(vazio) file=${arquivoFilename} bytes=${arquivoBytes.length} mime=${arquivoMime}`,
   );
 
   const res = await m2a.postMultipart(path, fd, {
