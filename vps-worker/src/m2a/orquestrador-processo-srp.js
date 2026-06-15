@@ -48,6 +48,7 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
   const { dfdId, processoId, numero: numeroPortal } = await capturarIdsProcesso({
     objeto: payload.objeto,
   });
+  const numeroProcesso = numeroPortal || payload.numero;
 
   onProgress({
     etapa: "atualizar_processo",
@@ -57,7 +58,7 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
   });
   await atualizarProcesso(processoId, {
     // numero gerado pelo portal SEMPRE tem prioridade; só usa fallback do frontend se não veio
-    numero: numeroPortal || payload.numero,
+    numero: numeroProcesso,
     objeto: payload.objeto,
     data_processo: payload.data,
     classificacao: payload.classificacao,
@@ -88,6 +89,8 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
       }
       await importarPlanilha({
         processoId,
+        objeto: payload.objeto,
+        numero: numeroProcesso,
         dataAviso: payload.data,
         orgaoPk: orgao,
         unidadeOrcamentariaPk: uo,
