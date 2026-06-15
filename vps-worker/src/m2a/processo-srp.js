@@ -80,15 +80,15 @@ export async function criarDFD(payload) {
 // ---------------------------------------------------------------------
 export async function capturarIdsProcesso({ objeto, dfdId: dfdIdPreferido }) {
   const objetoNorm = normalizeObjetoCaixaAlta(objeto);
-  const res = await m2a.get(DFD_TABELA_PATH);
+  let res = await m2a.get(DFD_TABELA_PATH);
   if (res.status >= 400) {
     throw new Error(
       `Tabela de DFD: portal retornou status ${res.status}`,
     );
   }
 
-  const $ = loadDoc(res.html);
-  const linhas = $("tr.kt-datatable__row.tr_solicitacao_despesa").toArray();
+  let $ = loadDoc(res.html);
+  let linhas = $("tr.kt-datatable__row.tr_solicitacao_despesa").toArray();
   if (!linhas.length) {
     throw new Error("Nenhuma DFD encontrada na tabela do portal.");
   }
@@ -99,8 +99,15 @@ export async function capturarIdsProcesso({ objeto, dfdId: dfdIdPreferido }) {
   if (dfdIdPreferido) {
     chosen = linhas.find((el) => ($(el).attr("id") || "") === `tr_${dfdIdPreferido}`);
     if (!chosen) {
-      console.warn(
-        `[capturarIdsProcesso] DFD recém-criada ${dfdIdPreferido} não apareceu na tabela; usando fallback por objeto.`,
+      await sleep(2000);
+      res = await m2a.get(DFD_TABELA_PATH);
+      $ = loadDoc(res.html);
+      linhas = $("tr.kt-datatable__row.tr_solicitacao_despesa").toArray();
+      chosen = linhas.find((el) => ($(el).attr("id") || "") === `tr_${dfdIdPreferido}`);
+    }
+    if (!chosen) {
+      throw new Error(
+        `DFD recém-criada ${dfdIdPreferido} não apareceu na tabela; abortando para não reutilizar processo antigo.`,
       );
     }
   }
