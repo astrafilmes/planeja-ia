@@ -164,45 +164,55 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
   });
   const intencoes = await listarIntencoes(dfdId);
 
-  // 7. Casa intenção → secretaria participante
+  // 7. Casa intenção → secretaria participante (mas processa TODAS)
   const { matches, orfas } = casarIntencoesComSecretarias(intencoes, participantes);
+  const matchByIntencaoId = new Map(
+    matches.map((m) => [String(m.intencao.intencaoId), m.secretaria]),
+  );
   if (orfas.length) {
     console.warn(
-      `[irp] ${orfas.length} intenção(ões) sem correspondência com secretarias participantes: ${orfas.map((o) => o.intencaoId).join(",")}`,
+      `[irp] ${orfas.length} intenção(ões) sem correspondência exata com secretarias participantes — serão processadas com quantidade 0 para fechar o ciclo. IDs: ${orfas.map((o) => o.intencaoId).join(",")}`,
     );
   }
 
-  // 8. Para cada intenção pareada: disponibilizar + manifestar + setar qty + finalizar + consolidar
-  for (let k = 0; k < matches.length; k++) {
-    const { intencao, secretaria } = matches[k];
-    const baseProg = 55 + (k / Math.max(matches.length, 1)) * 42;
+  // 8. Para CADA intenção gerada: disponibilizar + manifestar + setar qty + finalizar + consolidar
+  const todasIntencoes = intencoes;
+  for (let k = 0; k < todasIntencoes.length; k++) {
+    const intencao = todasIntencoes[k];
+    const secretaria = matchByIntencaoId.get(String(intencao.intencaoId)) || null;
+    const rotulo = secretaria
+      ? (secretaria.sigla || secretaria.nome)
+      : `intencao#${intencao.intencaoId}`;
+    const baseProg = 55 + (k / Math.max(todasIntencoes.length, 1)) * 42;
     onProgress({
       etapa: "intencoes",
-      mensagem: `Processando ${secretaria.sigla || secretaria.nome} (${k + 1}/${matches.length})…`,
+      mensagem: `Processando ${rotulo} (${k + 1}/${todasIntencoes.length})…`,
       progresso: baseProg,
-      payload: { itemAtual: k + 1, totalItens: matches.length, sigla: secretaria.sigla },
+      payload: { itemAtual: k + 1, totalItens: todasIntencoes.length, sigla: rotulo },
     });
     try {
       await disponibilizarIntencao(intencao.intencaoId);
       await manifestarInteresse(intencao.intencaoId, payload.data);
 
-      // lista itens dessa intenção e bate com ordem dos itens criados
       const itensIntencao = await listarItensIntencao(intencao.intencaoId);
-      if (itensIntencao.length !== itensCriados.length) {
-        console.warn(
-          `[irp] intencao ${intencao.intencaoId}: ${itensIntencao.length} itens; esperado ${itensCriados.length} (vou alinhar por ordem)`,
-        );
-      }
       if (!itensIntencao.length) {
         throw new Error(
           `intenção ${intencao.intencaoId} não recebeu itens da DFD ${dfdId}; não vou finalizar uma IRP vazia.`,
+        );
+      }
+      if (itensIntencao.length !== itensCriados.length) {
+        console.warn(
+          `[irp] intencao ${intencao.intencaoId}: ${itensIntencao.length} itens; esperado ${itensCriados.length} (vou alinhar por ordem)`,
         );
       }
       const N = Math.min(itensIntencao.length, itensCriados.length);
       for (let j = 0; j < N; j++) {
         const itemIntencao = itensIntencao[j];
         const original = itensCriados[j].input;
-        const qty = Number(original?.quantidades?.[secretaria.numero] ?? 0);
+        // Se for órfã (sem secretaria pareada), injeta 0 para fechar o ciclo.
+        const qty = secretaria
+          ? Number(original?.quantidades?.[secretaria.numero] ?? 0)
+          : 0;
         await atualizarQuantidadeItem({
           itemIntencaoId: itemIntencao.itemIntencaoId,
           intencaoId: intencao.intencaoId,
@@ -214,12 +224,12 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
     } catch (err) {
       const msg = String(err?.message ?? err);
       console.error(
-        `[irp] falha na intenção ${intencao.intencaoId} (${secretaria.sigla}): ${msg}`,
+        `[irp] falha na intenção ${intencao.intencaoId} (${rotulo}): ${msg}`,
       );
       erros.push({
         etapa: "intencao",
         intencaoId: intencao.intencaoId,
-        secretaria: secretaria.sigla,
+        secretaria: rotulo,
         erro: msg,
       });
     }
@@ -236,7 +246,7 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
       dfdId,
       erros,
       totalItens: itens.length,
-      totalIntencoes: matches.length,
+      totalIntencoes: intencoes.length,
       intencoesOrfas: orfas.length,
     },
   });
@@ -246,7 +256,7 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
     dfdId,
     erros,
     totalItens: itens.length,
-    totalIntencoes: matches.length,
+    totalIntencoes: intencoes.length,
     intencoesOrfas: orfas.length,
   };
 }
