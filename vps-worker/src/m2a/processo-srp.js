@@ -153,8 +153,14 @@ export async function capturarIdsProcesso({ objeto }) {
 // (modalidade, modo_disputa, fundamentacao_legal, classificacao,
 // criterio_julgamento, valor_aceitavel). Sem isso o portal devolve 200
 // mas silenciosamente ignora as alterações.
-const PROCESSO_ATUALIZAR_TPL = (id) =>
+// GET usa ?detail=true para renderizar o form COMPLETO com todos os campos.
+// POST vai SEM ?detail=true (igual ao capture do navegador) — esse é o
+// endpoint que de fato persiste o registro. O ?detail=true no POST devolve
+// um JSON curto (~51 bytes) mas ignora silenciosamente as alterações.
+const PROCESSO_ATUALIZAR_GET_TPL = (id) =>
   `/processo_administrativo/atualizar/${id}/?detail=true`;
+const PROCESSO_ATUALIZAR_POST_TPL = (id) =>
+  `/processo_administrativo/atualizar/${id}/`;
 
 // Lê todos os inputs/selects/textareas do form de edição e devolve um
 // objeto name->value preservando os valores atuais (que o M2A já gravou
