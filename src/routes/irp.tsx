@@ -31,7 +31,7 @@ import {
  DialogHeader,
  DialogTitle,
 } from"@/components/ui/dialog";
-import { Upload, FileSpreadsheet, Download, Package, Send } from"lucide-react";
+import { Upload, FileSpreadsheet, Download, Package, Settings2 } from"lucide-react";
 import { toast } from"sonner";
 import {
  listenM2AProcessCreationProgress,
@@ -54,6 +54,8 @@ const saveAs =
  (FileSaver as any).default?.saveAs ??
  (FileSaver as any).default;
 import { logAudit } from"@/lib/audit";
+import { IrpCabecalhoCard } from"@/components/irp/IrpCabecalhoCard";
+import { IrpSecretariaConfigModal } from"@/components/irp/IrpSecretariaConfigModal";
 
 type AppFile = Database["public"]["Tables"]["app_files"]["Row"];
 type IrpJob = Database["public"]["Tables"]["irp_jobs"]["Row"];
