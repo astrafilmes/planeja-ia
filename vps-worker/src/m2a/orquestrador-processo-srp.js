@@ -256,7 +256,7 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
     dfdId,
     erros,
     totalItens: itens.length,
-    totalIntencoes: matches.length,
+    totalIntencoes: intencoes.length,
     intencoesOrfas: orfas.length,
   };
 }
