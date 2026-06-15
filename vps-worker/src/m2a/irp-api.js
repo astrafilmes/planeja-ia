@@ -13,6 +13,8 @@ const URL_ITEM_TEMP = "/catalogo/itemtemporario/incluir/";
 const URL_ITEM_JSON = (id) => `/catalogo/itempadronizado-json/${id}`;
 const URL_SOLICITACAO_ITEM = (dfdId) =>
   `/gestao_compras/solicitacao_item/incluir/${dfdId}/`;
+const URL_SOLICITACAO_ITEM_TABELA = (dfdId) =>
+  `/gestao_compras/solicitacao_item/tabela/${dfdId}/?page_size=1000`;
 const URL_GERAR_INTENCOES = (dfdId) =>
   `/gestao_compras/formalizacao_demanda/gerar_intencoes/${dfdId}/`;
 const URL_TABELA_INTENCOES = (dfdId) =>
@@ -86,6 +88,7 @@ function detectDjangoFormErrors(html) {
 }
 
 function ensureDjangoFormAccepted(res, contexto, extra = "") {
+  if (res.status >= 300 && res.status < 400) return null;
   // 1) se for JSON e disser error, propaga (ex: cadastrar item temporário).
   let json = null;
   try {
@@ -122,6 +125,26 @@ function ensureDjangoFormAccepted(res, contexto, extra = "") {
     );
   }
   return null;
+}
+
+function extractIdsFromRows(html, selectors) {
+  const $ = loadDoc(html);
+  const ids = [];
+  $("tr").each((_, tr) => {
+    const $tr = $(tr);
+    let id = "";
+    $tr.find(selectors).each((_i, el) => {
+      if (id) return;
+      const v = $(el).attr("value") || "";
+      if (isValidNumericId(v)) id = v;
+    });
+    if (!id) {
+      const m = ($tr.attr("id") || "").match(/(\d+)$/);
+      if (m && isValidNumericId(m[1])) id = m[1];
+    }
+    if (id) ids.push(id);
+  });
+  return [...new Set(ids)];
 }
 
 function ensureOkJson(res, contexto, arquivo = "") {
