@@ -68,13 +68,17 @@ export async function criarDFD(payload) {
 
   // Aguarda 3s para o portal indexar a DFD na tabela
   await sleep(3000);
-  return { objetoNormalizado: objeto };
+  const dfdId = String(res.finalUrl || "").match(
+    /\/gestao_compras\/formalizacao_demanda\/(\d+)\/?/,
+  )?.[1];
+  console.log(`[criarDFD] dfdIdCriado=${dfdId || "NAO_IDENTIFICADO"}`);
+  return { objetoNormalizado: objeto, dfdId };
 }
 
 // ---------------------------------------------------------------------
 // FASE 3 — Scraping do ID da DFD e do Processo Administrativo
 // ---------------------------------------------------------------------
-export async function capturarIdsProcesso({ objeto }) {
+export async function capturarIdsProcesso({ objeto, dfdId: dfdIdPreferido }) {
   const objetoNorm = normalizeObjetoCaixaAlta(objeto);
   const res = await m2a.get(DFD_TABELA_PATH);
   if (res.status >= 400) {
@@ -89,10 +93,19 @@ export async function capturarIdsProcesso({ objeto }) {
     throw new Error("Nenhuma DFD encontrada na tabela do portal.");
   }
 
-  // Busca por objeto (mais seguro). Se não bater, usa a primeira (mais recente).
+  // Prioriza o ID recém-criado. Só buscar por objeto é inseguro quando existem
+  // DFDs antigas com o mesmo objeto — foi isso que reaproveitou o processo 69314.
   let chosen = null;
+  if (dfdIdPreferido) {
+    chosen = linhas.find((el) => ($(el).attr("id") || "") === `tr_${dfdIdPreferido}`);
+    if (!chosen) {
+      console.warn(
+        `[capturarIdsProcesso] DFD recém-criada ${dfdIdPreferido} não apareceu na tabela; usando fallback por objeto.`,
+      );
+    }
+  }
   if (objetoNorm) {
-    chosen = linhas.find((el) => {
+    chosen = chosen ?? linhas.find((el) => {
       const text = $(el).text().toUpperCase();
       return text.includes(objetoNorm.slice(0, 60));
     });
