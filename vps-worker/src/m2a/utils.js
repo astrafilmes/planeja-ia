@@ -277,7 +277,9 @@ export function formatQuantidadeM2A(value) {
   const numeric =
     typeof value === "number"
       ? value
-      : Number(raw.replace(/\./g, "").replace(",", "."));
+      : raw.includes(",")
+        ? Number(raw.replace(/\./g, "").replace(",", "."))
+        : Number(raw);
   if (Number.isFinite(numeric)) {
     return numeric.toLocaleString("pt-BR", {
       minimumFractionDigits: 3,
