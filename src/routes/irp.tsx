@@ -1259,89 +1259,15 @@ function Page() {
  </CardContent>
  </Card>
  </div>
- <Dialog open={m2aConfirmOpen} onOpenChange={setM2aConfirmOpen}>
- <DialogContent className="max-w-2xl">
- <DialogHeader>
- <DialogTitle>Confirmar criacao do processo SRP</DialogTitle>
- <DialogDescription>
- Revise os dados antes de iniciar a automacao no portal M2A.
- </DialogDescription>
- </DialogHeader>
-
- <div className="grid gap-3 text-sm">
- <div className="grid gap-2 rounded-lg border border-border/60 bg-muted/40 p-3 md:grid-cols-3">
- <div>
- <div className="text-[11px] font-semibold uppercase text-muted-foreground">
- Orgao
- </div>
- <div className="font-mono">
- {processoM2AForm.orgao_solicitante}
- </div>
- </div>
- <div>
- <div className="text-[11px] font-semibold uppercase text-muted-foreground">
- Unidade
- </div>
- <div className="font-mono">
- {processoM2AForm.unidade_orcamentaria_gerenciadora ||
- processoM2AForm.unidade_orcamentaria}
- </div>
- </div>
- <div>
- <div className="text-[11px] font-semibold uppercase text-muted-foreground">
- Agente
- </div>
- <div className="font-mono">
- {processoM2AForm.responsavel_dfd}
- </div>
- </div>
- </div>
-
- <div className="rounded-lg border border-border/60">
- <div className="border-b border-border/60 px-3 py-2 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground ">
- Planilhas selecionadas
- </div>
- <div className="max-h-64 overflow-auto">
- {selectedImportRows.map((row) => (
- <div
- key={row.key}
- className="grid gap-2 border-b border-border/60 px-3 py-2 text-[13px] last:border-b-0 md:grid-cols-[1fr_120px_120px]"
- >
- <div className="min-w-0">
- <div className="truncate font-medium">{row.nome}</div>
- <div className="truncate text-[11px] text-muted-foreground">
- {row.filename ??
- row.cabecalhoColuna ??"Arquivo gerado"}
- </div>
- </div>
- <div className="font-mono text-xs">Orgao {row.orgaoPk}</div>
- <div className="font-mono text-xs">UO {row.unidadePk}</div>
- </div>
- ))}
- </div>
- </div>
- </div>
-
- <DialogFooter>
- <Button
- type="button"
- variant="outline"
- onClick={() => setM2aConfirmOpen(false)}
- disabled={busy}
- >
- Cancelar
- </Button>
- <Button
- type="button"
- onClick={confirmarCriacaoProcessoM2A}
- disabled={busy}
- >
- <Send className="size-4" />
- Confirmar Inicio
- </Button>
- </DialogFooter>
- </DialogContent>
- </Dialog>
+        <IrpConfirmacaoProcessoModal
+          open={m2aConfirmOpen}
+          onOpenChange={setM2aConfirmOpen}
+          busy={busy}
+          form={processoM2AForm}
+          rows={selectedImportRows}
+          secRowByNumero={secRowByNumero}
+          onConfirm={confirmarCriacaoProcessoM2A}
+        />
  <IrpSecretariaConfigModal
  open={!!configModal}
  onOpenChange={(open) => !open && setConfigModal(null)}
