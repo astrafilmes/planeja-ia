@@ -766,7 +766,7 @@ function Page() {
  }
  if (rowsMissingM2A.length > 0) {
  toast.error("Ha planilhas sem IDs M2A cadastrados.", {
- description:"Complete Unidade Gestora e Unidade Orcamentaria em /secretarias.",
+  description:"Complete Unidade Gestora, Órgão da Dotação e Unidade Orçamentária em /secretarias.",
  });
  return;
  }
