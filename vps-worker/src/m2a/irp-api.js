@@ -229,9 +229,14 @@ export async function obterUnidadeFornecimento(itemPadronizadoId) {
   }
   // o portal devolve { unidade_fornecimento: { id: 92797, ... } } ou
   // {unidades_fornecimento: [{id, ...}]} — cobrimos os dois.
+  // A Bíblia da M2A define a forma canônica: unidade_fornecimento[0].id (array).
+  // Mantemos fallbacks defensivos para outras formas já vistas em produção.
   const ufId =
+    json?.unidade_fornecimento?.[0]?.id ??
     json?.unidade_fornecimento?.id ??
-    json?.unidade_fornecimento ??
+    (typeof json?.unidade_fornecimento === "number" || typeof json?.unidade_fornecimento === "string"
+      ? json.unidade_fornecimento
+      : null) ??
     json?.unidades_fornecimento?.[0]?.id ??
     json?.id_unidade_fornecimento ??
     null;
@@ -403,6 +408,7 @@ export async function manifestarInteresse(intencaoId, dataISO) {
   const body = new URLSearchParams();
   body.set("csrfmiddlewaretoken", csrf);
   body.set("text", "true");
+  body.set("detail_solicitacao", "true");
   body.set("data_input", String(dataISO));
   const res = await m2a.request("POST", URL_MANIFESTAR(intencaoId), {
     body: body.toString(),
@@ -461,14 +467,16 @@ export async function atualizarQuantidadeItem({
     );
   }
   const csrf = await getCsrfGlobal();
-  // Django exige multipart/form-data + botão de submit (_salvar) + qty com vírgula.
-  const fd = new FormData();
-  fd.append("csrfmiddlewaretoken", csrf);
-  fd.append("intencao_registro_preco", String(intencaoId));
-  fd.append("quantidade", formatQuantidadeM2A(quantidade));
-  fd.append("_salvar", "");
-  const res = await m2a.postMultipart(URL_ATUALIZAR_QTD_ITEM(itemIntencaoId), fd, {
+  // Bíblia M2A: application/x-www-form-urlencoded, sem _salvar.
+  const body = new URLSearchParams();
+  body.set("csrfmiddlewaretoken", csrf);
+  body.set("intencao_registro_preco", String(intencaoId));
+  body.set("quantidade", formatQuantidadeM2A(quantidade));
+  const res = await m2a.request("POST", URL_ATUALIZAR_QTD_ITEM(itemIntencaoId), {
+    body: body.toString(),
     headers: {
+      "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+      "X-Requested-With": "XMLHttpRequest",
       Referer: `${m2a.http.defaults.baseURL || ""}/gestao_compras/intencao_registro_preco/${intencaoId}/`,
     },
   });
@@ -490,6 +498,7 @@ export async function finalizarParaConsolidacao(intencaoId, dataISO) {
   const body = new URLSearchParams();
   body.set("csrfmiddlewaretoken", csrf);
   body.set("text", "true");
+  body.set("detail_solicitacao", "true");
   body.set("data_input", String(dataISO));
   const res = await m2a.request(
     "POST",
@@ -519,7 +528,7 @@ export async function consolidarIntencao(intencaoId, dataISO) {
   const body = new URLSearchParams();
   body.set("csrfmiddlewaretoken", csrf);
   body.set("text", "true");
-  if (dataISO) body.set("data_input", String(dataISO));
+  // Bíblia M2A: consolidar não recebe data_input (só csrf + text=true).
   const res = await m2a.request("POST", URL_CONSOLIDAR(intencaoId), {
     body: body.toString(),
     headers: {
