@@ -6,6 +6,7 @@ import { processosRoutes } from "./routes/processos.js";
 import { authRoutes } from "./routes/auth.js";
 import { contratosRoutes } from "./routes/contratos.js";
 import { documentosRoutes } from "./routes/documentos.js";
+import { processosSrpRoutes } from "./routes/processos-srp.js";
 
 const app = Fastify({
   logger: { level: config.logLevel },
@@ -24,6 +25,7 @@ await app.register(numeracaoRoutes);
 await app.register(processosRoutes);
 await app.register(contratosRoutes);
 await app.register(documentosRoutes);
+await app.register(processosSrpRoutes);
 
 app.setErrorHandler((err, _req, reply) => {
   app.log.error(err);

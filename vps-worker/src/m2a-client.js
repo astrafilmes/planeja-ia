@@ -276,6 +276,19 @@ class M2aClient {
     });
   }
 
+  /** POST multipart/form-data. payload = FormData (node form-data). */
+  async postMultipart(path, formData, opts = {}) {
+    return this.request("POST", path, {
+      ...opts,
+      body: formData,
+      headers: {
+        ...formData.getHeaders(),
+        "X-Requested-With": "XMLHttpRequest",
+        ...(opts.headers || {}),
+      },
+    });
+  }
+
   /** Captura/retorna CSRF para a URL dada (com cache). */
   async getCsrf(path, opts = {}) {
     const key = normalizeCacheUrl(path);
