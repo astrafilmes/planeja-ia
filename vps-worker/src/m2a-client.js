@@ -60,9 +60,13 @@ class M2aClient {
   }
 
   static isLoginPage(html, finalUrl = "") {
-    if (!html) return false;
-    if (/(?:\/login\/|\/usuario\/login\/)/i.test(finalUrl)) return true;
-    return /name=["']password["']/i.test(html);
+    // Só consideramos página de login quando a URL final aponta pra rota
+    // de login do portal. NÃO usar heurística por HTML (name="password"),
+    // porque várias páginas internas do M2A têm campo de "alterar senha"
+    // no menu do usuário e isso gera falso positivo — o que disparava
+    // re-login e invalidava o CSRF token do POST original (→ 403).
+    if (!finalUrl) return false;
+    return /(?:\/login\/|\/usuario\/login\/)/i.test(finalUrl);
   }
 
   rememberCsrf(html, sourceUrl) {
@@ -234,11 +238,14 @@ class M2aClient {
       }
       let r = await this._raw(method, path, opts);
       console.log(`[m2a] ${method} ${path} → ${r.status} (finalUrl=${r.finalUrl || "-"}, bytes=${r.html.length})`);
-      if (
-        M2aClient.isLoginPage(r.html, r.finalUrl) ||
-        r.status === 401 ||
-        r.status === 403
-      ) {
+      const isPost = method.toUpperCase() === "POST";
+      const sessionExpired =
+        M2aClient.isLoginPage(r.html, r.finalUrl) || r.status === 401;
+      // Para POST, NÃO refazemos o request automaticamente em 403:
+      // o body já carrega um csrfmiddlewaretoken que ficaria velho após
+      // o re-login e o Django rejeitaria de novo com 403. O caller deve
+      // tratar 403 explicitamente (re-buscar CSRF e refazer o POST).
+      if (sessionExpired || (!isPost && r.status === 403)) {
         console.warn(`[m2a] sessão expirada em ${method} ${path} — re-login e retry`);
         this.loggedIn = false;
         await this.login();
