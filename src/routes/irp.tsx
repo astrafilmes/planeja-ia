@@ -278,7 +278,7 @@ function Page() {
  unidade_orcamentaria:"",
  unidade_orcamentaria_gerenciadora:"",
  responsavel_dfd:"",
- comissao_planejamento:"",
+ comissao_planejamento:"3911",
  classificacao:"1",
  });
 
@@ -771,8 +771,7 @@ function Page() {
  ["ano_orcamento","Ano orcamentario"],
  ["orgao_solicitante","Orgao solicitante"],
  ["unidade_orcamentaria","Unidade orcamentaria"],
- ["responsavel_dfd","Agente responsavel"],
- ["comissao_planejamento","Comissao de planejamento"],
+ ["responsavel_dfd","Agente de planejamento"],
  ["classificacao","Classificacao"],
  ];
  const missing = requiredFields.filter(
@@ -839,7 +838,7 @@ function Page() {
  processoM2AForm.unidade_orcamentaria_gerenciadora.trim() ||
  processoM2AForm.unidade_orcamentaria.trim(),
  responsavel_dfd: processoM2AForm.responsavel_dfd.trim(),
- comissao_planejamento: processoM2AForm.comissao_planejamento.trim(),
+ comissao_planejamento: processoM2AForm.comissao_planejamento.trim() ||"3911",
  classificacao: processoM2AForm.classificacao.trim(),
  listaImportacoes,
  };
