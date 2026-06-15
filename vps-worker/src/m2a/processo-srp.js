@@ -140,17 +140,86 @@ export async function capturarIdsProcesso({ objeto }) {
 const PROCESSO_ATUALIZAR_TPL = (id) =>
   `/processo_administrativo/atualizar/${id}/?detail=true`;
 
+// Lê todos os inputs/selects/textareas do form de edição e devolve um
+// objeto name->value preservando os valores atuais (que o M2A já gravou
+// ao criar a DFD). Isso garante que campos obrigatórios que NÃO estamos
+// sobrescrevendo (natureza_objeto, local_disputa, justificativa,
+// tratamento ME/EPP, etc.) sejam ecoados de volta, evitando que o save
+// silencioso "limpe" o registro e gere "pendências no cadastro".
+function extrairCamposFormAtual($, formSelector = "form") {
+  const out = {};
+  const $form = $(formSelector).first().length
+    ? $(formSelector).first()
+    : $("form").first();
+
+  // Inputs
+  $form.find("input").each((_, el) => {
+    const $el = $(el);
+    const name = $el.attr("name");
+    if (!name) return;
+    const type = ($el.attr("type") || "text").toLowerCase();
+    if (type === "submit" || type === "button" || type === "file" || type === "image") return;
+    if (type === "checkbox" || type === "radio") {
+      if ($el.is("[checked]") || $el.prop("checked")) {
+        out[name] = $el.attr("value") ?? "on";
+      } else if (!(name in out)) {
+        // garante que o name exista mesmo se desmarcado? não — não enviar
+      }
+      return;
+    }
+    const val = $el.attr("value");
+    out[name] = val ?? "";
+  });
+
+  // Selects (pega <option selected> ou o primeiro com value não vazio)
+  $form.find("select").each((_, el) => {
+    const $el = $(el);
+    const name = $el.attr("name");
+    if (!name) return;
+    const $sel = $el.find("option[selected]").first();
+    if ($sel.length) {
+      out[name] = $sel.attr("value") ?? $sel.text().trim();
+    } else {
+      // se não tem selected explícito, mantém o que estiver em out (vazio)
+      if (!(name in out)) out[name] = "";
+    }
+  });
+
+  // Textareas
+  $form.find("textarea").each((_, el) => {
+    const $el = $(el);
+    const name = $el.attr("name");
+    if (!name) return;
+    out[name] = $el.text();
+  });
+
+  return out;
+}
+
 export async function atualizarProcesso(processoId, payload) {
   const path = PROCESSO_ATUALIZAR_TPL(processoId);
-  const csrf = await m2a.getCsrf(path, { force: true });
+
+  // 1) Carrega a página do form para ler o CSRF E todos os campos atuais
+  const pageRes = await m2a.get(path);
+  if (pageRes.status >= 400) {
+    throw new Error(`Atualizar processo: GET ${path} status ${pageRes.status}`);
+  }
+  const $page = loadDoc(pageRes.html);
+  const csrf =
+    $page('input[name="csrfmiddlewaretoken"]').first().attr("value") ||
+    (await m2a.getCsrf(path, { force: true }));
+
+  const camposAtuais = extrairCamposFormAtual($page);
+  console.log(
+    `[atualizarProcesso] camposAtuais (${Object.keys(camposAtuais).length}): ${JSON.stringify(camposAtuais)}`,
+  );
 
   const numeroLimpo = String(payload.numero ?? "")
     .replace(/[^0-9/]/g, "")
     .trim();
 
-  // Valida classificacao contra a API do portal
-  // (1=Compras, 2=Compras e serviços, 3=Serviços comuns, 4=Serviços de engenharia comuns)
-  let classificacao = String(payload.classificacao || "").trim();
+  // 2) Valida classificacao
+  let classificacao = String(payload.classificacao || camposAtuais.classificacao || "").trim();
   try {
     const r = await m2a.get(
       "/processo_administrativo/classificacao/?modalidade=7&fundamentacao_legal=66",
@@ -158,56 +227,61 @@ export async function atualizarProcesso(processoId, payload) {
     );
     const json = JSON.parse(r.html || "{}");
     const validos = (json.results || []).map((x) => String(x.id));
-    if (!validos.includes(classificacao)) {
-      const fallback = validos.includes("3") ? "3" : validos[0] || "3";
+    if (validos.length && !validos.includes(classificacao)) {
+      const fallback = validos.includes("3") ? "3" : validos[0];
       console.warn(
         `[m2a] classificacao "${classificacao}" inválida (válidas: ${validos.join(",")}). usando "${fallback}".`,
       );
       classificacao = fallback;
     }
   } catch (err) {
-    console.warn(`[m2a] falha ao validar classificacao: ${err.message}. usando "3".`);
+    console.warn(`[m2a] falha ao validar classificacao: ${err.message}.`);
     if (!classificacao) classificacao = "3";
   }
 
-  const body = new URLSearchParams();
-  body.set("csrfmiddlewaretoken", csrf);
-  // Fixos conforme spec (form completo de edição)
-  body.set("modalidade", "7");
-  body.set("modo_disputa", "1");
-  body.set("fundamentacao_legal", "66");
-  body.set("classificacao", classificacao);
-  body.set("criterio_julgamento", "1");
-  body.set("processo_administrativo_pre_qualificacao", "");
-  body.set("valor_aceitavel", "1");
-  body.set("criterio_apuracao", "1");
-  body.set("comissao_licitacao", "3909");
-  body.set("periodo_vigencia", "2");
-  body.set("valor_periodo_vigencia", "12");
-  body.set("permitir_adesao_registro_preco", "on");
-  body.set("regime_execucao", "1");
-  body.set("valor_intervalo_lance", "0,1000");
-  body.set("prazo_habilitacao_obrigatoria", "on");
-  body.set("_salvar", "true");
-  // Dinâmicos
-  if (numeroLimpo) body.set("numero", numeroLimpo);
-  if (payload.objeto)
-    body.set("objeto", normalizeObjetoCaixaAlta(payload.objeto));
-  if (payload.data_processo) body.set("data_processo", payload.data_processo);
+  // 3) Monta body partindo dos campos atuais + overrides
+  const overrides = {
+    csrfmiddlewaretoken: csrf,
+    modalidade: "7",
+    modo_disputa: "1",
+    fundamentacao_legal: "66",
+    classificacao,
+    criterio_julgamento: "1",
+    valor_aceitavel: "1",
+    criterio_apuracao: "1",
+    comissao_licitacao: "3909",
+    periodo_vigencia: "2",
+    valor_periodo_vigencia: "12",
+    permitir_adesao_registro_preco: "on",
+    regime_execucao: "1",
+    valor_intervalo_lance: "0,1000",
+    prazo_habilitacao_obrigatoria: "on",
+    _salvar: "true",
+  };
+  if (numeroLimpo) overrides.numero = numeroLimpo;
+  if (payload.objeto) overrides.objeto = normalizeObjetoCaixaAlta(payload.objeto);
+  if (payload.data_processo) overrides.data_processo = payload.data_processo;
   if (payload.unidade_orcamentaria_gerenciadora)
-    body.set(
-      "unidade_orcamentaria_gerenciadora",
-      String(payload.unidade_orcamentaria_gerenciadora),
+    overrides.unidade_orcamentaria_gerenciadora = String(
+      payload.unidade_orcamentaria_gerenciadora,
     );
 
-  // Log payload (sem csrf) para diagnóstico
+  const merged = { ...camposAtuais, ...overrides };
+
+  const body = new URLSearchParams();
+  for (const [k, v] of Object.entries(merged)) {
+    if (v === undefined || v === null) continue;
+    body.append(k, String(v));
+  }
+
+  // Log payload (sem csrf)
   const payloadDebug = {};
   for (const [k, v] of body.entries()) {
     if (k === "csrfmiddlewaretoken") continue;
     payloadDebug[k] = v;
   }
   console.log(
-    `[atualizarProcesso] POST ${path} payload=${JSON.stringify(payloadDebug)}`,
+    `[atualizarProcesso] POST ${path} payload(${Object.keys(payloadDebug).length} campos)=${JSON.stringify(payloadDebug)}`,
   );
 
   const res = await m2a.request("POST", path, {
@@ -223,8 +297,21 @@ export async function atualizarProcesso(processoId, payload) {
     throw new Error(`Atualizar processo: status ${res.status}`);
   }
   const $ = loadDoc(res.html);
-  const erros = $(".errorlist, .alert-danger, .alert-error")
+  // Detecta erros: errorlist (Django), alert-danger, has-error, help-block,
+  // e qualquer texto de "pendência"
+  const erros = $(
+    ".errorlist li, .alert-danger, .alert-error, .has-error .help-block, .invalid-feedback, .field-error",
+  )
     .map((_, el) => $(el).text().replace(/\s+/g, " ").trim())
+    .get()
+    .filter(Boolean);
+  // Detecta campos com erro: <div class="form-group has-error"> com <label>
+  const camposComErro = $(".has-error, .form-group.has-error")
+    .map((_, el) => {
+      const lbl = $(el).find("label").first().text().replace(/\s+/g, " ").trim();
+      const msg = $(el).find(".help-block, .invalid-feedback, .errorlist").text().replace(/\s+/g, " ").trim();
+      return lbl || msg ? `${lbl}${msg ? `: ${msg}` : ""}` : "";
+    })
     .get()
     .filter(Boolean);
   const msgsSucesso = $(".alert-success, .alert-info, .messages li")
@@ -232,10 +319,12 @@ export async function atualizarProcesso(processoId, payload) {
     .get()
     .filter(Boolean);
   console.log(
-    `[atualizarProcesso] resp bytes=${res.html.length} finalUrl=${res.finalUrl} erros=${JSON.stringify(erros)} sucesso=${JSON.stringify(msgsSucesso)}`,
+    `[atualizarProcesso] resp bytes=${res.html.length} finalUrl=${res.finalUrl} erros=${JSON.stringify(erros)} camposComErro=${JSON.stringify(camposComErro)} sucesso=${JSON.stringify(msgsSucesso)}`,
   );
-  if (erros.length) {
-    throw new Error(`Atualizar processo rejeitado: ${erros.join(" | ")}`);
+  if (erros.length || camposComErro.length) {
+    throw new Error(
+      `Atualizar processo rejeitado: ${[...erros, ...camposComErro].join(" | ")}`,
+    );
   }
   return { ok: true };
 }
