@@ -200,6 +200,16 @@ export async function atualizarProcesso(processoId, payload) {
       String(payload.unidade_orcamentaria_gerenciadora),
     );
 
+  // Log payload (sem csrf) para diagnóstico
+  const payloadDebug = {};
+  for (const [k, v] of body.entries()) {
+    if (k === "csrfmiddlewaretoken") continue;
+    payloadDebug[k] = v;
+  }
+  console.log(
+    `[atualizarProcesso] POST ${path} payload=${JSON.stringify(payloadDebug)}`,
+  );
+
   const res = await m2a.request("POST", path, {
     body: body.toString(),
     headers: {
@@ -217,6 +227,13 @@ export async function atualizarProcesso(processoId, payload) {
     .map((_, el) => $(el).text().replace(/\s+/g, " ").trim())
     .get()
     .filter(Boolean);
+  const msgsSucesso = $(".alert-success, .alert-info, .messages li")
+    .map((_, el) => $(el).text().replace(/\s+/g, " ").trim())
+    .get()
+    .filter(Boolean);
+  console.log(
+    `[atualizarProcesso] resp bytes=${res.html.length} finalUrl=${res.finalUrl} erros=${JSON.stringify(erros)} sucesso=${JSON.stringify(msgsSucesso)}`,
+  );
   if (erros.length) {
     throw new Error(`Atualizar processo rejeitado: ${erros.join(" | ")}`);
   }
