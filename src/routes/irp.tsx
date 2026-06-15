@@ -1252,12 +1252,6 @@ function Page() {
           secRowByNumero={secRowByNumero}
           onConfirm={confirmarCriacaoProcessoM2A}
         />
- <IrpSecretariaConfigModal
- open={!!configModal}
- onOpenChange={(open) => !open && setConfigModal(null)}
- secretariaRowId={configModal?.rowId ?? null}
- secretariaNome={configModal?.nome ?? ""}
- />
  </AppShell>
  );
 }
