@@ -1738,8 +1738,7 @@ function Page() {
  <span className="font-medium text-foreground">
  Ata:
  </span>{""}
- {c.m2aAtaNumero ??"não definida"}
- {c.m2aAtaId ? ` · ID ${c.m2aAtaId}` :""}
+                                    {c.m2aAtaNumero ?? "não definida"}
  </div>
  <div>
  <span className="font-medium text-foreground">
@@ -1757,10 +1756,7 @@ function Page() {
  <span className="font-medium text-foreground">
  Fiscal:
  </span>{""}
- {sec?.m2a_fiscal_nome ??"não cadastrado"}
- {sec?.m2a_fiscal_codigo
- ? ` - ID ${sec.m2a_fiscal_codigo}`
- :""}
+                                    {sec?.m2a_fiscal_nome ?? "não cadastrado"}
  </div>
  <div>
  <span className="font-medium text-foreground">
@@ -1772,10 +1768,7 @@ function Page() {
  <span className="font-medium text-foreground">
  Gestor:
  </span>{""}
- {sec?.m2a_gestor_nome ??"não cadastrado"}
- {sec?.m2a_gestor_codigo
- ? ` - ID ${sec.m2a_gestor_codigo}`
- :""}
+                                    {sec?.m2a_gestor_nome ?? "não cadastrado"}
  </div>
  <div>
  <span className="font-medium text-foreground">

@@ -433,12 +433,8 @@ export function ServidoresCatalogPage({
  setEditing({ ...editing, unidade_ids: next });
  }}
  />
- <span className="min-w-0 truncate">
- {unidade.nome}{""}
- <span className="font-mono text-xs text-muted-foreground">
- ID {unidade.m2a_id}
- </span>
- </span>
+                    <span className="min-w-0 truncate">{unidade.nome}</span>
+
  </label>
  ))}
  </div>
