@@ -400,30 +400,38 @@ export async function atualizarQuantidadeItem({
   intencaoId,
   quantidade,
 }) {
+  // Trava extra contra IDs contaminados ("on") chegando aqui.
+  if (!isValidNumericId(String(itemIntencaoId))) {
+    throw new Error(
+      `atualizarQuantidadeItem: itemIntencaoId inválido "${itemIntencaoId}" (esperado numérico).`,
+    );
+  }
+  if (!isValidNumericId(String(intencaoId))) {
+    throw new Error(
+      `atualizarQuantidadeItem: intencaoId inválido "${intencaoId}" (esperado numérico).`,
+    );
+  }
   const csrf = await getCsrfGlobal();
-  const body = new URLSearchParams();
-  body.set("csrfmiddlewaretoken", csrf);
-  body.set("intencao_registro_preco", String(intencaoId));
-  body.set("quantidade", formatQuantidadeM2A(quantidade));
-  const res = await m2a.request(
-    "POST",
-    URL_ATUALIZAR_QTD_ITEM(itemIntencaoId),
-    {
-      body: body.toString(),
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-        "X-Requested-With": "XMLHttpRequest",
-      },
+  // Django exige multipart/form-data + botão de submit (_salvar) + qty com vírgula.
+  const fd = new FormData();
+  fd.append("csrfmiddlewaretoken", csrf);
+  fd.append("intencao_registro_preco", String(intencaoId));
+  fd.append("quantidade", formatQuantidadeM2A(quantidade));
+  fd.append("_salvar", "");
+  const res = await m2a.postMultipart(URL_ATUALIZAR_QTD_ITEM(itemIntencaoId), fd, {
+    headers: {
+      Referer: `${m2a.http.defaults.baseURL || ""}/gestao_compras/intencao_registro_preco/${intencaoId}/`,
     },
-  );
+  });
   if (res.status >= 400) {
     throw new Error(
       `atualizarQuantidadeItem(${itemIntencaoId}): status ${res.status}`,
     );
   }
-  ensureOkJson(res, "atualizarQuantidadeItem", itemIntencaoId);
+  ensureOkJson(res, "atualizarQuantidadeItem", `item=${itemIntencaoId} qty=${formatQuantidadeM2A(quantidade)}`);
   return { ok: true };
 }
+
 
 // =====================================================================
 // PASSO 8.1 — finalizar para consolidação
