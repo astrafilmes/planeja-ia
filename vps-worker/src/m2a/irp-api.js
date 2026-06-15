@@ -294,7 +294,8 @@ export async function incluirItemNaDFD({
   fd.append("item_padronizado_especificacao_text", String(especificacao || ""));
   fd.append("natureza_despesa", String(naturezaId));
   fd.append("unidade_fornecimento", String(unidadeFornecimentoId));
-  fd.append("quantidade", formatQuantidadeM2A(quantidade));
+  const qtyStr = sanitizeQuantidadeDFD(quantidade);
+  fd.append("quantidade", qtyStr);
   fd.append("padrao_descritivo_processo", "");
   fd.append("_salvar", "");
 
