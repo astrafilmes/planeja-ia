@@ -37,13 +37,60 @@ async function getCsrfGlobal() {
   return await m2a.getCsrf(URL_DFD_LIST, { force: false });
 }
 
-function ensureOkJson(res, contexto, arquivo = "") {
+// Valida que o value de checkbox é um ID numérico real (não "on", não vazio).
+function isValidNumericId(v) {
+  return typeof v === "string" && /^\d+$/.test(v);
+}
+
+// Lê a resposta de um POST de formulário Django e detecta a "tela vermelha".
+// Em sucesso o Django responde 302 → axios segue o redirect (status 200) e a
+// página final NÃO contém .has-error/.alert-danger/.help-block (form-errors).
+// Em falha, o Django re-renderiza a MESMA url do form com classes de erro
+// preenchidas — é isso que detectamos aqui.
+function detectDjangoFormErrors(html) {
+  if (!html || typeof html !== "string") return [];
+  // Acelera: só carrega Cheerio se houver marcador suspeito.
+  if (
+    !/has-error|alert-danger|errorlist|invalid-feedback|help-block|text-danger/i.test(
+      html,
+    )
+  ) {
+    return [];
+  }
+  const $ = loadDoc(html);
+  const errs = [];
+  $(".has-error, .form-group.has-error, .invalid-feedback, .errorlist li, .alert-danger, .alert.alert-error, .help-block.text-danger, span.text-danger, ul.errorlist li").each(
+    (_i, el) => {
+      const $el = $(el);
+      const msg = ($el.text() || "").replace(/\s+/g, " ").trim();
+      if (!msg) return;
+      // ignora ruído informativo
+      if (/sucesso|salv|inclu[ií]d|cadastrad/i.test(msg)) return;
+      // tenta achar o label do campo
+      let field = "";
+      const $grp = $el.closest(".form-group, .field, .row");
+      if ($grp.length) {
+        field = ($grp.find("label").first().text() || "").replace(/\s+/g, " ").trim();
+      }
+      errs.push({ field: field || "?", message: msg });
+    },
+  );
+  // dedup
+  const seen = new Set();
+  return errs.filter((e) => {
+    const k = `${e.field}::${e.message}`;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+
+function ensureDjangoFormAccepted(res, contexto, extra = "") {
+  // 1) se for JSON e disser error, propaga (ex: cadastrar item temporário).
   let json = null;
   try {
     json = JSON.parse(res.html);
-  } catch {
-    /* não é JSON; segue pra parse HTML */
-  }
+  } catch {}
   if (json) {
     const ok =
       json.ok === true ||
@@ -52,22 +99,35 @@ function ensureOkJson(res, contexto, arquivo = "") {
       json.status === "success";
     if (!ok) {
       const msg =
-        json.mensagem ||
-        json.message ||
-        json.msg ||
-        json.error ||
-        json.erro ||
-        JSON.stringify(json);
-      throw new Error(`${contexto}${arquivo ? ` (${arquivo})` : ""}: ${msg}`);
+        json.mensagem || json.message || json.msg || json.error || json.erro || JSON.stringify(json);
+      throw new Error(`${contexto}${extra ? ` (${extra})` : ""}: ${msg}`);
     }
     return json;
   }
+  // 2) HTTP error
   if (res.status >= 400) {
-    throw new Error(`${contexto}: HTTP ${res.status}`);
+    throw new Error(`${contexto}${extra ? ` (${extra})` : ""}: HTTP ${res.status}`);
   }
-  // sem JSON e sem erro -> assume ok (redirect 302 comum em Django)
+  // 3) Django "200 OK + tela vermelha" — armadilha clássica
+  const erros = detectDjangoFormErrors(res.html);
+  if (erros.length) {
+    for (const e of erros) {
+      console.error(
+        `[irp-api] M2A recusou ${contexto}${extra ? ` (${extra})` : ""} — campo="${e.field}" erro="${e.message}"`,
+      );
+    }
+    const resumo = erros.map((e) => `${e.field}: ${e.message}`).join(" | ");
+    throw new Error(
+      `${contexto}${extra ? ` (${extra})` : ""}: M2A rejeitou o formulário → ${resumo}`,
+    );
+  }
   return null;
 }
+
+function ensureOkJson(res, contexto, arquivo = "") {
+  return ensureDjangoFormAccepted(res, contexto, arquivo);
+}
+
 
 // =====================================================================
 // PASSO 1 — cadastra item temporário no catálogo
@@ -225,18 +285,21 @@ export async function listarIntencoes(dfdId) {
   const out = [];
   for (const tr of linhas) {
     const $tr = $(tr);
-    let id =
-      $tr.find("input.checkboxes, input.checkbox-intencao, input[type=checkbox]")
-        .first()
-        .attr("value") || "";
+    // Procura o PRIMEIRO checkbox com value numérico real (ignora "selecionar todos" cujo value="on").
+    let id = "";
+    $tr
+      .find("input.checkboxes, input.checkbox-intencao, input[type=checkbox]")
+      .each((_i, el) => {
+        if (id) return;
+        const v = $(el).attr("value") || "";
+        if (isValidNumericId(v)) id = v;
+      });
     if (!id) {
       const m = ($tr.attr("id") || "").match(/(\d+)$/);
-      if (m) id = m[1];
+      if (m && isValidNumericId(m[1])) id = m[1];
     }
-    if (!id) continue;
-    // texto da linha para casar com m2a_orgao_id ou nome
+    if (!isValidNumericId(id)) continue;
     const textoLinha = $tr.text().replace(/\s+/g, " ").trim();
-    // tenta pegar data-orgao / data-orgao-id se existirem em algum filho
     const orgaoAttr =
       $tr.attr("data-orgao") ||
       $tr.attr("data-orgao-id") ||
@@ -249,6 +312,7 @@ export async function listarIntencoes(dfdId) {
       texto: textoLinha,
     });
   }
+
   console.log(
     `[irp-api] listarIntencoes dfd=${dfdId} encontrou ${out.length} intenções`,
   );
@@ -308,16 +372,25 @@ export async function listarItensIntencao(intencaoId) {
   // cada linha tem um checkbox .checkboxintencao_registro_itens com value=ITEM_INTENCAO_ID
   $("tr").each((_, tr) => {
     const $tr = $(tr);
-    const cb = $tr
+    // Procura o PRIMEIRO checkbox com value numérico real (ignora "on" do master selector).
+    let id = "";
+    $tr
       .find("input.checkboxintencao_registro_itens, input.checkboxes, input[type=checkbox]")
-      .first();
-    const id = cb.attr("value");
-    if (!id) return;
+      .each((_i, el) => {
+        if (id) return;
+        const v = $(el).attr("value") || "";
+        if (isValidNumericId(v)) id = v;
+      });
+    if (!isValidNumericId(id)) return;
     const texto = $tr.text().replace(/\s+/g, " ").trim();
     out.push({ itemIntencaoId: String(id), texto });
   });
+  console.log(
+    `[irp-api] listarItensIntencao(${intencaoId}) → ${out.length} itens (ids válidos)`,
+  );
   return out;
 }
+
 
 // =====================================================================
 // PASSO 7 — atualiza a quantidade que esta participante quer daquele item
@@ -327,30 +400,38 @@ export async function atualizarQuantidadeItem({
   intencaoId,
   quantidade,
 }) {
+  // Trava extra contra IDs contaminados ("on") chegando aqui.
+  if (!isValidNumericId(String(itemIntencaoId))) {
+    throw new Error(
+      `atualizarQuantidadeItem: itemIntencaoId inválido "${itemIntencaoId}" (esperado numérico).`,
+    );
+  }
+  if (!isValidNumericId(String(intencaoId))) {
+    throw new Error(
+      `atualizarQuantidadeItem: intencaoId inválido "${intencaoId}" (esperado numérico).`,
+    );
+  }
   const csrf = await getCsrfGlobal();
-  const body = new URLSearchParams();
-  body.set("csrfmiddlewaretoken", csrf);
-  body.set("intencao_registro_preco", String(intencaoId));
-  body.set("quantidade", formatQuantidadeM2A(quantidade));
-  const res = await m2a.request(
-    "POST",
-    URL_ATUALIZAR_QTD_ITEM(itemIntencaoId),
-    {
-      body: body.toString(),
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-        "X-Requested-With": "XMLHttpRequest",
-      },
+  // Django exige multipart/form-data + botão de submit (_salvar) + qty com vírgula.
+  const fd = new FormData();
+  fd.append("csrfmiddlewaretoken", csrf);
+  fd.append("intencao_registro_preco", String(intencaoId));
+  fd.append("quantidade", formatQuantidadeM2A(quantidade));
+  fd.append("_salvar", "");
+  const res = await m2a.postMultipart(URL_ATUALIZAR_QTD_ITEM(itemIntencaoId), fd, {
+    headers: {
+      Referer: `${m2a.http.defaults.baseURL || ""}/gestao_compras/intencao_registro_preco/${intencaoId}/`,
     },
-  );
+  });
   if (res.status >= 400) {
     throw new Error(
       `atualizarQuantidadeItem(${itemIntencaoId}): status ${res.status}`,
     );
   }
-  ensureOkJson(res, "atualizarQuantidadeItem", itemIntencaoId);
+  ensureOkJson(res, "atualizarQuantidadeItem", `item=${itemIntencaoId} qty=${formatQuantidadeM2A(quantidade)}`);
   return { ok: true };
 }
+
 
 // =====================================================================
 // PASSO 8.1 — finalizar para consolidação
