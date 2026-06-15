@@ -1104,7 +1104,20 @@ function Page() {
  <TableCell className="text-right">
  <StatusBadge status={r.status} />
  </TableCell>
- <TableCell className="text-right">
+  <TableCell className="text-right">
+ <div className="flex items-center justify-end gap-1">
+ <Button
+ size="sm"
+ variant="ghost"
+ disabled={r.itens.length === 0 || !secRowByUnidadeId.get(r.unidade.id)}
+ onClick={() => {
+ const row = secRowByUnidadeId.get(r.unidade.id);
+ if (row) setConfigModal({ rowId: row.id, nome: r.unidade.nome });
+ }}
+ title="Configurar dotação / fiscal / gestor"
+ >
+ <Settings2 className="size-4" />
+ </Button>
  <Button
  size="sm"
  variant="ghost"
@@ -1113,6 +1126,7 @@ function Page() {
  >
  <Download className="size-4" />
  </Button>
+ </div>
  </TableCell>
  </TableRow>
  ))}
