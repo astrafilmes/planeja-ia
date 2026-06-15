@@ -146,53 +146,69 @@ const PROCESSO_ATUALIZAR_TPL = (id) =>
 // sobrescrevendo (natureza_objeto, local_disputa, justificativa,
 // tratamento ME/EPP, etc.) sejam ecoados de volta, evitando que o save
 // silencioso "limpe" o registro e gere "pendências no cadastro".
-function extrairCamposFormAtual($, formSelector = "form") {
+function extrairCamposFormAtual($) {
   const out = {};
-  const $form = $(formSelector).first().length
-    ? $(formSelector).first()
-    : $("form").first();
-
-  // Inputs
-  $form.find("input").each((_, el) => {
+  // Procura em TODO o documento — alguns portais põem inputs fora do <form>
+  // (e o form de fato é submetido via JS). Pegamos tudo que tiver name.
+  $("input").each((_, el) => {
     const $el = $(el);
     const name = $el.attr("name");
     if (!name) return;
     const type = ($el.attr("type") || "text").toLowerCase();
-    if (type === "submit" || type === "button" || type === "file" || type === "image") return;
+    if (["submit", "button", "file", "image", "reset"].includes(type)) return;
+    if (name === "csrfmiddlewaretoken") return;
     if (type === "checkbox" || type === "radio") {
-      if ($el.is("[checked]") || $el.prop("checked")) {
-        out[name] = $el.attr("value") ?? "on";
-      } else if (!(name in out)) {
-        // garante que o name exista mesmo se desmarcado? não — não enviar
-      }
+      const checked =
+        $el.attr("checked") !== undefined || $el.is("[checked]");
+      if (checked) out[name] = $el.attr("value") ?? "on";
       return;
     }
-    const val = $el.attr("value");
-    out[name] = val ?? "";
+    out[name] = $el.attr("value") ?? "";
   });
 
-  // Selects (pega <option selected> ou o primeiro com value não vazio)
-  $form.find("select").each((_, el) => {
+  $("select").each((_, el) => {
     const $el = $(el);
     const name = $el.attr("name");
     if (!name) return;
+    let val = "";
     const $sel = $el.find("option[selected]").first();
-    if ($sel.length) {
-      out[name] = $sel.attr("value") ?? $sel.text().trim();
-    } else {
-      // se não tem selected explícito, mantém o que estiver em out (vazio)
-      if (!(name in out)) out[name] = "";
-    }
+    if ($sel.length) val = $sel.attr("value") ?? $sel.text().trim();
+    out[name] = val;
   });
 
-  // Textareas
-  $form.find("textarea").each((_, el) => {
+  $("textarea").each((_, el) => {
     const $el = $(el);
     const name = $el.attr("name");
     if (!name) return;
     out[name] = $el.text();
   });
 
+  return out;
+}
+
+// Correlaciona cada <ul class="errorlist"> ao input/select/textarea
+// vizinho com [name], devolvendo "name: mensagem".
+function extrairErrosComCampo($) {
+  const out = [];
+  $(".errorlist").each((_, ul) => {
+    const $ul = $(ul);
+    const msg = $ul.text().replace(/\s+/g, " ").trim();
+    if (!msg) return;
+    // sobe até o form-group / .form-row / parent e procura input com name
+    let $scope = $ul.parent();
+    let name = null;
+    for (let i = 0; i < 6 && $scope.length && !name; i++) {
+      const $field = $scope.find("[name]").first();
+      if ($field.length) name = $field.attr("name");
+      $scope = $scope.parent();
+    }
+    // fallback: irmão imediato
+    if (!name) {
+      const $sib = $ul.next("[name], :has([name])").find("[name]").first();
+      if ($sib.length) name = $sib.attr("name");
+    }
+    out.push(name ? `${name}: ${msg}` : msg);
+  });
   return out;
 }
 
