@@ -211,16 +211,39 @@ export function IrpCabecalhoCard({
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label>Data *</Label>
+          <Label>Data DFD / IRP *</Label>
           <Input
             type="date"
             value={form.data}
-            onChange={(e) => update({ data: e.target.value })}
+            onChange={(e) => {
+              const novaData = e.target.value;
+              // se a consolidação ainda era o "próximo dia útil" da data anterior,
+              // recalcula automaticamente. Caso contrário, mantém o valor manual.
+              const auto = proximoDiaUtil(form.data);
+              const next: Partial<IrpCabecalhoForm> = { data: novaData };
+              if (!form.data_consolidacao || form.data_consolidacao === auto) {
+                next.data_consolidacao = proximoDiaUtil(novaData);
+              }
+              onChange({ ...form, ...next });
+            }}
             onBlur={persist}
           />
+          <p className="text-[10px] text-muted-foreground">
+            usada como data do processo, manifestação e finalização da IRP.
+          </p>
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label>Ano orçamentário *</Label>
+          <Label>Data Consolidação *</Label>
+          <Input
+            type="date"
+            value={form.data_consolidacao}
+            onChange={(e) => update({ data_consolidacao: e.target.value })}
+            onBlur={persist}
+          />
+          <p className="text-[10px] text-muted-foreground">
+            geralmente 1 dia útil após a data da DFD.
+          </p>
+        </div>
           <Input
             value={form.ano_orcamento}
             onChange={(e) => update({ ano_orcamento: e.target.value })}
