@@ -405,7 +405,7 @@ function Page() {
  .map((r) => {
  const unidade = r.unidade as UnidadeIrp;
  const secretaria = resolveSecretariaM2A(unidade, unidade.numero);
-  const importOrgaoPk = secretaria?.m2a_dot_orgao_id ?? secretaria?.m2a_orgao_id ?? null;
+  const importOrgaoPk = secretaria?.m2a_dot_orgao_id ?? null;
  return {
  key: `analise:${unidade.id}`,
  nome: unidade.nome,
@@ -429,7 +429,7 @@ function Page() {
  .map((r) => {
  const unidade = r.unidade_id ? unidadeById.get(r.unidade_id) : null;
  const secretaria = resolveSecretariaM2A(unidade, r.numero);
-  const importOrgaoPk = secretaria?.m2a_dot_orgao_id ?? secretaria?.m2a_orgao_id ?? null;
+  const importOrgaoPk = secretaria?.m2a_dot_orgao_id ?? null;
  return {
  key: `salvo:${r.id}`,
  nome: r.nome,
