@@ -1,9 +1,5 @@
-import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
 import {
-  AlertTriangle,
   CalendarDays,
-  CheckCircle2,
   FileSpreadsheet,
   Hash,
   Loader2,
@@ -11,7 +7,6 @@ import {
   Tag,
   User,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -61,25 +56,14 @@ type ImportRow = {
   unidadePk: string | null;
 };
 
-type SecRow = {
-  id: string;
-  unidade_id: string | null;
-  numero: string | number;
-  nome: string;
-  dotacao_orgao: string | null;
-  dotacao_uo: string | null;
-  dotacao_projeto_atividade: string | null;
-  fiscal_servidor_id: string | null;
-  gestor_servidor_id: string | null;
-};
-
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   busy: boolean;
   form: Form;
   rows: ImportRow[];
-  secRowByNumero: Map<string | number, SecRow>;
+  // mantido por compatibilidade com chamadores existentes — não utilizado
+  secRowByNumero?: unknown;
   onConfirm: () => void;
 };
 
@@ -89,45 +73,11 @@ export function IrpConfirmacaoProcessoModal({
   busy,
   form,
   rows,
-  secRowByNumero,
   onConfirm,
 }: Props) {
-  const { data: servidores = [] } = useQuery({
-    queryKey: ["m2a-servidores"],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("m2a_servidores")
-        .select("id_local, nome, cargo");
-      return data ?? [];
-    },
-  });
-
-  const servidorById = useMemo(
-    () => new Map((servidores ?? []).map((s: any) => [s.id_local, s])),
-    [servidores],
-  );
-
   const totalItens = rows.reduce((a, r) => a + r.itens, 0);
   const totalValor = rows.reduce((a, r) => a + r.valor, 0);
-
-  const enriched = rows.map((row) => {
-    const sec = row.numero ? secRowByNumero.get(row.numero) : undefined;
-    const fiscal = sec?.fiscal_servidor_id
-      ? servidorById.get(sec.fiscal_servidor_id)
-      : null;
-    const gestor = sec?.gestor_servidor_id
-      ? servidorById.get(sec.gestor_servidor_id)
-      : null;
-    const dotacaoOk = !!(sec?.dotacao_orgao && sec?.dotacao_uo);
-    const fiscalOk = !!fiscal;
-    const gestorOk = !!gestor;
-    return { row, sec, fiscal, gestor, dotacaoOk, fiscalOk, gestorOk };
-  });
-
-  const pendentes = enriched.filter(
-    (e) => !e.dotacaoOk || !e.fiscalOk || !e.gestorOk,
-  );
-  const podeConfirmar = !busy && enriched.length > 0;
+  const podeConfirmar = !busy && rows.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -135,9 +85,8 @@ export function IrpConfirmacaoProcessoModal({
         <DialogHeader>
           <DialogTitle>Confirmar criação do processo SRP</DialogTitle>
           <DialogDescription>
-            Revise abaixo o cabeçalho do DFD, a ordem de importação das
-            planilhas e os responsáveis configurados em cada secretaria antes
-            de iniciar a automação no portal M2A.
+            Revise o cabeçalho do DFD e a ordem de importação das planilhas
+            antes de iniciar a automação no portal M2A.
           </DialogDescription>
         </DialogHeader>
 
@@ -166,9 +115,7 @@ export function IrpConfirmacaoProcessoModal({
               />
               <Field
                 label="Classificação"
-                value={`${form.classificacao} — ${
-                  CLASSIFICACOES[form.classificacao] ?? "—"
-                }`}
+                value={CLASSIFICACOES[form.classificacao] ?? "—"}
               />
               <Field
                 label="Órgão solicitante"
@@ -196,24 +143,6 @@ export function IrpConfirmacaoProcessoModal({
             <Stat label="Valor estimado" value={moeda(totalValor)} />
           </section>
 
-          {/* Pendências */}
-          {pendentes.length > 0 ? (
-            <div className="flex items-start gap-2 rounded-lg border border-amber-400/40 bg-amber-50 p-3 text-[13px] text-amber-900 dark:bg-amber-500/10 dark:text-amber-200">
-              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-              <div>
-                <strong>{pendentes.length}</strong> secretaria(s) sem
-                dotação, fiscal ou gestor configurados. Clique no ícone de
-                engrenagem na tabela para completar antes de prosseguir.
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 rounded-lg border border-emerald-400/40 bg-emerald-50 p-3 text-[13px] text-emerald-900 dark:bg-emerald-500/10 dark:text-emerald-200">
-              <CheckCircle2 className="size-4 shrink-0" />
-              Todas as secretarias estão com dotação e responsáveis
-              configurados.
-            </div>
-          )}
-
           {/* Tabela de planilhas */}
           <section className="rounded-lg border border-border/60">
             <div className="flex items-center gap-2 border-b border-border/60 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -226,80 +155,30 @@ export function IrpConfirmacaoProcessoModal({
                   <tr>
                     <th className="w-8 px-3 py-2 text-left">#</th>
                     <th className="px-3 py-2 text-left">Secretaria</th>
-                    <th className="px-3 py-2 text-left">Dotação</th>
-                    <th className="px-3 py-2 text-left">Fiscal / Gestor</th>
                     <th className="px-3 py-2 text-right">Itens</th>
                     <th className="px-3 py-2 text-right">Valor</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {enriched.map((e, i) => {
-                    const allOk = e.dotacaoOk && e.fiscalOk && e.gestorOk;
-                    return (
-                      <tr
-                        key={e.row.key}
-                        className="border-b border-border/40 last:border-b-0"
-                      >
-                        <td className="px-3 py-2 align-top text-muted-foreground">
-                          {i + 1}
-                        </td>
-                        <td className="px-3 py-2 align-top">
-                          <div className="flex items-center gap-1.5 font-medium">
-                            {allOk ? (
-                              <CheckCircle2 className="size-3.5 text-emerald-600" />
-                            ) : (
-                              <AlertTriangle className="size-3.5 text-amber-600" />
-                            )}
-                            {e.row.nome}
-                          </div>
-                          <div className="text-[11px] text-muted-foreground">
-                            Órgão {e.row.orgaoPk ?? "?"} · UO{" "}
-                            {e.row.unidadePk ?? "?"}
-                          </div>
-                        </td>
-                        <td className="px-3 py-2 align-top font-mono text-xs">
-                          {e.dotacaoOk ? (
-                            <>
-                              {e.sec?.dotacao_orgao}/{e.sec?.dotacao_uo}
-                              {e.sec?.dotacao_projeto_atividade ? (
-                                <div className="text-[11px] text-muted-foreground">
-                                  PA {e.sec.dotacao_projeto_atividade}
-                                </div>
-                              ) : null}
-                            </>
-                          ) : (
-                            <span className="text-amber-600">
-                              não configurada
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-3 py-2 align-top text-xs">
-                          <div
-                            className={
-                              e.fiscalOk ? "" : "text-amber-600"
-                            }
-                          >
-                            F: {e.fiscal?.nome ?? "—"}
-                          </div>
-                          <div
-                            className={
-                              e.gestorOk
-                                ? "text-muted-foreground"
-                                : "text-amber-600"
-                            }
-                          >
-                            G: {e.gestor?.nome ?? "—"}
-                          </div>
-                        </td>
-                        <td className="px-3 py-2 text-right align-top tabular-nums">
-                          {e.row.itens}
-                        </td>
-                        <td className="px-3 py-2 text-right align-top tabular-nums">
-                          {moeda(e.row.valor)}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {rows.map((row, i) => (
+                    <tr
+                      key={row.key}
+                      className="border-b border-border/40 last:border-b-0"
+                    >
+                      <td className="px-3 py-2 align-top text-muted-foreground">
+                        {i + 1}
+                      </td>
+                      <td className="px-3 py-2 align-top font-medium">
+                        {row.nome}
+                      </td>
+                      <td className="px-3 py-2 text-right align-top tabular-nums">
+                        {row.itens}
+                      </td>
+                      <td className="px-3 py-2 text-right align-top tabular-nums">
+                        {moeda(row.valor)}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
