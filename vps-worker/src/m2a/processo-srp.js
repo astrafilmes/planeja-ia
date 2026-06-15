@@ -436,6 +436,12 @@ export async function importarPlanilha({
   const numeroLimpo = String(numero ?? "")
     .replace(/[^0-9/]/g, "")
     .trim();
+  const orgaoLimpo = String(orgaoPk ?? "").trim();
+  const unidadeLimpa = String(unidadeOrcamentariaPk ?? "").trim();
+  if (!orgaoLimpo) throw new Error("importarPlanilha: orgaoPk obrigatório.");
+  if (!unidadeLimpa) {
+    throw new Error("importarPlanilha: unidadeOrcamentariaPk obrigatório.");
+  }
 
   const path = IMPORTACAO_TPL(processoId);
   // O endpoint de importacao_planilha responde apenas ao POST (o GET
@@ -452,8 +458,11 @@ export async function importarPlanilha({
   // processo não basta para esse endpoint.
   if (objetoNormalizado) fd.append("objeto", objetoNormalizado);
   if (numeroLimpo) fd.append("numero", numeroLimpo);
-  fd.append("orgao_pk", String(orgaoPk));
-  fd.append("unidade_orcamentaria_pk", String(unidadeOrcamentariaPk));
+  fd.append("orgao_pk", orgaoLimpo);
+  fd.append("orgao", orgaoLimpo);
+  fd.append("unidade_gestora_pk", orgaoLimpo);
+  fd.append("unidade_orcamentaria_pk", unidadeLimpa);
+  fd.append("unidade_orcamentaria", unidadeLimpa);
   fd.append("data_aviso", String(dataAviso));
   fd.append("data_consolidacao", dataConsolidacao);
   fd.append("data_manifestacao", dataManifestacao);
@@ -464,7 +473,7 @@ export async function importarPlanilha({
   });
 
   console.log(
-    `[importarPlanilha] POST ${path} csrf=${csrf ? `len=${csrf.length}` : "AUSENTE"} objeto=${objetoNormalizado ? `len=${objetoNormalizado.length}` : "AUSENTE"} numero=${numeroLimpo || "AUSENTE"} orgao_pk=${orgaoPk} unidade_orcamentaria_pk=${unidadeOrcamentariaPk} data_aviso=${dataAviso} data_consolidacao=${dataConsolidacao} data_manifestacao=${dataManifestacao} file=${arquivoFilename} bytes=${arquivoBytes.length} mime=${arquivoMime}`,
+    `[importarPlanilha] POST ${path} csrf=${csrf ? `len=${csrf.length}` : "AUSENTE"} objeto=${objetoNormalizado ? `len=${objetoNormalizado.length}` : "AUSENTE"} numero=${numeroLimpo || "AUSENTE"} orgao_pk=${orgaoLimpo} orgao=${orgaoLimpo} unidade_gestora_pk=${orgaoLimpo} unidade_orcamentaria_pk=${unidadeLimpa} unidade_orcamentaria=${unidadeLimpa} data_aviso=${dataAviso} data_consolidacao=${dataConsolidacao} data_manifestacao=${dataManifestacao} file=${arquivoFilename} bytes=${arquivoBytes.length} mime=${arquivoMime}`,
   );
 
   const res = await m2a.postMultipart(path, fd, {
