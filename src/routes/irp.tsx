@@ -865,23 +865,25 @@ function Page() {
  try {
   const { itens, secretariasParticipantes, gerenciadora_numero } =
    await buildM2AIrpPayload();
-  const payload: M2ASrpPayload = {
-   objeto: processoM2AForm.objeto.trim(),
-   data: processoM2AForm.data,
-   ano_orcamento: processoM2AForm.ano_orcamento.trim(),
-   orgao_solicitante: processoM2AForm.orgao_solicitante.trim(),
-   unidade_orcamentaria: processoM2AForm.unidade_orcamentaria.trim(),
-   unidade_orcamentaria_gerenciadora:
-    processoM2AForm.unidade_orcamentaria_gerenciadora.trim() ||
-    processoM2AForm.unidade_orcamentaria.trim(),
-   responsavel_dfd: processoM2AForm.responsavel_dfd.trim(),
-   comissao_planejamento:
-    processoM2AForm.comissao_planejamento.trim() || "3911",
-   classificacao: processoM2AForm.classificacao.trim(),
-   gerenciadora_numero,
-   itens,
-   secretariasParticipantes,
-  };
+   const payload: M2ASrpPayload = {
+    objeto: processoM2AForm.objeto.trim(),
+    data: processoM2AForm.data,
+    data_consolidacao:
+      processoM2AForm.data_consolidacao || processoM2AForm.data,
+    ano_orcamento: processoM2AForm.ano_orcamento.trim(),
+    orgao_solicitante: processoM2AForm.orgao_solicitante.trim(),
+    unidade_orcamentaria: processoM2AForm.unidade_orcamentaria.trim(),
+    unidade_orcamentaria_gerenciadora:
+     processoM2AForm.unidade_orcamentaria_gerenciadora.trim() ||
+     processoM2AForm.unidade_orcamentaria.trim(),
+    responsavel_dfd: processoM2AForm.responsavel_dfd.trim(),
+    comissao_planejamento:
+     processoM2AForm.comissao_planejamento.trim() || "3911",
+    classificacao: processoM2AForm.classificacao.trim(),
+    gerenciadora_numero,
+    itens,
+    secretariasParticipantes,
+   };
 
  setM2aConfirmOpen(false);
  if (jobId) {
