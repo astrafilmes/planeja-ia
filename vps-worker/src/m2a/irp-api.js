@@ -13,6 +13,8 @@ const URL_ITEM_TEMP = "/catalogo/itemtemporario/incluir/";
 const URL_ITEM_JSON = (id) => `/catalogo/itempadronizado-json/${id}`;
 const URL_SOLICITACAO_ITEM = (dfdId) =>
   `/gestao_compras/solicitacao_item/incluir/${dfdId}/`;
+const URL_SOLICITACAO_ITEM_TABELA = (dfdId) =>
+  `/gestao_compras/solicitacao_item/tabela/${dfdId}/?page_size=1000`;
 const URL_GERAR_INTENCOES = (dfdId) =>
   `/gestao_compras/formalizacao_demanda/gerar_intencoes/${dfdId}/`;
 const URL_TABELA_INTENCOES = (dfdId) =>
@@ -86,6 +88,7 @@ function detectDjangoFormErrors(html) {
 }
 
 function ensureDjangoFormAccepted(res, contexto, extra = "") {
+  if (res.status >= 300 && res.status < 400) return null;
   // 1) se for JSON e disser error, propaga (ex: cadastrar item temporário).
   let json = null;
   try {
@@ -122,6 +125,26 @@ function ensureDjangoFormAccepted(res, contexto, extra = "") {
     );
   }
   return null;
+}
+
+function extractIdsFromRows(html, selectors) {
+  const $ = loadDoc(html);
+  const ids = [];
+  $("tr").each((_, tr) => {
+    const $tr = $(tr);
+    let id = "";
+    $tr.find(selectors).each((_i, el) => {
+      if (id) return;
+      const v = $(el).attr("value") || "";
+      if (isValidNumericId(v)) id = v;
+    });
+    if (!id) {
+      const m = ($tr.attr("id") || "").match(/(\d+)$/);
+      if (m && isValidNumericId(m[1])) id = m[1];
+    }
+    if (id) ids.push(id);
+  });
+  return [...new Set(ids)];
 }
 
 function ensureOkJson(res, contexto, arquivo = "") {
@@ -231,7 +254,11 @@ export async function incluirItemNaDFD({
   especificacao,
   quantidade,
 }) {
-  const csrf = await getCsrfGlobal();
+  const beforeIds = await listarItensDFD(dfdId).catch((err) => {
+    console.warn(`[irp-api] não consegui listar itens da DFD antes do POST: ${err?.message ?? err}`);
+    return [];
+  });
+  const csrf = await m2a.getCsrf(URL_SOLICITACAO_ITEM(dfdId), { force: true });
   const fd = new FormData();
   fd.append("csrfmiddlewaretoken", csrf);
   fd.append("item_padronizado", String(itemPadronizadoId));
@@ -243,7 +270,13 @@ export async function incluirItemNaDFD({
   fd.append("_salvar", "");
 
   const res = await m2a.postMultipart(URL_SOLICITACAO_ITEM(dfdId), fd, {
-    headers: { Referer: `${m2a.http.defaults.baseURL || ""}/gestao_compras/formalizacao_demanda/${dfdId}/` },
+    ajax: false,
+    maxRedirects: 0,
+    headers: {
+      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      Origin: m2a.http.defaults.baseURL || "",
+      Referer: `${m2a.http.defaults.baseURL || ""}${URL_SOLICITACAO_ITEM(dfdId)}`,
+    },
   });
   if (res.status >= 400) {
     throw new Error(
@@ -251,7 +284,29 @@ export async function incluirItemNaDFD({
     );
   }
   ensureOkJson(res, "incluirItemNaDFD", String(itemPadronizadoId));
+  const afterIds = await listarItensDFD(dfdId);
+  const before = new Set(beforeIds.map(String));
+  const created = afterIds.filter((id) => !before.has(String(id)));
+  if (!created.length && afterIds.length <= beforeIds.length) {
+    throw new Error(
+      `incluirItemNaDFD (${itemPadronizadoId}): M2A aceitou o POST, mas o item não apareceu na tabela da DFD ${dfdId}.`,
+    );
+  }
+  console.log(
+    `[irp-api] item ${itemPadronizadoId} vinculado à DFD ${dfdId}; itens antes=${beforeIds.length} depois=${afterIds.length}`,
+  );
   return { ok: true };
+}
+
+export async function listarItensDFD(dfdId) {
+  const res = await m2a.get(URL_SOLICITACAO_ITEM_TABELA(dfdId));
+  if (res.status >= 400) throw new Error(`listarItensDFD(${dfdId}): status ${res.status}`);
+  const ids = extractIdsFromRows(
+    res.html,
+    "input.checkboxsolicitacao_item, input.checkbox-solicitacao-item, input.checkboxes, input[type=checkbox]",
+  );
+  console.log(`[irp-api] listarItensDFD(${dfdId}) → ${ids.length} itens`);
+  return ids;
 }
 
 // =====================================================================
@@ -368,22 +423,16 @@ export async function listarItensIntencao(intencaoId) {
   const res = await m2a.get(URL_ITENS_INTENCAO(intencaoId));
   if (res.status >= 400) throw new Error(`listarItensIntencao(${intencaoId}): status ${res.status}`);
   const $ = loadDoc(res.html);
-  const out = [];
-  // cada linha tem um checkbox .checkboxintencao_registro_itens com value=ITEM_INTENCAO_ID
-  $("tr").each((_, tr) => {
-    const $tr = $(tr);
-    // Procura o PRIMEIRO checkbox com value numérico real (ignora "on" do master selector).
-    let id = "";
-    $tr
-      .find("input.checkboxintencao_registro_itens, input.checkboxes, input[type=checkbox]")
-      .each((_i, el) => {
-        if (id) return;
-        const v = $(el).attr("value") || "";
-        if (isValidNumericId(v)) id = v;
-      });
-    if (!isValidNumericId(id)) return;
-    const texto = $tr.text().replace(/\s+/g, " ").trim();
-    out.push({ itemIntencaoId: String(id), texto });
+  const ids = extractIdsFromRows(
+    res.html,
+    "input.checkboxintencao_registro_itens, input.checkboxes, input[type=checkbox]",
+  );
+  const out = ids.map((id) => {
+    const $row = $(`input[value="${id}"]`).first().closest("tr");
+    return {
+      itemIntencaoId: String(id),
+      texto: $row.text().replace(/\s+/g, " ").trim(),
+    };
   });
   console.log(
     `[irp-api] listarItensIntencao(${intencaoId}) → ${out.length} itens (ids válidos)`,

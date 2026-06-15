@@ -198,6 +198,7 @@ class M2aClient {
       responseType: binary ? "arraybuffer" : "text",
       transformResponse: [(data) => data],
     };
+    if (opts.maxRedirects !== undefined) cfg.maxRedirects = opts.maxRedirects;
     if (opts.body !== undefined) cfg.data = opts.body;
     const res = await this.http.request(cfg);
     const finalUrl = res.request?.res?.responseUrl || "";
@@ -285,12 +286,13 @@ class M2aClient {
 
   /** POST multipart/form-data. payload = FormData (node form-data). */
   async postMultipart(path, formData, opts = {}) {
+    const { ajax = true, ...requestOpts } = opts;
     return this.request("POST", path, {
-      ...opts,
+      ...requestOpts,
       body: formData,
       headers: {
         ...formData.getHeaders(),
-        "X-Requested-With": "XMLHttpRequest",
+        ...(ajax ? { "X-Requested-With": "XMLHttpRequest" } : {}),
         ...(opts.headers || {}),
       },
     });
