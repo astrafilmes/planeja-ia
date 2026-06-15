@@ -37,13 +37,60 @@ async function getCsrfGlobal() {
   return await m2a.getCsrf(URL_DFD_LIST, { force: false });
 }
 
-function ensureOkJson(res, contexto, arquivo = "") {
+// Valida que o value de checkbox é um ID numérico real (não "on", não vazio).
+function isValidNumericId(v) {
+  return typeof v === "string" && /^\d+$/.test(v);
+}
+
+// Lê a resposta de um POST de formulário Django e detecta a "tela vermelha".
+// Em sucesso o Django responde 302 → axios segue o redirect (status 200) e a
+// página final NÃO contém .has-error/.alert-danger/.help-block (form-errors).
+// Em falha, o Django re-renderiza a MESMA url do form com classes de erro
+// preenchidas — é isso que detectamos aqui.
+function detectDjangoFormErrors(html) {
+  if (!html || typeof html !== "string") return [];
+  // Acelera: só carrega Cheerio se houver marcador suspeito.
+  if (
+    !/has-error|alert-danger|errorlist|invalid-feedback|help-block|text-danger/i.test(
+      html,
+    )
+  ) {
+    return [];
+  }
+  const $ = loadDoc(html);
+  const errs = [];
+  $(".has-error, .form-group.has-error, .invalid-feedback, .errorlist li, .alert-danger, .alert.alert-error, .help-block.text-danger, span.text-danger, ul.errorlist li").each(
+    (_i, el) => {
+      const $el = $(el);
+      const msg = ($el.text() || "").replace(/\s+/g, " ").trim();
+      if (!msg) return;
+      // ignora ruído informativo
+      if (/sucesso|salv|inclu[ií]d|cadastrad/i.test(msg)) return;
+      // tenta achar o label do campo
+      let field = "";
+      const $grp = $el.closest(".form-group, .field, .row");
+      if ($grp.length) {
+        field = ($grp.find("label").first().text() || "").replace(/\s+/g, " ").trim();
+      }
+      errs.push({ field: field || "?", message: msg });
+    },
+  );
+  // dedup
+  const seen = new Set();
+  return errs.filter((e) => {
+    const k = `${e.field}::${e.message}`;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+
+function ensureDjangoFormAccepted(res, contexto, extra = "") {
+  // 1) se for JSON e disser error, propaga (ex: cadastrar item temporário).
   let json = null;
   try {
     json = JSON.parse(res.html);
-  } catch {
-    /* não é JSON; segue pra parse HTML */
-  }
+  } catch {}
   if (json) {
     const ok =
       json.ok === true ||
@@ -52,22 +99,35 @@ function ensureOkJson(res, contexto, arquivo = "") {
       json.status === "success";
     if (!ok) {
       const msg =
-        json.mensagem ||
-        json.message ||
-        json.msg ||
-        json.error ||
-        json.erro ||
-        JSON.stringify(json);
-      throw new Error(`${contexto}${arquivo ? ` (${arquivo})` : ""}: ${msg}`);
+        json.mensagem || json.message || json.msg || json.error || json.erro || JSON.stringify(json);
+      throw new Error(`${contexto}${extra ? ` (${extra})` : ""}: ${msg}`);
     }
     return json;
   }
+  // 2) HTTP error
   if (res.status >= 400) {
-    throw new Error(`${contexto}: HTTP ${res.status}`);
+    throw new Error(`${contexto}${extra ? ` (${extra})` : ""}: HTTP ${res.status}`);
   }
-  // sem JSON e sem erro -> assume ok (redirect 302 comum em Django)
+  // 3) Django "200 OK + tela vermelha" — armadilha clássica
+  const erros = detectDjangoFormErrors(res.html);
+  if (erros.length) {
+    for (const e of erros) {
+      console.error(
+        `[irp-api] M2A recusou ${contexto}${extra ? ` (${extra})` : ""} — campo="${e.field}" erro="${e.message}"`,
+      );
+    }
+    const resumo = erros.map((e) => `${e.field}: ${e.message}`).join(" | ");
+    throw new Error(
+      `${contexto}${extra ? ` (${extra})` : ""}: M2A rejeitou o formulário → ${resumo}`,
+    );
+  }
   return null;
 }
+
+function ensureOkJson(res, contexto, arquivo = "") {
+  return ensureDjangoFormAccepted(res, contexto, arquivo);
+}
+
 
 // =====================================================================
 // PASSO 1 — cadastra item temporário no catálogo
