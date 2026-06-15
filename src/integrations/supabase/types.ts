@@ -693,10 +693,19 @@ export type Database = {
         Row: {
           cabecalho_coluna: string
           created_at: string
+          dotacao_orgao: string | null
+          dotacao_projeto_atividade: string | null
+          dotacao_uo: string | null
           erro: string | null
+          fiscal_servidor_id: string | null
+          gestor_servidor_id: string | null
           id: string
           itens_validos: number
           job_id: string
+          m2a_completed_at: string | null
+          m2a_mensagem: string | null
+          m2a_started_at: string | null
+          m2a_status: string
           nome: string
           numero: number
           output_file_id: string | null
@@ -709,10 +718,19 @@ export type Database = {
         Insert: {
           cabecalho_coluna: string
           created_at?: string
+          dotacao_orgao?: string | null
+          dotacao_projeto_atividade?: string | null
+          dotacao_uo?: string | null
           erro?: string | null
+          fiscal_servidor_id?: string | null
+          gestor_servidor_id?: string | null
           id?: string
           itens_validos?: number
           job_id: string
+          m2a_completed_at?: string | null
+          m2a_mensagem?: string | null
+          m2a_started_at?: string | null
+          m2a_status?: string
           nome: string
           numero: number
           output_file_id?: string | null
@@ -725,10 +743,19 @@ export type Database = {
         Update: {
           cabecalho_coluna?: string
           created_at?: string
+          dotacao_orgao?: string | null
+          dotacao_projeto_atividade?: string | null
+          dotacao_uo?: string | null
           erro?: string | null
+          fiscal_servidor_id?: string | null
+          gestor_servidor_id?: string | null
           id?: string
           itens_validos?: number
           job_id?: string
+          m2a_completed_at?: string | null
+          m2a_mensagem?: string | null
+          m2a_started_at?: string | null
+          m2a_status?: string
           nome?: string
           numero?: number
           output_file_id?: string | null
@@ -739,6 +766,20 @@ export type Database = {
           unidade_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "irp_job_secretarias_fiscal_servidor_id_fkey"
+            columns: ["fiscal_servidor_id"]
+            isOneToOne: false
+            referencedRelation: "m2a_servidores"
+            referencedColumns: ["id_local"]
+          },
+          {
+            foreignKeyName: "irp_job_secretarias_gestor_servidor_id_fkey"
+            columns: ["gestor_servidor_id"]
+            isOneToOne: false
+            referencedRelation: "m2a_servidores"
+            referencedColumns: ["id_local"]
+          },
           {
             foreignKeyName: "irp_job_secretarias_job_id_fkey"
             columns: ["job_id"]
@@ -764,9 +805,13 @@ export type Database = {
       }
       irp_jobs: {
         Row: {
+          ano_orcamento: number | null
+          classificacao: string | null
+          comissao_planejamento: string | null
           completed_at: string | null
           created_at: string
           created_by: string | null
+          data_processo: string | null
           error_message: string | null
           id: string
           idx_descricao: number | null
@@ -774,8 +819,18 @@ export type Database = {
           idx_natureza: number | null
           idx_unidade: number | null
           linha_cabecalho: number | null
+          m2a_envio_completed_at: string | null
+          m2a_envio_etapa: string | null
+          m2a_envio_mensagem: string | null
+          m2a_envio_started_at: string | null
+          m2a_envio_status: string
+          m2a_processo_id: string | null
+          m2a_processo_numero: string | null
+          objeto: string | null
+          orgao_solicitante_id: string | null
           original_filename: string
           processo_id: string | null
+          responsavel_dfd_id: string | null
           secretarias_com_itens: number
           secretarias_sem_itens: number
           started_at: string | null
@@ -783,13 +838,18 @@ export type Database = {
           total_linhas: number
           total_secretarias: number
           total_valor: number
+          unidade_orcamentaria_id: string | null
           updated_at: string
           upload_file_id: string | null
         }
         Insert: {
+          ano_orcamento?: number | null
+          classificacao?: string | null
+          comissao_planejamento?: string | null
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
+          data_processo?: string | null
           error_message?: string | null
           id?: string
           idx_descricao?: number | null
@@ -797,8 +857,18 @@ export type Database = {
           idx_natureza?: number | null
           idx_unidade?: number | null
           linha_cabecalho?: number | null
+          m2a_envio_completed_at?: string | null
+          m2a_envio_etapa?: string | null
+          m2a_envio_mensagem?: string | null
+          m2a_envio_started_at?: string | null
+          m2a_envio_status?: string
+          m2a_processo_id?: string | null
+          m2a_processo_numero?: string | null
+          objeto?: string | null
+          orgao_solicitante_id?: string | null
           original_filename: string
           processo_id?: string | null
+          responsavel_dfd_id?: string | null
           secretarias_com_itens?: number
           secretarias_sem_itens?: number
           started_at?: string | null
@@ -806,13 +876,18 @@ export type Database = {
           total_linhas?: number
           total_secretarias?: number
           total_valor?: number
+          unidade_orcamentaria_id?: string | null
           updated_at?: string
           upload_file_id?: string | null
         }
         Update: {
+          ano_orcamento?: number | null
+          classificacao?: string | null
+          comissao_planejamento?: string | null
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
+          data_processo?: string | null
           error_message?: string | null
           id?: string
           idx_descricao?: number | null
@@ -820,8 +895,18 @@ export type Database = {
           idx_natureza?: number | null
           idx_unidade?: number | null
           linha_cabecalho?: number | null
+          m2a_envio_completed_at?: string | null
+          m2a_envio_etapa?: string | null
+          m2a_envio_mensagem?: string | null
+          m2a_envio_started_at?: string | null
+          m2a_envio_status?: string
+          m2a_processo_id?: string | null
+          m2a_processo_numero?: string | null
+          objeto?: string | null
+          orgao_solicitante_id?: string | null
           original_filename?: string
           processo_id?: string | null
+          responsavel_dfd_id?: string | null
           secretarias_com_itens?: number
           secretarias_sem_itens?: number
           started_at?: string | null
@@ -829,6 +914,7 @@ export type Database = {
           total_linhas?: number
           total_secretarias?: number
           total_valor?: number
+          unidade_orcamentaria_id?: string | null
           updated_at?: string
           upload_file_id?: string | null
         }
@@ -841,11 +927,32 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "irp_jobs_orgao_solicitante_id_fkey"
+            columns: ["orgao_solicitante_id"]
+            isOneToOne: false
+            referencedRelation: "m2a_unidades_gestoras"
+            referencedColumns: ["id_local"]
+          },
+          {
             foreignKeyName: "irp_jobs_processo_id_fkey"
             columns: ["processo_id"]
             isOneToOne: false
             referencedRelation: "processos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "irp_jobs_responsavel_dfd_id_fkey"
+            columns: ["responsavel_dfd_id"]
+            isOneToOne: false
+            referencedRelation: "m2a_servidores"
+            referencedColumns: ["id_local"]
+          },
+          {
+            foreignKeyName: "irp_jobs_unidade_orcamentaria_id_fkey"
+            columns: ["unidade_orcamentaria_id"]
+            isOneToOne: false
+            referencedRelation: "m2a_unidades_gestoras"
+            referencedColumns: ["id_local"]
           },
           {
             foreignKeyName: "irp_jobs_upload_file_id_fkey"
