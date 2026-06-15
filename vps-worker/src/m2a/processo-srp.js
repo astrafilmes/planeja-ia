@@ -326,34 +326,23 @@ export async function atualizarProcesso(processoId, payload) {
     throw new Error(`Atualizar processo: status ${res.status}`);
   }
   const $ = loadDoc(res.html);
-  // Detecta erros: errorlist (Django), alert-danger, has-error, help-block,
-  // e qualquer texto de "pendência"
-  const erros = $(
-    ".errorlist li, .alert-danger, .alert-error, .has-error .help-block, .invalid-feedback, .field-error",
-  )
+  // Correlação errorlist→campo (mostra "name: mensagem")
+  const errosComCampo = extrairErrosComCampo($);
+  // Alertas globais (alert-danger / messages)
+  const alertasGlobais = $(".alert-danger, .alert-error, .messages .error")
     .map((_, el) => $(el).text().replace(/\s+/g, " ").trim())
     .get()
     .filter(Boolean);
-  // Detecta campos com erro: <div class="form-group has-error"> com <label>
-  const camposComErro = $(".has-error, .form-group.has-error")
-    .map((_, el) => {
-      const lbl = $(el).find("label").first().text().replace(/\s+/g, " ").trim();
-      const msg = $(el).find(".help-block, .invalid-feedback, .errorlist").text().replace(/\s+/g, " ").trim();
-      return lbl || msg ? `${lbl}${msg ? `: ${msg}` : ""}` : "";
-    })
-    .get()
-    .filter(Boolean);
-  const msgsSucesso = $(".alert-success, .alert-info, .messages li")
+  const msgsSucesso = $(".alert-success, .alert-info, .messages li.success")
     .map((_, el) => $(el).text().replace(/\s+/g, " ").trim())
     .get()
     .filter(Boolean);
   console.log(
-    `[atualizarProcesso] resp bytes=${res.html.length} finalUrl=${res.finalUrl} erros=${JSON.stringify(erros)} camposComErro=${JSON.stringify(camposComErro)} sucesso=${JSON.stringify(msgsSucesso)}`,
+    `[atualizarProcesso] resp bytes=${res.html.length} finalUrl=${res.finalUrl} errosComCampo=${JSON.stringify(errosComCampo)} alertasGlobais=${JSON.stringify(alertasGlobais)} sucesso=${JSON.stringify(msgsSucesso)}`,
   );
-  if (erros.length || camposComErro.length) {
-    throw new Error(
-      `Atualizar processo rejeitado: ${[...erros, ...camposComErro].join(" | ")}`,
-    );
+  const todosErros = [...errosComCampo, ...alertasGlobais];
+  if (todosErros.length) {
+    throw new Error(`Atualizar processo rejeitado: ${todosErros.join(" | ")}`);
   }
   return { ok: true };
 }
