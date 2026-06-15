@@ -55,7 +55,7 @@ const saveAs =
  (FileSaver as any).default;
 import { logAudit } from"@/lib/audit";
 import { IrpCabecalhoCard } from"@/components/irp/IrpCabecalhoCard";
-import { IrpSecretariaConfigModal } from"@/components/irp/IrpSecretariaConfigModal";
+
 import { IrpConfirmacaoProcessoModal } from"@/components/irp/IrpConfirmacaoProcessoModal";
 import { criarProcessoSrpM2A, blobToBase64, type M2ASrpPayload } from"@/lib/m2a-srp";
 
