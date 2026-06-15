@@ -200,6 +200,16 @@ export async function atualizarProcesso(processoId, payload) {
       String(payload.unidade_orcamentaria_gerenciadora),
     );
 
+  // Log payload (sem csrf) para diagnóstico
+  const payloadDebug = {};
+  for (const [k, v] of body.entries()) {
+    if (k === "csrfmiddlewaretoken") continue;
+    payloadDebug[k] = v;
+  }
+  console.log(
+    `[atualizarProcesso] POST ${path} payload=${JSON.stringify(payloadDebug)}`,
+  );
+
   const res = await m2a.request("POST", path, {
     body: body.toString(),
     headers: {
@@ -217,6 +227,13 @@ export async function atualizarProcesso(processoId, payload) {
     .map((_, el) => $(el).text().replace(/\s+/g, " ").trim())
     .get()
     .filter(Boolean);
+  const msgsSucesso = $(".alert-success, .alert-info, .messages li")
+    .map((_, el) => $(el).text().replace(/\s+/g, " ").trim())
+    .get()
+    .filter(Boolean);
+  console.log(
+    `[atualizarProcesso] resp bytes=${res.html.length} finalUrl=${res.finalUrl} erros=${JSON.stringify(erros)} sucesso=${JSON.stringify(msgsSucesso)}`,
+  );
   if (erros.length) {
     throw new Error(`Atualizar processo rejeitado: ${erros.join(" | ")}`);
   }
@@ -269,26 +286,66 @@ export async function importarPlanilha({
     contentType: arquivoMime,
   });
 
+  console.log(
+    `[importarPlanilha] POST ${path} csrf=${csrf ? `len=${csrf.length}` : "AUSENTE"} orgao_pk=${orgaoPk} unidade_orcamentaria_pk=${unidadeOrcamentariaPk} data_aviso=${dataAviso} data_consolidacao=${dataConsolidacao} data_manifestacao=${dataManifestacao} file=${arquivoFilename} bytes=${arquivoBytes.length} mime=${arquivoMime}`,
+  );
+
   const res = await m2a.postMultipart(path, fd, {
     headers: {
       Referer: `${m2a.http.defaults.baseURL || ""}${path}`,
     },
   });
 
+  const bodyPreview = String(res.html || "").slice(0, 1200).replace(/\s+/g, " ");
+  console.log(
+    `[importarPlanilha] resp status=${res.status} bytes=${(res.html || "").length} ct=${res.contentType || "-"} finalUrl=${res.finalUrl} bodyPreview="${bodyPreview}"`,
+  );
+
   if (res.status >= 400) {
     throw new Error(
       `Importação ${arquivoFilename}: status ${res.status}`,
     );
   }
-  const $ = loadDoc(res.html);
-  const erros = $(".errorlist, .alert-danger, .alert-error")
-    .map((_, el) => $(el).text().replace(/\s+/g, " ").trim())
-    .get()
-    .filter(Boolean);
-  if (erros.length) {
-    throw new Error(
-      `Importação ${arquivoFilename} rejeitada: ${erros.join(" | ")}`,
+
+  // Tenta parsear como JSON (o portal devolve JSON pequeno em caso de erro)
+  let jsonResp = null;
+  try {
+    jsonResp = JSON.parse(res.html);
+  } catch {
+    /* não é JSON */
+  }
+  if (jsonResp) {
+    console.log(
+      `[importarPlanilha] resp JSON: ${JSON.stringify(jsonResp).slice(0, 800)}`,
     );
+    const ok =
+      jsonResp.ok === true ||
+      jsonResp.success === true ||
+      jsonResp.status === "ok" ||
+      jsonResp.status === "success";
+    const msg =
+      jsonResp.error ||
+      jsonResp.erro ||
+      jsonResp.message ||
+      jsonResp.msg ||
+      jsonResp.detail ||
+      "";
+    if (!ok) {
+      throw new Error(
+        `Importação ${arquivoFilename} rejeitada pelo portal: ${msg || JSON.stringify(jsonResp)}`,
+      );
+    }
+  } else {
+    const $ = loadDoc(res.html);
+    const erros = $(".errorlist, .alert-danger, .alert-error")
+      .map((_, el) => $(el).text().replace(/\s+/g, " ").trim())
+      .get()
+      .filter(Boolean);
+    if (erros.length) {
+      throw new Error(
+        `Importação ${arquivoFilename} rejeitada: ${erros.join(" | ")}`,
+      );
+    }
   }
   return { ok: true, dataConsolidacao, dataManifestacao };
 }
