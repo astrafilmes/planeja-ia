@@ -39,6 +39,27 @@ export function obterDiaUtilAnterior(dataISO) {
   return formatIsoDateUTC(date);
 }
 
+// Adiciona 1 dia útil simples: se cair no Sábado, vai para Segunda; se Domingo, vai para Segunda.
+export function adicionarDiaUtil(dataISO) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dataISO ?? ""))) {
+    throw new Error(`Data inválida: ${dataISO}`);
+  }
+  const date = new Date(`${dataISO}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + 1);
+  const day = date.getUTCDay();
+  if (day === 6) date.setUTCDate(date.getUTCDate() + 2); // sábado → seg
+  if (day === 0) date.setUTCDate(date.getUTCDate() + 1); // domingo → seg
+  return formatIsoDateUTC(date);
+}
+
+// Normaliza descrição para CAIXA ALTA, parágrafo único.
+export function normalizeObjetoCaixaAlta(value) {
+  return String(value ?? "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toUpperCase();
+}
+
 // ---------- decode AJAX (JSON com HTML escapado) ----------
 function decodeEscapedHtmlString(value) {
   return String(value ?? "")
