@@ -54,7 +54,7 @@ type Form = {
 type ImportRow = {
   key: string;
   nome: string;
-  numero: string | null;
+  numero: string | number | null;
   itens: number;
   valor: number;
   orgaoPk: string | null;
@@ -64,7 +64,7 @@ type ImportRow = {
 type SecRow = {
   id: string;
   unidade_id: string | null;
-  numero: string;
+  numero: string | number;
   nome: string;
   dotacao_orgao: string | null;
   dotacao_uo: string | null;
