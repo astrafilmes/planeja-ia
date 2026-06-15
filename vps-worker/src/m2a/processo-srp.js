@@ -226,7 +226,13 @@ export async function importarPlanilha({
   const dataManifestacao = dataConsolidacao;
 
   const path = IMPORTACAO_TPL(processoId);
-  const csrf = await m2a.getCsrf(path, { force: true });
+  // O endpoint de importacao_planilha responde apenas ao POST (o GET
+  // retorna ~159 bytes sem CSRF). Buscamos o token na página do processo,
+  // que renderiza o form completo com csrfmiddlewaretoken.
+  const csrf = await m2a.getCsrf(
+    `/processo_administrativo/atualizar/${processoId}/?detail=true`,
+    { force: true },
+  );
 
   const fd = new FormData();
   fd.append("csrfmiddlewaretoken", csrf);
