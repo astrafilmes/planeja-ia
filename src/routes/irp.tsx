@@ -469,8 +469,8 @@ function Page() {
  [importableRows, selectedIrpImportIds],
  );
 
- const rowsMissingM2A = useMemo(
- () => selectedImportRows.filter((row) => !row.orgaoPk || !row.unidadePk),
+  const rowsMissingM2A = useMemo(
+  () => selectedImportRows.filter((row) => !row.orgaoPk || !row.importOrgaoPk || !row.unidadePk),
  [selectedImportRows],
  );
 
@@ -820,7 +820,7 @@ function Page() {
  }
  const bytesBase64 = await blobToBase64(blob);
  lista.push({
- orgao_pk: row.orgaoPk!,
+  orgao_pk: row.importOrgaoPk!,
  unidade_orcamentaria_pk: row.unidadePk!,
  nome: row.nome,
  arquivo_xlsx: { bytesBase64, filename, mimeType },
