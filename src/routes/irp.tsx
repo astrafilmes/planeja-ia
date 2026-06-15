@@ -76,6 +76,7 @@ type SecretariaM2A = {
  sigla: string;
  nome: string;
  m2a_orgao_id: string | null;
+  m2a_dot_orgao_id: string | null;
  m2a_uo_id: string | null;
 };
 
@@ -87,6 +88,7 @@ type IrpImportRow = {
  valor: number;
  cabecalhoColuna: string | null;
  orgaoPk: string | null;
+  importOrgaoPk: string | null;
  unidadePk: string | null;
  filename: string | null;
  resultado?: AnaliseIRP["resultados"][number];
@@ -299,7 +301,7 @@ function Page() {
  queryFn: async () => {
  const { data, error } = await supabase
  .from("secretarias")
- .select("id, numero, sigla, nome, m2a_orgao_id, m2a_uo_id")
+  .select("id, numero, sigla, nome, m2a_orgao_id, m2a_dot_orgao_id, m2a_uo_id")
  .eq("ativa", true);
  if (error) throw error;
  return (data ?? []) as SecretariaM2A[];
