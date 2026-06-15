@@ -27,6 +27,7 @@ import {
   criarItemEAdicionarNaDFD,
   gerarIntencoes,
   listarIntencoes,
+  listarItensDFD,
   disponibilizarIntencao,
   manifestarInteresse,
   listarItensIntencao,
@@ -140,6 +141,12 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
       `Nenhum item conseguiu ser cadastrado. Erros: ${JSON.stringify(erros).slice(0, 500)}`,
     );
   }
+  const itensConfirmadosDFD = await listarItensDFD(dfdId);
+  if (itensConfirmadosDFD.length < itensCriados.length) {
+    throw new Error(
+      `Itens não foram vinculados à DFD ${dfdId}: portal mostra ${itensConfirmadosDFD.length}, esperado ${itensCriados.length}. Abortando antes de gerar IRP.`,
+    );
+  }
 
   // 5. Gerar intenções
   onProgress({
@@ -184,6 +191,11 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
       if (itensIntencao.length !== itensCriados.length) {
         console.warn(
           `[irp] intencao ${intencao.intencaoId}: ${itensIntencao.length} itens; esperado ${itensCriados.length} (vou alinhar por ordem)`,
+        );
+      }
+      if (!itensIntencao.length) {
+        throw new Error(
+          `intenção ${intencao.intencaoId} não recebeu itens da DFD ${dfdId}; não vou finalizar uma IRP vazia.`,
         );
       }
       const N = Math.min(itensIntencao.length, itensCriados.length);
