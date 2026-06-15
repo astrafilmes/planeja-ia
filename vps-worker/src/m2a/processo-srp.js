@@ -402,6 +402,8 @@ const IMPORTACAO_TPL = (id) =>
 
 export async function importarPlanilha({
   processoId,
+  objeto,
+  numero,
   dataAviso,
   orgaoPk,
   unidadeOrcamentariaPk,
@@ -417,6 +419,10 @@ export async function importarPlanilha({
   }
   const dataConsolidacao = adicionarDiaUtil(dataAviso);
   const dataManifestacao = dataConsolidacao;
+  const objetoNormalizado = normalizeObjetoCaixaAlta(objeto);
+  const numeroLimpo = String(numero ?? "")
+    .replace(/[^0-9/]/g, "")
+    .trim();
 
   const path = IMPORTACAO_TPL(processoId);
   // O endpoint de importacao_planilha responde apenas ao POST (o GET
@@ -429,6 +435,10 @@ export async function importarPlanilha({
 
   const fd = new FormData();
   fd.append("csrfmiddlewaretoken", csrf);
+  // A M2A também valida `objeto` no POST multipart da importação; salvar no
+  // processo não basta para esse endpoint.
+  if (objetoNormalizado) fd.append("objeto", objetoNormalizado);
+  if (numeroLimpo) fd.append("numero", numeroLimpo);
   fd.append("orgao_pk", String(orgaoPk));
   fd.append("unidade_orcamentaria_pk", String(unidadeOrcamentariaPk));
   fd.append("data_aviso", String(dataAviso));
@@ -441,7 +451,7 @@ export async function importarPlanilha({
   });
 
   console.log(
-    `[importarPlanilha] POST ${path} csrf=${csrf ? `len=${csrf.length}` : "AUSENTE"} orgao_pk=${orgaoPk} unidade_orcamentaria_pk=${unidadeOrcamentariaPk} data_aviso=${dataAviso} data_consolidacao=${dataConsolidacao} data_manifestacao=${dataManifestacao} file=${arquivoFilename} bytes=${arquivoBytes.length} mime=${arquivoMime}`,
+    `[importarPlanilha] POST ${path} csrf=${csrf ? `len=${csrf.length}` : "AUSENTE"} objeto=${objetoNormalizado ? `len=${objetoNormalizado.length}` : "AUSENTE"} numero=${numeroLimpo || "AUSENTE"} orgao_pk=${orgaoPk} unidade_orcamentaria_pk=${unidadeOrcamentariaPk} data_aviso=${dataAviso} data_consolidacao=${dataConsolidacao} data_manifestacao=${dataManifestacao} file=${arquivoFilename} bytes=${arquivoBytes.length} mime=${arquivoMime}`,
   );
 
   const res = await m2a.postMultipart(path, fd, {
