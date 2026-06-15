@@ -132,8 +132,13 @@ export async function capturarIdsProcesso({ objeto }) {
 // ---------------------------------------------------------------------
 // FASE 4 — Atualizar Processo Administrativo (vigência, comissões, etc.)
 // ---------------------------------------------------------------------
+// IMPORTANTE: o portal só aceita o save quando chamado com ?detail=true
+// e quando TODOS os campos obrigatórios do form de edição vão no POST
+// (modalidade, modo_disputa, fundamentacao_legal, classificacao,
+// criterio_julgamento, valor_aceitavel). Sem isso o portal devolve 200
+// mas silenciosamente ignora as alterações.
 const PROCESSO_ATUALIZAR_TPL = (id) =>
-  `/processo_administrativo/atualizar/${id}/`;
+  `/processo_administrativo/atualizar/${id}/?detail=true`;
 
 export async function atualizarProcesso(processoId, payload) {
   const path = PROCESSO_ATUALIZAR_TPL(processoId);
@@ -145,7 +150,14 @@ export async function atualizarProcesso(processoId, payload) {
 
   const body = new URLSearchParams();
   body.set("csrfmiddlewaretoken", csrf);
-  // Fixos conforme spec
+  // Fixos conforme spec (form completo de edição)
+  body.set("modalidade", "7");
+  body.set("modo_disputa", "1");
+  body.set("fundamentacao_legal", "66");
+  body.set("classificacao", String(payload.classificacao || "3"));
+  body.set("criterio_julgamento", "1");
+  body.set("processo_administrativo_pre_qualificacao", "");
+  body.set("valor_aceitavel", "1");
   body.set("criterio_apuracao", "1");
   body.set("comissao_licitacao", "3909");
   body.set("periodo_vigencia", "2");
@@ -214,7 +226,13 @@ export async function importarPlanilha({
   const dataManifestacao = dataConsolidacao;
 
   const path = IMPORTACAO_TPL(processoId);
-  const csrf = await m2a.getCsrf(path, { force: true });
+  // O endpoint de importacao_planilha responde apenas ao POST (o GET
+  // retorna ~159 bytes sem CSRF). Buscamos o token na página do processo,
+  // que renderiza o form completo com csrfmiddlewaretoken.
+  const csrf = await m2a.getCsrf(
+    `/processo_administrativo/atualizar/${processoId}/?detail=true`,
+    { force: true },
+  );
 
   const fd = new FormData();
   fd.append("csrfmiddlewaretoken", csrf);
