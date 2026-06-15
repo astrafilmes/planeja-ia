@@ -55,24 +55,27 @@ function Page() {
  const [syncing, setSyncing] = useState(false);
  const [m2aMap, setM2aMap] = useState<Record<string, M2ASyncItemResult>>({});
 
- const { data, isLoading } = useQuery<NumeracaoComSec[]>({
- queryKey: ["numeracao"],
- queryFn: async () => {
- // Otimização: Busca os dados com o JOIN já resolvido pelo Supabase
- const { data: numData, error } = await supabase
- .from("numeracao")
- .select(
- `
- *,
- sec:secretarias!inner(numero, nome, sigla)
- `,
- )
- .order("secretaria_num");
-
- if (error) throw error;
- return numData as unknown as NumeracaoComSec[];
- },
- });
+  const { data, isLoading } = useQuery<NumeracaoComSec[]>({
+    queryKey: ["numeracao"],
+    queryFn: async () => {
+      // Não há FK entre numeracao.secretaria_num e secretarias.numero,
+      // então o embed !inner falha (400). Fazemos o join no cliente.
+      const [{ data: numData, error: numErr }, { data: secData, error: secErr }] =
+        await Promise.all([
+          supabase.from("numeracao").select("*").order("secretaria_num"),
+          supabase.from("secretarias").select("numero, nome, sigla"),
+        ]);
+      if (numErr) throw numErr;
+      if (secErr) throw secErr;
+      const secByNum = new Map(
+        (secData ?? []).map((s: any) => [Number(s.numero), s]),
+      );
+      return (numData ?? []).map((n: any) => ({
+        ...n,
+        sec: secByNum.get(Number(n.secretaria_num)) ?? null,
+      })) as unknown as NumeracaoComSec[];
+    },
+  });
 
  async function handleSync() {
  if (!data) return;
