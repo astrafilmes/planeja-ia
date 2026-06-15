@@ -423,22 +423,16 @@ export async function listarItensIntencao(intencaoId) {
   const res = await m2a.get(URL_ITENS_INTENCAO(intencaoId));
   if (res.status >= 400) throw new Error(`listarItensIntencao(${intencaoId}): status ${res.status}`);
   const $ = loadDoc(res.html);
-  const out = [];
-  // cada linha tem um checkbox .checkboxintencao_registro_itens com value=ITEM_INTENCAO_ID
-  $("tr").each((_, tr) => {
-    const $tr = $(tr);
-    // Procura o PRIMEIRO checkbox com value numérico real (ignora "on" do master selector).
-    let id = "";
-    $tr
-      .find("input.checkboxintencao_registro_itens, input.checkboxes, input[type=checkbox]")
-      .each((_i, el) => {
-        if (id) return;
-        const v = $(el).attr("value") || "";
-        if (isValidNumericId(v)) id = v;
-      });
-    if (!isValidNumericId(id)) return;
-    const texto = $tr.text().replace(/\s+/g, " ").trim();
-    out.push({ itemIntencaoId: String(id), texto });
+  const ids = extractIdsFromRows(
+    res.html,
+    "input.checkboxintencao_registro_itens, input.checkboxes, input[type=checkbox]",
+  );
+  const out = ids.map((id) => {
+    const $row = $(`input[value="${id}"]`).first().closest("tr");
+    return {
+      itemIntencaoId: String(id),
+      texto: $row.text().replace(/\s+/g, " ").trim(),
+    };
   });
   console.log(
     `[irp-api] listarItensIntencao(${intencaoId}) → ${out.length} itens (ids válidos)`,
