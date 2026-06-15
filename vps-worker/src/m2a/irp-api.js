@@ -498,11 +498,12 @@ export async function atualizarQuantidadeItem({
     );
   }
   const csrf = await getCsrfGlobal();
+  const qtyStr = sanitizeQuantidadeM2A(quantidade);
   // Bíblia M2A: application/x-www-form-urlencoded, sem _salvar.
   const body = new URLSearchParams();
   body.set("csrfmiddlewaretoken", csrf);
   body.set("intencao_registro_preco", String(intencaoId));
-  body.set("quantidade", formatQuantidadeM2A(quantidade));
+  body.set("quantidade", qtyStr);
   const res = await m2a.request("POST", URL_ATUALIZAR_QTD_ITEM(itemIntencaoId), {
     body: body.toString(),
     headers: {
@@ -516,7 +517,7 @@ export async function atualizarQuantidadeItem({
       `atualizarQuantidadeItem(${itemIntencaoId}): status ${res.status}`,
     );
   }
-  ensureOkJson(res, "atualizarQuantidadeItem", `item=${itemIntencaoId} qty=${formatQuantidadeM2A(quantidade)}`);
+  ensureOkJson(res, "atualizarQuantidadeItem", `item=${itemIntencaoId} qty=${qtyStr}`);
   return { ok: true };
 }
 
