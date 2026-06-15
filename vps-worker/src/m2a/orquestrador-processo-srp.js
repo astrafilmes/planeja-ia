@@ -30,7 +30,7 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
   const totalPlanilhas = lista.length;
 
   onProgress({ etapa: "criar_dfd", mensagem: "Criando DFD…", progresso: 5 });
-  await criarDFD({
+  const dfdCriada = await criarDFD({
     objeto: payload.objeto,
     data: payload.data,
     ano_orcamento: payload.ano_orcamento,
@@ -47,6 +47,7 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
   });
   const { dfdId, processoId, numero: numeroPortal } = await capturarIdsProcesso({
     objeto: payload.objeto,
+    dfdId: dfdCriada.dfdId,
   });
   const numeroProcesso = numeroPortal || payload.numero;
 

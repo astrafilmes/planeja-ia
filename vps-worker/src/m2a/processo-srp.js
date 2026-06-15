@@ -68,31 +68,51 @@ export async function criarDFD(payload) {
 
   // Aguarda 3s para o portal indexar a DFD na tabela
   await sleep(3000);
-  return { objetoNormalizado: objeto };
+  const dfdId = String(res.finalUrl || "").match(
+    /\/gestao_compras\/formalizacao_demanda\/(\d+)\/?/,
+  )?.[1];
+  console.log(`[criarDFD] dfdIdCriado=${dfdId || "NAO_IDENTIFICADO"}`);
+  return { objetoNormalizado: objeto, dfdId };
 }
 
 // ---------------------------------------------------------------------
 // FASE 3 — Scraping do ID da DFD e do Processo Administrativo
 // ---------------------------------------------------------------------
-export async function capturarIdsProcesso({ objeto }) {
+export async function capturarIdsProcesso({ objeto, dfdId: dfdIdPreferido }) {
   const objetoNorm = normalizeObjetoCaixaAlta(objeto);
-  const res = await m2a.get(DFD_TABELA_PATH);
+  let res = await m2a.get(DFD_TABELA_PATH);
   if (res.status >= 400) {
     throw new Error(
       `Tabela de DFD: portal retornou status ${res.status}`,
     );
   }
 
-  const $ = loadDoc(res.html);
-  const linhas = $("tr.kt-datatable__row.tr_solicitacao_despesa").toArray();
+  let $ = loadDoc(res.html);
+  let linhas = $("tr.kt-datatable__row.tr_solicitacao_despesa").toArray();
   if (!linhas.length) {
     throw new Error("Nenhuma DFD encontrada na tabela do portal.");
   }
 
-  // Busca por objeto (mais seguro). Se não bater, usa a primeira (mais recente).
+  // Prioriza o ID recém-criado. Só buscar por objeto é inseguro quando existem
+  // DFDs antigas com o mesmo objeto — foi isso que reaproveitou o processo 69314.
   let chosen = null;
+  if (dfdIdPreferido) {
+    chosen = linhas.find((el) => ($(el).attr("id") || "") === `tr_${dfdIdPreferido}`);
+    if (!chosen) {
+      await sleep(2000);
+      res = await m2a.get(DFD_TABELA_PATH);
+      $ = loadDoc(res.html);
+      linhas = $("tr.kt-datatable__row.tr_solicitacao_despesa").toArray();
+      chosen = linhas.find((el) => ($(el).attr("id") || "") === `tr_${dfdIdPreferido}`);
+    }
+    if (!chosen) {
+      throw new Error(
+        `DFD recém-criada ${dfdIdPreferido} não apareceu na tabela; abortando para não reutilizar processo antigo.`,
+      );
+    }
+  }
   if (objetoNorm) {
-    chosen = linhas.find((el) => {
+    chosen = chosen ?? linhas.find((el) => {
       const text = $(el).text().toUpperCase();
       return text.includes(objetoNorm.slice(0, 60));
     });
@@ -423,6 +443,12 @@ export async function importarPlanilha({
   const numeroLimpo = String(numero ?? "")
     .replace(/[^0-9/]/g, "")
     .trim();
+  const orgaoLimpo = String(orgaoPk ?? "").trim();
+  const unidadeLimpa = String(unidadeOrcamentariaPk ?? "").trim();
+  if (!orgaoLimpo) throw new Error("importarPlanilha: orgaoPk obrigatório.");
+  if (!unidadeLimpa) {
+    throw new Error("importarPlanilha: unidadeOrcamentariaPk obrigatório.");
+  }
 
   const path = IMPORTACAO_TPL(processoId);
   // O endpoint de importacao_planilha responde apenas ao POST (o GET
@@ -439,11 +465,13 @@ export async function importarPlanilha({
   // processo não basta para esse endpoint.
   if (objetoNormalizado) fd.append("objeto", objetoNormalizado);
   if (numeroLimpo) fd.append("numero", numeroLimpo);
-  fd.append("orgao_pk", String(orgaoPk));
-  fd.append("unidade_orcamentaria_pk", String(unidadeOrcamentariaPk));
+  fd.append("orgao_pk", orgaoLimpo);
+  fd.append("unidade_orcamentaria_pk", unidadeLimpa);
   fd.append("data_aviso", String(dataAviso));
   fd.append("data_consolidacao", dataConsolidacao);
   fd.append("data_manifestacao", dataManifestacao);
+  fd.append("data_pesquisa_finalizada", "");
+  fd.append("responsavel_pesquisa_pk", "");
   fd.append("valores_pesquisa_importacao", "false");
   fd.append("FileUpload", arquivoBytes, {
     filename: arquivoFilename,
@@ -451,7 +479,7 @@ export async function importarPlanilha({
   });
 
   console.log(
-    `[importarPlanilha] POST ${path} csrf=${csrf ? `len=${csrf.length}` : "AUSENTE"} objeto=${objetoNormalizado ? `len=${objetoNormalizado.length}` : "AUSENTE"} numero=${numeroLimpo || "AUSENTE"} orgao_pk=${orgaoPk} unidade_orcamentaria_pk=${unidadeOrcamentariaPk} data_aviso=${dataAviso} data_consolidacao=${dataConsolidacao} data_manifestacao=${dataManifestacao} file=${arquivoFilename} bytes=${arquivoBytes.length} mime=${arquivoMime}`,
+    `[importarPlanilha] POST ${path} csrf=${csrf ? `len=${csrf.length}` : "AUSENTE"} objeto=${objetoNormalizado ? `len=${objetoNormalizado.length}` : "AUSENTE"} numero=${numeroLimpo || "AUSENTE"} orgao_pk=${orgaoLimpo} unidade_orcamentaria_pk=${unidadeLimpa} data_aviso=${dataAviso} data_consolidacao=${dataConsolidacao} data_manifestacao=${dataManifestacao} data_pesquisa_finalizada=(vazio) responsavel_pesquisa_pk=(vazio) file=${arquivoFilename} bytes=${arquivoBytes.length} mime=${arquivoMime}`,
   );
 
   const res = await m2a.postMultipart(path, fd, {

@@ -76,6 +76,7 @@ type SecretariaM2A = {
  sigla: string;
  nome: string;
  m2a_orgao_id: string | null;
+  m2a_dot_orgao_id: string | null;
  m2a_uo_id: string | null;
 };
 
@@ -87,6 +88,7 @@ type IrpImportRow = {
  valor: number;
  cabecalhoColuna: string | null;
  orgaoPk: string | null;
+  importOrgaoPk: string | null;
  unidadePk: string | null;
  filename: string | null;
  resultado?: AnaliseIRP["resultados"][number];
@@ -299,7 +301,7 @@ function Page() {
  queryFn: async () => {
  const { data, error } = await supabase
  .from("secretarias")
- .select("id, numero, sigla, nome, m2a_orgao_id, m2a_uo_id")
+  .select("id, numero, sigla, nome, m2a_orgao_id, m2a_dot_orgao_id, m2a_uo_id")
  .eq("ativa", true);
  if (error) throw error;
  return (data ?? []) as SecretariaM2A[];
@@ -403,6 +405,7 @@ function Page() {
  .map((r) => {
  const unidade = r.unidade as UnidadeIrp;
  const secretaria = resolveSecretariaM2A(unidade, unidade.numero);
+  const importOrgaoPk = secretaria?.m2a_dot_orgao_id ?? null;
  return {
  key: `analise:${unidade.id}`,
  nome: unidade.nome,
@@ -411,6 +414,7 @@ function Page() {
  valor: r.somaValor,
  cabecalhoColuna: r.cabecalhoColuna,
  orgaoPk: secretaria?.m2a_orgao_id ?? null,
+  importOrgaoPk,
  unidadePk: secretaria?.m2a_uo_id ?? null,
  filename: null,
  resultado: r,
@@ -425,6 +429,7 @@ function Page() {
  .map((r) => {
  const unidade = r.unidade_id ? unidadeById.get(r.unidade_id) : null;
  const secretaria = resolveSecretariaM2A(unidade, r.numero);
+  const importOrgaoPk = secretaria?.m2a_dot_orgao_id ?? null;
  return {
  key: `salvo:${r.id}`,
  nome: r.nome,
@@ -433,6 +438,7 @@ function Page() {
  valor: Number(r.soma_valor),
  cabecalhoColuna: r.cabecalho_coluna,
  orgaoPk: secretaria?.m2a_orgao_id ?? null,
+  importOrgaoPk,
  unidadePk: secretaria?.m2a_uo_id ?? null,
  filename: r.arquivo?.original_name ?? r.output_filename ?? null,
  arquivo: r.arquivo ?? null,
@@ -463,8 +469,8 @@ function Page() {
  [importableRows, selectedIrpImportIds],
  );
 
- const rowsMissingM2A = useMemo(
- () => selectedImportRows.filter((row) => !row.orgaoPk || !row.unidadePk),
+  const rowsMissingM2A = useMemo(
+  () => selectedImportRows.filter((row) => !row.orgaoPk || !row.importOrgaoPk || !row.unidadePk),
  [selectedImportRows],
  );
 
@@ -760,7 +766,7 @@ function Page() {
  }
  if (rowsMissingM2A.length > 0) {
  toast.error("Ha planilhas sem IDs M2A cadastrados.", {
- description:"Complete Unidade Gestora e Unidade Orcamentaria em /secretarias.",
+  description:"Complete Unidade Gestora, Órgão da Dotação e Unidade Orçamentária em /secretarias.",
  });
  return;
  }
@@ -814,7 +820,7 @@ function Page() {
  }
  const bytesBase64 = await blobToBase64(blob);
  lista.push({
- orgao_pk: row.orgaoPk!,
+  orgao_pk: row.importOrgaoPk!,
  unidade_orcamentaria_pk: row.unidadePk!,
  nome: row.nome,
  arquivo_xlsx: { bytesBase64, filename, mimeType },
