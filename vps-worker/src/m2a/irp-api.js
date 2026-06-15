@@ -408,6 +408,7 @@ export async function manifestarInteresse(intencaoId, dataISO) {
   const body = new URLSearchParams();
   body.set("csrfmiddlewaretoken", csrf);
   body.set("text", "true");
+  body.set("detail_solicitacao", "true");
   body.set("data_input", String(dataISO));
   const res = await m2a.request("POST", URL_MANIFESTAR(intencaoId), {
     body: body.toString(),
