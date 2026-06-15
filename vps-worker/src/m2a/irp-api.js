@@ -6,6 +6,30 @@
 import FormData from "form-data";
 import { m2a } from "../m2a-client.js";
 import { loadDoc, sleep, formatQuantidadeM2A, normalizeComparableText } from "./utils.js";
+
+// Sanitiza quantidade para o POST de inclusão de item na DFD.
+// Django rejeita "", null, undefined ou strings com ponto como decimal.
+// Regra: se inválido/<=0, força "1,000" (a Gerenciadora pode atualizar depois).
+function sanitizeQuantidadeDFD(value) {
+  let n;
+  if (typeof value === "number") {
+    n = value;
+  } else {
+    const raw = String(value ?? "").trim();
+    if (!raw) {
+      n = NaN;
+    } else if (raw.includes(",")) {
+      n = Number(raw.replace(/\./g, "").replace(",", "."));
+    } else {
+      n = Number(raw);
+    }
+  }
+  if (!Number.isFinite(n) || n <= 0) n = 1;
+  return n.toLocaleString("pt-BR", {
+    minimumFractionDigits: 3,
+    maximumFractionDigits: 3,
+  });
+}
 import { resolverNaturezaId } from "./irp-naturezas.js";
 import { resolverUnidadeId, nomeUnidadeNormalizado } from "./irp-unidades.js";
 
