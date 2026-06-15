@@ -126,7 +126,23 @@ export async function capturarIdsProcesso({ objeto }) {
       `DFD ${dfdId} encontrada mas sem link para processo_administrativo na linha.`,
     );
   }
-  return { dfdId, processoId };
+
+  // Numero do processo: texto do botão verde (ex: "00003.20260601/0001-42")
+  // — retiramos "." e "/" para enviar no campo `numero` (ex: "0000320260601000142").
+  let numero = "";
+  const $btn = $(chosen).find("a.btn-label-success span").first();
+  if ($btn.length) {
+    numero = $btn.text().replace(/[^0-9]/g, "").trim();
+  }
+  if (!numero) {
+    // fallback: procura em qualquer texto da linha o padrão NNNNN.NNNNNNNN/NNNN-NN
+    const m = $(chosen).text().match(/\d{4,6}\.\d{6,10}\/\d{3,5}-?\d{0,3}/);
+    if (m) numero = m[0].replace(/[^0-9]/g, "");
+  }
+  console.log(
+    `[capturarIdsProcesso] dfdId=${dfdId} processoId=${processoId} numero="${numero}"`,
+  );
+  return { dfdId, processoId, numero };
 }
 
 // ---------------------------------------------------------------------
