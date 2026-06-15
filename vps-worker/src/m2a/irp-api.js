@@ -467,14 +467,16 @@ export async function atualizarQuantidadeItem({
     );
   }
   const csrf = await getCsrfGlobal();
-  // Django exige multipart/form-data + botão de submit (_salvar) + qty com vírgula.
-  const fd = new FormData();
-  fd.append("csrfmiddlewaretoken", csrf);
-  fd.append("intencao_registro_preco", String(intencaoId));
-  fd.append("quantidade", formatQuantidadeM2A(quantidade));
-  fd.append("_salvar", "");
-  const res = await m2a.postMultipart(URL_ATUALIZAR_QTD_ITEM(itemIntencaoId), fd, {
+  // Bíblia M2A: application/x-www-form-urlencoded, sem _salvar.
+  const body = new URLSearchParams();
+  body.set("csrfmiddlewaretoken", csrf);
+  body.set("intencao_registro_preco", String(intencaoId));
+  body.set("quantidade", formatQuantidadeM2A(quantidade));
+  const res = await m2a.request("POST", URL_ATUALIZAR_QTD_ITEM(itemIntencaoId), {
+    body: body.toString(),
     headers: {
+      "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+      "X-Requested-With": "XMLHttpRequest",
       Referer: `${m2a.http.defaults.baseURL || ""}/gestao_compras/intencao_registro_preco/${intencaoId}/`,
     },
   });
