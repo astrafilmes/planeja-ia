@@ -816,6 +816,7 @@ function Page() {
   itens: M2ASrpPayload["itens"];
   secretariasParticipantes: M2ASrpPayload["secretariasParticipantes"];
   gerenciadora_numero: number;
+  gerenciadora_chave: string;
  }> {
   // 1) Resolve gerenciadora pelo m2a_uo_id casado no form
   const uoGerenciadora = (
@@ -829,6 +830,10 @@ function Page() {
    throw new Error("Secretaria gerenciadora não identificada.");
   }
   const gerenciadora_numero = rowGerenciadora.secretaria.numero;
+  const idsGerenciadora = enrichRowForM2A(rowGerenciadora);
+  const gerenciadora_chave = idsGerenciadora.uoId
+   ? `uo:${idsGerenciadora.uoId}`
+   : `ref:${rowGerenciadora.resultado?.unidade.ref_coluna ?? rowGerenciadora.key}`;
 
   // 2) Lista de secretarias (gerenciadora + participantes) que entram no IRP
   const secretariasParticipantes: M2ASrpPayload["secretariasParticipantes"] =
@@ -875,14 +880,14 @@ function Page() {
    }
   }
   const itens = Array.from(map.values()).map(({ _key: _k, ...rest }) => rest);
-  return { itens, secretariasParticipantes, gerenciadora_numero };
+  return { itens, secretariasParticipantes, gerenciadora_numero, gerenciadora_chave };
  }
 
  async function confirmarCriacaoProcessoM2A() {
  setBusy(true);
  startTask("Criando processo SRP no M2A","Preparando planilhas...");
  try {
-  const { itens, secretariasParticipantes, gerenciadora_numero } =
+  const { itens, secretariasParticipantes, gerenciadora_numero, gerenciadora_chave } =
    await buildM2AIrpPayload();
    const payload: M2ASrpPayload = {
     objeto: processoM2AForm.objeto.trim(),
@@ -900,10 +905,7 @@ function Page() {
      processoM2AForm.comissao_planejamento.trim() || "3911",
     classificacao: processoM2AForm.classificacao.trim(),
      gerenciadora_numero,
-     gerenciadora_chave:
-      enrichRowForM2A(rowGerenciadora).uoId
-       ? `uo:${enrichRowForM2A(rowGerenciadora).uoId}`
-       : `ref:${rowGerenciadora.resultado?.unidade.ref_coluna ?? rowGerenciadora.key}`,
+     gerenciadora_chave,
     itens,
     secretariasParticipantes,
    };
