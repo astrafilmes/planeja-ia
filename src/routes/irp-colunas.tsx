@@ -16,9 +16,11 @@ import { M2A_ORGAOS_MAPPING } from "@/lib/m2a-orgaos-mapping";
 export const Route = createFileRoute("/irp-colunas")({
   head: () =>
     routeHead({
+      path: "/irp-colunas",
       title: "Mapeamento de Colunas IRP",
       description:
         "Relação entre cada coluna da planilha de importação IRP e a respectiva Unidade Orçamentária no M2A.",
+      noindex: true,
     }),
   component: IrpColunasPage,
 });
