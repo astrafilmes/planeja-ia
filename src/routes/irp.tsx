@@ -899,7 +899,11 @@ function Page() {
     comissao_planejamento:
      processoM2AForm.comissao_planejamento.trim() || "3911",
     classificacao: processoM2AForm.classificacao.trim(),
-    gerenciadora_numero,
+     gerenciadora_numero,
+     gerenciadora_chave:
+      enrichRowForM2A(rowGerenciadora).uoId
+       ? `uo:${enrichRowForM2A(rowGerenciadora).uoId}`
+       : `ref:${rowGerenciadora.resultado?.unidade.ref_coluna ?? rowGerenciadora.key}`,
     itens,
     secretariasParticipantes,
    };
