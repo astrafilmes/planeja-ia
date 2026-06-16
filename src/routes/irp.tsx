@@ -490,9 +490,12 @@ function Page() {
  );
 
   const rowsMissingM2A = useMemo(
-  () => selectedImportRows.filter((row) => !row.orgaoPk || !row.importOrgaoPk || !row.unidadePk),
- [selectedImportRows],
- );
+   () => selectedImportRows.filter((row) => {
+    const ids = enrichRowForM2A(row);
+    return !ids.orgaoId || !ids.uoId;
+   }),
+  [enrichRowForM2A, selectedImportRows],
+  );
 
  const allImportRowsSelected =
  importableRows.length > 0 &&
@@ -511,19 +514,21 @@ function Page() {
  }, [file?.name, resultadoSalvo?.job.original_filename]);
 
  useEffect(() => {
- const first = selectedImportRows.find(
- (row) => row.orgaoPk && row.unidadePk,
- );
+  const first = selectedImportRows.find((row) => {
+  const ids = enrichRowForM2A(row);
+  return ids.orgaoId && ids.uoId;
+  });
  if (!first) return;
+  const ids = enrichRowForM2A(first);
  setProcessoM2AForm((current) => ({
  ...current,
- orgao_solicitante: current.orgao_solicitante || first.orgaoPk ||"",
+  orgao_solicitante: current.orgao_solicitante || ids.orgaoId ||"",
  unidade_orcamentaria:
- current.unidade_orcamentaria || first.unidadePk ||"",
+  current.unidade_orcamentaria || ids.uoId ||"",
  unidade_orcamentaria_gerenciadora:
- current.unidade_orcamentaria_gerenciadora || first.unidadePk ||"",
+  current.unidade_orcamentaria_gerenciadora || ids.uoId ||"",
  }));
- }, [selectedImportRows]);
+  }, [enrichRowForM2A, selectedImportRows]);
 
  async function persistirArquivosResultado(
  jobId: string,
@@ -876,7 +881,8 @@ function Page() {
     }
      const ids = enrichRowForM2A(row);
      const refColuna = row.resultado?.unidade.ref_coluna ?? null;
-     agg.quantidades[ids.uoId ? `uo:${ids.uoId}` : `ref:${refColuna ?? row.key}`] = it.quantidade;
+     const chave = ids.uoId ? `uo:${ids.uoId}` : `ref:${refColuna ?? row.key}`;
+     agg.quantidades[chave] = Number(agg.quantidades[chave] ?? 0) + it.quantidade;
    }
   }
   const itens = Array.from(map.values()).map(({ _key: _k, ...rest }) => rest);
