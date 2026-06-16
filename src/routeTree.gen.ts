@@ -15,6 +15,7 @@ import { Route as ProcessosRouteImport } from './routes/processos'
 import { Route as NumeracaoRouteImport } from './routes/numeracao'
 import { Route as LogsRouteImport } from './routes/logs'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as IrpColunasRouteImport } from './routes/irp-colunas'
 import { Route as IrpRouteImport } from './routes/irp'
 import { Route as ImportarContratosRouteImport } from './routes/importar-contratos'
 import { Route as HistoricoRouteImport } from './routes/historico'
@@ -55,6 +56,11 @@ const LogsRoute = LogsRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IrpColunasRoute = IrpColunasRouteImport.update({
+  id: '/irp-colunas',
+  path: '/irp-colunas',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IrpRoute = IrpRouteImport.update({
@@ -123,6 +129,7 @@ export interface FileRoutesByFullPath {
   '/historico': typeof HistoricoRoute
   '/importar-contratos': typeof ImportarContratosRoute
   '/irp': typeof IrpRoute
+  '/irp-colunas': typeof IrpColunasRoute
   '/login': typeof LoginRoute
   '/logs': typeof LogsRoute
   '/numeracao': typeof NumeracaoRoute
@@ -142,6 +149,7 @@ export interface FileRoutesByTo {
   '/historico': typeof HistoricoRoute
   '/importar-contratos': typeof ImportarContratosRoute
   '/irp': typeof IrpRoute
+  '/irp-colunas': typeof IrpColunasRoute
   '/login': typeof LoginRoute
   '/logs': typeof LogsRoute
   '/numeracao': typeof NumeracaoRoute
@@ -162,6 +170,7 @@ export interface FileRoutesById {
   '/historico': typeof HistoricoRoute
   '/importar-contratos': typeof ImportarContratosRoute
   '/irp': typeof IrpRoute
+  '/irp-colunas': typeof IrpColunasRoute
   '/login': typeof LoginRoute
   '/logs': typeof LogsRoute
   '/numeracao': typeof NumeracaoRoute
@@ -183,6 +192,7 @@ export interface FileRouteTypes {
     | '/historico'
     | '/importar-contratos'
     | '/irp'
+    | '/irp-colunas'
     | '/login'
     | '/logs'
     | '/numeracao'
@@ -202,6 +212,7 @@ export interface FileRouteTypes {
     | '/historico'
     | '/importar-contratos'
     | '/irp'
+    | '/irp-colunas'
     | '/login'
     | '/logs'
     | '/numeracao'
@@ -221,6 +232,7 @@ export interface FileRouteTypes {
     | '/historico'
     | '/importar-contratos'
     | '/irp'
+    | '/irp-colunas'
     | '/login'
     | '/logs'
     | '/numeracao'
@@ -241,6 +253,7 @@ export interface RootRouteChildren {
   HistoricoRoute: typeof HistoricoRoute
   ImportarContratosRoute: typeof ImportarContratosRoute
   IrpRoute: typeof IrpRoute
+  IrpColunasRoute: typeof IrpColunasRoute
   LoginRoute: typeof LoginRoute
   LogsRoute: typeof LogsRoute
   NumeracaoRoute: typeof NumeracaoRoute
@@ -291,6 +304,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/irp-colunas': {
+      id: '/irp-colunas'
+      path: '/irp-colunas'
+      fullPath: '/irp-colunas'
+      preLoaderRoute: typeof IrpColunasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/irp': {
@@ -407,6 +427,7 @@ const rootRouteChildren: RootRouteChildren = {
   HistoricoRoute: HistoricoRoute,
   ImportarContratosRoute: ImportarContratosRoute,
   IrpRoute: IrpRoute,
+  IrpColunasRoute: IrpColunasRoute,
   LoginRoute: LoginRoute,
   LogsRoute: LogsRoute,
   NumeracaoRoute: NumeracaoRoute,
