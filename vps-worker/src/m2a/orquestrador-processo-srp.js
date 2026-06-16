@@ -35,13 +35,10 @@ import {
   finalizarParaConsolidacao,
   consolidarIntencao,
   casarIntencoesComSecretarias,
+  obterUnidadeOrcamentariaDaIntencao,
+  MAPA_ID_UNIDADE_PARA_CSV,
 } from "./irp-api.js";
-import {
-  encontrarUnidadeNoDicionario,
-  encontrarUnidadePorIds,
-  M2A_DICIONARIO_COMPLETO,
-  secretariasParaColunas,
-} from "./m2a-dicionario.js";
+import { normalizeComparableText } from "./utils.js";
 
 /**
  * @param {object} payload

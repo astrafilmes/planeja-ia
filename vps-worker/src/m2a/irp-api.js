@@ -61,6 +61,77 @@ const URL_FINALIZAR_CONSOLIDACAO = (id) =>
   `/gestao_compras/intencao_registro_preco/finalizar_para_consolidacao/${id}/?detail_solicitacao=true`;
 const URL_CONSOLIDAR = (id) =>
   `/gestao_compras/intencao_registro_preco/consolidar/${id}/`;
+const URL_EDITAR_INTENCAO = (id) =>
+  `/gestao_compras/intencao_registro_preco/atualizar/${id}/?detail=true`;
+
+// =====================================================================
+// Mapa CANÔNICO: ID numérico da Unidade Orçamentária (do <select name=
+// "unidade_orcamentaria"> na página de edição da IRP) → rótulos das
+// colunas do CSV de demanda. Fonte da verdade quando o texto da UO varia.
+// =====================================================================
+export const MAPA_ID_UNIDADE_PARA_CSV = {
+  "12877": ["CGM"],
+  "14712": ["GAB"],
+  "12897": ["ADM"],
+  "12898": ["INF"],
+  "12899": ["DES"],
+  "12901": ["EJL"],
+  "12902": ["SEC EDU", "SME"],
+  "12904": ["FUNDEB"],
+  "12905": ["SAÚDE", "SMS"],
+  "12906": ["FMS"],
+  "12907": ["HOSPITAL", "HOSP"],
+  "12908": ["PROTECAO", "SPS"],
+  "12909": ["FUNDO", "CRAS SCFV", "CREAS"],
+  "12913": ["MEIO AMBIENTE", "SEC. MUN. DE MEIO AMBIENTE"],
+  "14718": ["CUT"],
+  "12912": ["PREVIDÊNCIA", "FPS"],
+};
+
+// Lê a página de edição da IRP e extrai os IDs canônicos do formulário.
+// Retorna { orgaoId, unidadeId } como strings (ou null se ausentes).
+export async function obterUnidadeOrcamentariaDaIntencao(intencaoId) {
+  if (!isValidNumericId(String(intencaoId))) {
+    throw new Error(
+      `obterUnidadeOrcamentariaDaIntencao: intencaoId inválido "${intencaoId}".`,
+    );
+  }
+  const res = await m2a.get(URL_EDITAR_INTENCAO(intencaoId));
+  if (res.status >= 400) {
+    throw new Error(
+      `obterUnidadeOrcamentariaDaIntencao(${intencaoId}): status ${res.status}`,
+    );
+  }
+  const $ = loadDoc(res.html);
+
+  const pegarCampo = (name) => {
+    const sel = $(`select[name="${name}"] option[selected]`).attr("value");
+    if (sel && /^\d+$/.test(String(sel).trim())) return String(sel).trim();
+    const sel2 = $(`select[name="${name}"] option[selected="selected"]`).attr("value");
+    if (sel2 && /^\d+$/.test(String(sel2).trim())) return String(sel2).trim();
+    const inp = $(`input[name="${name}"]`).attr("value");
+    if (inp && /^\d+$/.test(String(inp).trim())) return String(inp).trim();
+    return null;
+  };
+
+  let unidadeId = pegarCampo("unidade_orcamentaria");
+  let orgaoId = pegarCampo("orgao");
+
+  // Fallback regex no HTML cru (caso o template popule via JS).
+  if (!unidadeId) {
+    const m = res.html.match(/name=["']unidade_orcamentaria["'][^>]*?value=["'](\d+)["']/i);
+    if (m) unidadeId = m[1];
+  }
+  if (!orgaoId) {
+    const m = res.html.match(/name=["']orgao["'][^>]*?value=["'](\d+)["']/i);
+    if (m) orgaoId = m[1];
+  }
+
+  console.log(
+    `[irp-api] obterUnidadeOrcamentariaDaIntencao(${intencaoId}) → orgao=${orgaoId || "?"} unidade=${unidadeId || "?"}`,
+  );
+  return { orgaoId, unidadeId };
+}
 
 // página com CSRF "global" — qualquer página interna serve
 const URL_DFD_LIST = "/gestao_compras/formalizacao_demanda/tabela/?page_size=10";
