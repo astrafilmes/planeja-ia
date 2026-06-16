@@ -846,7 +846,7 @@ function Page() {
     .filter((r) => r.secretaria)
     .map((r) => {
      const ids = enrichRowForM2A(r);
-     const refColuna = r.resultado?.unidade.ref_coluna ?? null;
+     const refColuna: number | null = r.resultado?.unidade.ref_coluna ?? null;
      return {
       chave: ids.uoId ? `uo:${ids.uoId}` : `ref:${refColuna ?? r.key}`,
       numero: r.secretaria!.numero,
@@ -880,7 +880,7 @@ function Page() {
      map.set(key, agg);
     }
      const ids = enrichRowForM2A(row);
-     const refColuna = row.resultado?.unidade.ref_coluna ?? null;
+     const refColuna: number | null = row.resultado?.unidade.ref_coluna ?? null;
      const chave = ids.uoId ? `uo:${ids.uoId}` : `ref:${refColuna ?? row.key}`;
      agg.quantidades[chave] = Number(agg.quantidades[chave] ?? 0) + it.quantidade;
    }
