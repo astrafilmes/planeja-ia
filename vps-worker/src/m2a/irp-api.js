@@ -84,19 +84,44 @@ export async function obterUnidadeOrcamentariaDaIntencao(intencaoId) {
   const $ = loadDoc(res.html);
 
   const pegarCampo = (name) => {
-    const sel = $(`select[name="${name}"] option[selected]`).attr("value");
-    if (sel && /^\d+$/.test(String(sel).trim())) return String(sel).trim();
-    const sel2 = $(`select[name="${name}"] option[selected="selected"]`).attr("value");
-    if (sel2 && /^\d+$/.test(String(sel2).trim())) return String(sel2).trim();
-    const inp = $(`input[name="${name}"]`).attr("value");
-    if (inp && /^\d+$/.test(String(inp).trim())) return String(inp).trim();
+    // 1) <input> com value numérico (hidden ou não)
+    let inpVal = null;
+    $(`input[name="${name}"]`).each((_i, el) => {
+      if (inpVal) return;
+      const v = String($(el).attr("value") || "").trim();
+      if (/^\d+$/.test(v)) inpVal = v;
+    });
+    if (inpVal) return inpVal;
+
+    // 2) <select> com <option selected>
+    const $sel = $(`select[name="${name}"]`);
+    if ($sel.length) {
+      let val = null;
+      $sel.find("option").each((_i, el) => {
+        if (val) return;
+        const attrs = el.attribs || {};
+        const isSel = attrs.selected !== undefined;
+        if (!isSel) return;
+        const v = String(attrs.value || "").trim();
+        if (/^\d+$/.test(v)) val = v;
+      });
+      if (val) return val;
+
+      // 3) Select2/AJAX: o portal pode renderizar apenas a opção atual.
+      const numericos = $sel
+        .find("option")
+        .toArray()
+        .map((el) => String((el.attribs || {}).value || "").trim())
+        .filter((v) => /^\d+$/.test(v));
+      if (numericos.length === 1) return numericos[0];
+    }
     return null;
   };
 
   let unidadeId = pegarCampo("unidade_orcamentaria");
   let orgaoId = pegarCampo("orgao");
 
-  // Fallback regex no HTML cru (caso o template popule via JS).
+  // 4) Fallback regex no HTML cru (templates que populam via JS).
   if (!unidadeId) {
     const m = res.html.match(/name=["']unidade_orcamentaria["'][^>]*?value=["'](\d+)["']/i);
     if (m) unidadeId = m[1];
@@ -106,9 +131,17 @@ export async function obterUnidadeOrcamentariaDaIntencao(intencaoId) {
     if (m) orgaoId = m[1];
   }
 
-  console.log(
-    `[irp-api] obterUnidadeOrcamentariaDaIntencao(${intencaoId}) → orgao=${orgaoId || "?"} unidade=${unidadeId || "?"}`,
-  );
+  if (!unidadeId || !orgaoId) {
+    const trechos = res.html.match(/name=["'](?:orgao|unidade_orcamentaria)["'][\s\S]{0,400}/gi) || [];
+    console.warn(
+      `[irp-api] obterUnidadeOrcamentariaDaIntencao(${intencaoId}) → orgao=${orgaoId || "?"} unidade=${unidadeId || "?"} (HTML não expôs IDs; trechos=${trechos.length})`,
+    );
+    if (trechos[0]) console.warn(`[irp-api]   trecho: ${trechos[0].replace(/\s+/g, " ").slice(0, 300)}`);
+  } else {
+    console.log(
+      `[irp-api] obterUnidadeOrcamentariaDaIntencao(${intencaoId}) → orgao=${orgaoId} unidade=${unidadeId}`,
+    );
+  }
   return { orgaoId, unidadeId };
 }
 
