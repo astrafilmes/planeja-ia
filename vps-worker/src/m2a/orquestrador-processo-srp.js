@@ -300,7 +300,7 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
   }
   if (ignoradasSemMatch || ignoradasSemQuantidade) {
     console.log(
-      `[irp] resumo: ${ignoradasSemMatch} sem secretaria pareada (m2a_uo_id), ${ignoradasSemQuantidade} sem quantidade — ignoradas silenciosamente.`,
+      `[irp] resumo: ${ignoradasSemMatch} sem secretaria pareada (orgao+uo), ${ignoradasSemQuantidade} sem quantidade — ignoradas silenciosamente.`,
     );
   }
 
