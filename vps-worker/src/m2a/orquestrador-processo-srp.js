@@ -193,11 +193,12 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
   //    fuzzy match. Se não bater nenhuma → ignora; se bater mas a soma de
   //    quantidades for 0 → ignora.
   const participantesPorUoId = new Map();
+  const participantesPorOrgaoUoId = new Map();
   for (const sec of participantes) {
     const uo = String(sec.m2a_uo_id || "").trim();
     if (!uo) continue;
-    // pode haver várias secretarias_id apontando para a mesma UO
-    // (todas com mesmo `numero`); guardamos a primeira.
+    const orgao = String(sec.m2a_orgao_id || sec.m2a_dot_orgao_id || "").trim();
+    if (orgao) participantesPorOrgaoUoId.set(`${orgao}:${uo}`, sec);
     if (!participantesPorUoId.has(uo)) participantesPorUoId.set(uo, sec);
   }
 
@@ -222,20 +223,23 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
       continue;
     }
 
-    // 7b. Match direto pelo m2a_uo_id da secretaria participante.
-    const secretaria = unidadeId ? participantesPorUoId.get(String(unidadeId)) : null;
+    // 7b. Match direto por orgao+unidade; fallback por unidade para manter compatibilidade.
+    const secretaria = unidadeId
+      ? (orgaoId ? participantesPorOrgaoUoId.get(`${orgaoId}:${unidadeId}`) : null) ||
+        participantesPorUoId.get(String(unidadeId))
+      : null;
     if (!secretaria) {
       ignoradasSemMatch++;
       orfas.push(intencao.intencaoId);
       console.log(
-        `[irp] intenção ${intencao.intencaoId} (orgao=${orgaoId || "?"} unidade=${unidadeId || "?"}): nenhuma secretaria participante com esse m2a_uo_id → ignorada.`,
+        `[irp] intenção ${intencao.intencaoId} (orgao=${orgaoId || "?"} unidade=${unidadeId || "?"}): nenhuma secretaria participante com esse orgao+uo → ignorada.`,
       );
       continue;
     }
 
     // 7c. Soma quantidades da secretaria.
     const somaQty = itensCriados.reduce((acc, { input }) => {
-      const q = Number(input?.quantidades?.[secretaria.numero] ?? 0);
+      const q = quantidadeDoItem(input, secretaria, unidadeId ? [`uo:${unidadeId}`] : []);
       return acc + (Number.isFinite(q) && q > 0 ? q : 0);
     }, 0);
     if (somaQty <= 0) {
@@ -273,7 +277,7 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
       for (let j = 0; j < N; j++) {
         const itemIntencao = itensIntencao[j];
         const original = itensCriados[j].input;
-        const qty = Number(original?.quantidades?.[secretaria.numero] ?? 0);
+        const qty = quantidadeDoItem(original, secretaria, unidadeId ? [`uo:${unidadeId}`] : []);
         if (!Number.isFinite(qty) || qty <= 0) continue;
         await atualizarQuantidadeItem({
           itemIntencaoId: itemIntencao.itemIntencaoId,
