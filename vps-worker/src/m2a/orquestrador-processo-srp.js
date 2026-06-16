@@ -276,9 +276,9 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
       });
     }
   }
-  if (ignoradasSemSecretaria || ignoradasSemQuantidade) {
+  if (ignoradasSemSecretaria || ignoradasSemQuantidade || ignoradasForaDoDicionario) {
     console.log(
-      `[irp] resumo: ${ignoradasSemSecretaria} intenções órfãs ignoradas, ${ignoradasSemQuantidade} sem quantidade ignoradas.`,
+      `[irp] resumo: ${ignoradasForaDoDicionario} fora do dicionário, ${ignoradasSemSecretaria} órfãs no catálogo, ${ignoradasSemQuantidade} sem quantidade — todas ignoradas silenciosamente.`,
     );
   }
 
