@@ -11,7 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { M2A_ORGAOS_MAPPING } from "@/lib/m2a-orgaos-mapping";
+import { M2A_IRP_UNIDADES_CANONICAS, M2A_ORGAOS_MAPPING } from "@/lib/m2a-orgaos-mapping";
 
 export const Route = createFileRoute("/irp-colunas")({
   head: () =>
@@ -45,26 +45,14 @@ interface Linha {
   responsavel: string;
 }
 
-// Mapeamento atual carregado de irp_unidades_processamento + M2A_ORGAOS_MAPPING.
-// ref_coluna é zero-based (coluna 0 = A).
-const LINHAS: Linha[] = [
-  { refColuna: 9,  secretariaPlanilha: "SEC. MUN. DE ADMINISTRAÇÃO, FINANÇAS E PLANEJAMENTO", orgaoId: "10023", uoId: 12897, uoNome: "Secretaria Municipal de Administração, Finanças e Planejamento", responsavel: "Ana Soraya" },
-  { refColuna: 11, secretariaPlanilha: "CONTROLADORIA GERAL DO MUNICÍPIO",                       orgaoId: "10006", uoId: 12877, uoNome: "Controladoria Geral do Município",                                  responsavel: "Ana Soraya" },
-  { refColuna: 13, secretariaPlanilha: "SEC. MUN. DE TURISMO E CULTURA",                          orgaoId: "11291", uoId: 14718, uoNome: "Secretaria Municipal de Cultura e Turismo",                         responsavel: "Ana Soraya" },
-  { refColuna: 15, secretariaPlanilha: "SEC. MUN. DE DESENVOLVIMENTO RURAL E PESCA (SDRP)",       orgaoId: "10025", uoId: 12899, uoNome: "Secretaria Municipal de Desenvolvimento Rural e Pesca",            responsavel: "Ana Soraya" },
-  { refColuna: 17, secretariaPlanilha: "SEC. MUN. DE ESPORTE, JUVENTUDE E LAZER",                 orgaoId: "10026", uoId: 12901, uoNome: "Secretaria Municipal de Esporte, Juventude e Lazer",              responsavel: "Ana Soraya" },
-  { refColuna: 19, secretariaPlanilha: "PREVIDÊNCIA",                                             orgaoId: "10030", uoId: 12912, uoNome: "Fundo de Previdência Social do Município de Itarema",              responsavel: "Ana Soraya" },
-  { refColuna: 21, secretariaPlanilha: "GABINETE DO PREFEITO",                                    orgaoId: "10022", uoId: 14712, uoNome: "Gabinete do Prefeito",                                              responsavel: "Ana Soraya" },
-  { refColuna: 23, secretariaPlanilha: "SEC. MUN. DE INFRAESTRUTURA, MOBILIDADE E SERV. PÚBLICOS", orgaoId: "10024", uoId: 12898, uoNome: "Secretaria Municipal de Infraestrutura, Mobilidade e Serviços Públicos", responsavel: "Hawlyson" },
-  { refColuna: 25, secretariaPlanilha: "SEC. MUN. DE MEIO AMBIENTE",                              orgaoId: "10031", uoId: 12913, uoNome: "Secretaria Municipal de Meio Ambiente",                            responsavel: "Ana Soraya" },
-  { refColuna: 27, secretariaPlanilha: "SEC. MUN. DA EDUCAÇÃO — SEC",                             orgaoId: "10027", uoId: 12902, uoNome: "Secretaria Municipal de Educação",                                 responsavel: "Lorena" },
-  { refColuna: 30, secretariaPlanilha: "SEC. MUN. DA EDUCAÇÃO — FUNDEB",                          orgaoId: "10027", uoId: 12904, uoNome: "FUNDEB",                                                           responsavel: "Lorena" },
-  { refColuna: 33, secretariaPlanilha: "SEC. MUN. DA SAÚDE — SEC",                                orgaoId: "10028", uoId: 12905, uoNome: "Secretaria Municipal de Saúde",                                   responsavel: "Francisco" },
-  { refColuna: 35, secretariaPlanilha: "SEC. MUN. DA SAÚDE — HOSPITAL",                           orgaoId: "10028", uoId: 12907, uoNome: "Hospital Municipal de Itarema - Natércia Rios",                  responsavel: "Francisco" },
-  { refColuna: 40, secretariaPlanilha: "SEC. MUN. DA SAÚDE — FMS",                                orgaoId: "10028", uoId: 12906, uoNome: "Fundo Municipal de Saúde",                                        responsavel: "Francisco" },
-  { refColuna: 43, secretariaPlanilha: "SEC. MUN. DE PROTEÇÃO SOCIAL E CIDADANIA — SEC",          orgaoId: "10029", uoId: 12908, uoNome: "Secretaria Municipal de Proteção Social e Cidadania",            responsavel: "Leide" },
-  { refColuna: 49, secretariaPlanilha: "SEC. MUN. DE PROTEÇÃO SOCIAL E CIDADANIA — FUNDO ASSISTÊNCIA", orgaoId: "10029", uoId: 12909, uoNome: "Fundo Municipal de Assistência Social",                      responsavel: "Leide" },
-];
+const LINHAS: Linha[] = M2A_IRP_UNIDADES_CANONICAS.map((u) => ({
+  refColuna: u.refColuna,
+  secretariaPlanilha: u.nomePlanilha,
+  orgaoId: u.orgaoId,
+  uoId: Number(u.uoId),
+  uoNome: u.uoNome,
+  responsavel: M2A_ORGAOS_MAPPING[u.orgaoId]?.responsavel_dfd_nome.split(" ")[0] ?? "",
+}));
 
 function IrpColunasPage() {
   return (
