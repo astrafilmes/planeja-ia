@@ -5,7 +5,7 @@
 
 import FormData from "form-data";
 import { m2a } from "../m2a-client.js";
-import { loadDoc, sleep, formatQuantidadeM2A, normalizeComparableText } from "./utils.js";
+import { loadDoc, sleep, formatQuantidadeM2A } from "./utils.js";
 
 // Sanitiza quantidade para o Django M2A.
 // Regras:
