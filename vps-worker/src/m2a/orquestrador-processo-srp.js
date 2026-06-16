@@ -39,6 +39,7 @@ import {
 import {
   encontrarUnidadeNoDicionario,
   encontrarUnidadePorIds,
+  M2A_DICIONARIO_COMPLETO,
   secretariasParaColunas,
 } from "./m2a-dicionario.js";
 
