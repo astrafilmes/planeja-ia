@@ -36,6 +36,10 @@ import {
   consolidarIntencao,
   obterUnidadeOrcamentariaDaIntencao,
 } from "./irp-api.js";
+import {
+  gerarJustificativaGemini,
+  atualizarJustificativaM2A,
+} from "./justificativa-gemini.js";
 
 function chaveSecretaria(sec) {
   if (sec?.chave) return String(sec.chave);
