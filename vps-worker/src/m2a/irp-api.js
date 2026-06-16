@@ -64,29 +64,8 @@ const URL_CONSOLIDAR = (id) =>
 const URL_EDITAR_INTENCAO = (id) =>
   `/gestao_compras/intencao_registro_preco/atualizar/${id}/?detail=true`;
 
-// =====================================================================
-// Mapa CANÔNICO: ID numérico da Unidade Orçamentária (do <select name=
-// "unidade_orcamentaria"> na página de edição da IRP) → rótulos das
-// colunas do CSV de demanda. Fonte da verdade quando o texto da UO varia.
-// =====================================================================
-export const MAPA_ID_UNIDADE_PARA_CSV = {
-  "12877": ["CGM"],
-  "14712": ["GAB"],
-  "12897": ["ADM"],
-  "12898": ["INF"],
-  "12899": ["DES"],
-  "12901": ["EJL"],
-  "12902": ["SEC EDU", "SME"],
-  "12904": ["FUNDEB"],
-  "12905": ["SAÚDE", "SMS"],
-  "12906": ["FMS"],
-  "12907": ["HOSPITAL", "HOSP"],
-  "12908": ["PROTECAO", "SPS"],
-  "12909": ["FUNDO", "CRAS SCFV", "CREAS"],
-  "12913": ["MEIO AMBIENTE", "SEC. MUN. DE MEIO AMBIENTE"],
-  "14718": ["CUT"],
-  "12912": ["PREVIDÊNCIA", "FPS"],
-};
+
+
 
 // Lê a página de edição da IRP e extrai os IDs canônicos do formulário.
 // Retorna { orgaoId, unidadeId } como strings (ou null se ausentes).
