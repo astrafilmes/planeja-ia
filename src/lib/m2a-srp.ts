@@ -32,6 +32,7 @@ export interface M2ASrpItemIRP {
 }
 
 export interface M2ASrpSecretariaParticipante {
+  chave: string;
   numero: number;
   sigla: string;
   nome: string;
@@ -55,6 +56,7 @@ export interface M2ASrpPayload {
   numero?: string;
   /** numero da secretaria gerenciadora (para diferenciá-la das participantes) */
   gerenciadora_numero: number;
+  gerenciadora_chave?: string;
   itens: M2ASrpItemIRP[];
   secretariasParticipantes: M2ASrpSecretariaParticipante[];
 }
