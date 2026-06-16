@@ -21,6 +21,19 @@ export interface M2AOrgaoMapping {
   unidades: M2AUnidadeOrcamentaria[];
 }
 
+export interface M2AIrpUnidadeCanonica {
+  /** Coluna zero-based da planilha-mãe IRP. */
+  refColuna: number;
+  /** Número legado exibido na planilha/tabela. Não é chave única. */
+  numero: number;
+  nomePlanilha: string;
+  /** ID do campo `orgao` no formulário da manifestação/IRP. */
+  orgaoId: string;
+  /** ID do campo `unidade_orcamentaria` no formulário da manifestação/IRP. */
+  uoId: string;
+  uoNome: string;
+}
+
 export const M2A_RESPONSAVEIS = {
   ANA_SORAYA: { id: 37164, nome: "Ana Soraya Azevedo Henrique" },
   FRANCISCO: { id: 38000, nome: "Francisco José Lopes" },
@@ -149,6 +162,25 @@ export const M2A_ORGAOS_MAPPING: Record<string, M2AOrgaoMapping> = {
   },
 };
 
+export const M2A_IRP_UNIDADES_CANONICAS: M2AIrpUnidadeCanonica[] = [
+  { refColuna: 21, numero: 2, nomePlanilha: "GABINETE DO PREFEITO", orgaoId: "10022", uoId: "14712", uoNome: "01 - Gabinete do Prefeito" },
+  { refColuna: 11, numero: 1, nomePlanilha: "CONTROLADORIA GERAL DO MUNICIPIO", orgaoId: "10006", uoId: "12877", uoNome: "01 - Controladoria Geral do Município" },
+  { refColuna: 9, numero: 3, nomePlanilha: "SECRETARIA MUNICIPAL DE ADMINISTRACAO, FINANCAS, E PLANEJAMENTO", orgaoId: "10023", uoId: "12897", uoNome: "01 - Secretaria Municipal de Administração, Finanças e Planejamento" },
+  { refColuna: 23, numero: 4, nomePlanilha: "SECRETARIA MUNICIPAL DE INFRAESTRUTURA, MOBILIDADE E SERVICOS PUBLICOS", orgaoId: "10024", uoId: "12898", uoNome: "01 - Secretaria Municipal de Infraestrutura, Mobilidade e Serviços Públicos" },
+  { refColuna: 15, numero: 5, nomePlanilha: "SECRETARIA MUNICIPAL DE DESENVOLVIMENTO RURAL E PESCA (SDRP)", orgaoId: "10025", uoId: "12899", uoNome: "01 - Secretaria Municipal de Desenvolvimento Rural e Pesca" },
+  { refColuna: 17, numero: 6, nomePlanilha: "SECRETARIA MUNICIPAL DE ESPORTE, JUVENTUDE E LAZER", orgaoId: "10026", uoId: "12901", uoNome: "01 - Secretaria Municipal de Esporte, Juventude e Lazer" },
+  { refColuna: 30, numero: 7, nomePlanilha: "SECRETARIA MUNICIPAL DA EDUCACAO - FUNDEB", orgaoId: "10027", uoId: "12904", uoNome: "03 - FUNDEB" },
+  { refColuna: 27, numero: 7, nomePlanilha: "SECRETARIA MUNICIPAL DA EDUCACAO - SEC", orgaoId: "10027", uoId: "12902", uoNome: "01 - Secretaria Municipal de Educação" },
+  { refColuna: 35, numero: 8, nomePlanilha: "SECRETARIA MUNICIPAL DA SAUDE - HOSPITAL", orgaoId: "10028", uoId: "12907", uoNome: "03 - Hospital Municipal de Itarema - Natércia Rios" },
+  { refColuna: 40, numero: 8, nomePlanilha: "SECRETARIA MUNICIPAL DA SAUDE - FMS", orgaoId: "10028", uoId: "12906", uoNome: "02 - Fundo Municipal de Saúde" },
+  { refColuna: 33, numero: 8, nomePlanilha: "SECRETARIA MUNICIPAL DA SAUDE - SEC", orgaoId: "10028", uoId: "12905", uoNome: "01 - Secretaria Municipal de Saúde" },
+  { refColuna: 49, numero: 9, nomePlanilha: "SECRETARIA MUNICIPAL DE PROTECAO SOCIAL E CIDADANIA - FUNDO ASSISTENCIA", orgaoId: "10029", uoId: "12909", uoNome: "02 - Fundo Municipal de Assistência Social" },
+  { refColuna: 43, numero: 9, nomePlanilha: "SECRETARIA MUNICIPAL DE PROTECAO SOCIAL E CIDADANIA - SEC", orgaoId: "10029", uoId: "12908", uoNome: "01 - Secretaria Municipal de Proteção Social e Cidadania" },
+  { refColuna: 13, numero: 11, nomePlanilha: "SECRETARIA MUNICIPAL DE TURISMO E CULTURA", orgaoId: "11291", uoId: "14718", uoNome: "01 - Secretaria Municipal de Cultura e Turismo" },
+  { refColuna: 25, numero: 10, nomePlanilha: "SECRETARIA MUNICIPAL DE MEIO AMBIENTE", orgaoId: "10031", uoId: "12913", uoNome: "01 - Secretaria Municipal de Meio Ambiente" },
+  { refColuna: 19, numero: 90, nomePlanilha: "PREVIDENCIA", orgaoId: "10030", uoId: "12912", uoNome: "01 - Fundo de Previdência Social do Município de Itarema" },
+];
+
 /** Lista ordenada de órgãos para selects (id como string p/ compat com M2A). */
 export function listarOrgaosOrdenados() {
   return Object.entries(M2A_ORGAOS_MAPPING)
@@ -174,4 +206,9 @@ export function findOrgaoByUO(uoId?: string | null): string | null {
     if (o.unidades.some((u) => String(u.id) === String(uoId))) return orgaoId;
   }
   return null;
+}
+
+export function findIrpUnidadeCanonicaByRefColuna(refColuna?: number | null) {
+  if (refColuna === null || refColuna === undefined) return null;
+  return M2A_IRP_UNIDADES_CANONICAS.find((u) => u.refColuna === Number(refColuna)) ?? null;
 }
