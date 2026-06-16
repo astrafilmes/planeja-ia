@@ -55,6 +55,7 @@ const saveAs =
  (FileSaver as any).default;
 import { logAudit } from"@/lib/audit";
 import { IrpCabecalhoCard } from"@/components/irp/IrpCabecalhoCard";
+import { findIrpUnidadeCanonicaByRefColuna } from"@/lib/m2a-orgaos-mapping";
 
 import { IrpConfirmacaoProcessoModal } from"@/components/irp/IrpConfirmacaoProcessoModal";
 import { criarProcessoSrpM2A, blobToBase64, type M2ASrpPayload } from"@/lib/m2a-srp";
@@ -461,6 +462,14 @@ function Page() {
  return [];
  }, [analise, resultadoSalvo, resolveSecretariaM2A, unidadeById]);
 
+  const enrichRowForM2A = useCallback((row: IrpImportRow) => {
+    const canonica = findIrpUnidadeCanonicaByRefColuna(row.resultado?.unidade.ref_coluna ?? null);
+    return {
+      orgaoId: canonica?.orgaoId ?? row.secretaria?.m2a_dot_orgao_id ?? row.secretaria?.m2a_orgao_id ?? null,
+      uoId: canonica?.uoId ?? row.secretaria?.m2a_uo_id ?? null,
+    };
+  }, []);
+
  const importableKeys = useMemo(
  () => importableRows.map((row) => row.key).join("|"),
  [importableRows],
@@ -481,9 +490,12 @@ function Page() {
  );
 
   const rowsMissingM2A = useMemo(
-  () => selectedImportRows.filter((row) => !row.orgaoPk || !row.importOrgaoPk || !row.unidadePk),
- [selectedImportRows],
- );
+   () => selectedImportRows.filter((row) => {
+    const ids = enrichRowForM2A(row);
+    return !ids.orgaoId || !ids.uoId;
+   }),
+  [enrichRowForM2A, selectedImportRows],
+  );
 
  const allImportRowsSelected =
  importableRows.length > 0 &&
@@ -502,19 +514,21 @@ function Page() {
  }, [file?.name, resultadoSalvo?.job.original_filename]);
 
  useEffect(() => {
- const first = selectedImportRows.find(
- (row) => row.orgaoPk && row.unidadePk,
- );
+  const first = selectedImportRows.find((row) => {
+  const ids = enrichRowForM2A(row);
+  return ids.orgaoId && ids.uoId;
+  });
  if (!first) return;
+  const ids = enrichRowForM2A(first);
  setProcessoM2AForm((current) => ({
  ...current,
- orgao_solicitante: current.orgao_solicitante || first.orgaoPk ||"",
+  orgao_solicitante: current.orgao_solicitante || ids.orgaoId ||"",
  unidade_orcamentaria:
- current.unidade_orcamentaria || first.unidadePk ||"",
+  current.unidade_orcamentaria || ids.uoId ||"",
  unidade_orcamentaria_gerenciadora:
- current.unidade_orcamentaria_gerenciadora || first.unidadePk ||"",
+  current.unidade_orcamentaria_gerenciadora || ids.uoId ||"",
  }));
- }, [selectedImportRows]);
+  }, [enrichRowForM2A, selectedImportRows]);
 
  async function persistirArquivosResultado(
  jobId: string,
@@ -807,6 +821,7 @@ function Page() {
   itens: M2ASrpPayload["itens"];
   secretariasParticipantes: M2ASrpPayload["secretariasParticipantes"];
   gerenciadora_numero: number;
+  gerenciadora_chave: string;
  }> {
   // 1) Resolve gerenciadora pelo m2a_uo_id casado no form
   const uoGerenciadora = (
@@ -814,24 +829,35 @@ function Page() {
    processoM2AForm.unidade_orcamentaria.trim()
   );
   const rowGerenciadora =
-   selectedImportRows.find((r) => r.unidadePk && r.unidadePk === uoGerenciadora) ||
+   selectedImportRows.find((r) => enrichRowForM2A(r).uoId === uoGerenciadora) ||
    selectedImportRows[0];
   if (!rowGerenciadora?.secretaria) {
    throw new Error("Secretaria gerenciadora não identificada.");
   }
   const gerenciadora_numero = rowGerenciadora.secretaria.numero;
+  const idsGerenciadora = enrichRowForM2A(rowGerenciadora);
+  const gerenciadora_chave = idsGerenciadora.uoId
+   ? `uo:${idsGerenciadora.uoId}`
+   : `ref:${rowGerenciadora.resultado?.unidade.ref_coluna ?? rowGerenciadora.key}`;
 
   // 2) Lista de secretarias (gerenciadora + participantes) que entram no IRP
   const secretariasParticipantes: M2ASrpPayload["secretariasParticipantes"] =
    selectedImportRows
     .filter((r) => r.secretaria)
-    .map((r) => ({
-     numero: r.secretaria!.numero,
-     sigla: r.secretaria!.sigla,
-     nome: r.secretaria!.nome,
-     m2a_orgao_id: r.secretaria!.m2a_orgao_id,
-     m2a_uo_id: r.secretaria!.m2a_uo_id,
-    }));
+    .map((r) => {
+     const ids = enrichRowForM2A(r);
+     const refColuna: number | null = r.resultado?.unidade.ref_coluna ?? null;
+     return {
+      chave: ids.uoId ? `uo:${ids.uoId}` : `ref:${refColuna ?? r.key}`,
+      numero: r.secretaria!.numero,
+      sigla: r.secretaria!.sigla,
+      nome: r.secretaria!.nome,
+      m2a_orgao_id: ids.orgaoId,
+      m2a_dot_orgao_id: r.secretaria!.m2a_dot_orgao_id,
+      m2a_uo_id: ids.uoId,
+      ref_coluna: refColuna,
+     };
+    });
 
   // 3) Lista mestre de itens (dedup pelo sourceRow|identificador) + qtd por secretaria
   type ItemAgreg = M2ASrpPayload["itens"][number] & { _key: string };
@@ -853,18 +879,21 @@ function Page() {
      };
      map.set(key, agg);
     }
-    agg.quantidades[String(row.secretaria.numero)] = it.quantidade;
+     const ids = enrichRowForM2A(row);
+     const refColuna: number | null = row.resultado?.unidade.ref_coluna ?? null;
+     const chave = ids.uoId ? `uo:${ids.uoId}` : `ref:${refColuna ?? row.key}`;
+     agg.quantidades[chave] = Number(agg.quantidades[chave] ?? 0) + it.quantidade;
    }
   }
   const itens = Array.from(map.values()).map(({ _key: _k, ...rest }) => rest);
-  return { itens, secretariasParticipantes, gerenciadora_numero };
+  return { itens, secretariasParticipantes, gerenciadora_numero, gerenciadora_chave };
  }
 
  async function confirmarCriacaoProcessoM2A() {
  setBusy(true);
  startTask("Criando processo SRP no M2A","Preparando planilhas...");
  try {
-  const { itens, secretariasParticipantes, gerenciadora_numero } =
+  const { itens, secretariasParticipantes, gerenciadora_numero, gerenciadora_chave } =
    await buildM2AIrpPayload();
    const payload: M2ASrpPayload = {
     objeto: processoM2AForm.objeto.trim(),
@@ -881,7 +910,8 @@ function Page() {
     comissao_planejamento:
      processoM2AForm.comissao_planejamento.trim() || "3911",
     classificacao: processoM2AForm.classificacao.trim(),
-    gerenciadora_numero,
+     gerenciadora_numero,
+     gerenciadora_chave,
     itens,
     secretariasParticipantes,
    };

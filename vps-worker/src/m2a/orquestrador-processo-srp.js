@@ -37,6 +37,25 @@ import {
   obterUnidadeOrcamentariaDaIntencao,
 } from "./irp-api.js";
 
+function chaveSecretaria(sec) {
+  if (sec?.chave) return String(sec.chave);
+  if (sec?.m2a_uo_id) return `uo:${String(sec.m2a_uo_id).trim()}`;
+  if (sec?.ref_coluna !== undefined && sec?.ref_coluna !== null) return `ref:${sec.ref_coluna}`;
+  return String(sec?.numero ?? "");
+}
+
+function quantidadeDoItem(item, sec, chavesExtras = []) {
+  const quantidades = item?.quantidades ?? {};
+  const chaves = [chaveSecretaria(sec), ...chavesExtras, String(sec?.numero ?? "")].filter(Boolean);
+  for (const chave of chaves) {
+    if (Object.prototype.hasOwnProperty.call(quantidades, chave)) {
+      const q = Number(quantidades[chave] ?? 0);
+      return Number.isFinite(q) ? q : 0;
+    }
+  }
+  return 0;
+}
+
 /**
  * @param {object} payload
  *   {
@@ -62,12 +81,16 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
   if (!gerenciadoraNumero) {
     throw new Error("gerenciadora_numero obrigatório (numero da secretaria gerenciadora).");
   }
+  const gerenciadoraChave = String(payload.gerenciadora_chave || "").trim();
   const todasSecretarias = Array.isArray(payload.secretariasParticipantes)
     ? payload.secretariasParticipantes
     : [];
   const participantes = todasSecretarias.filter(
-    (s) => Number(s.numero) !== gerenciadoraNumero,
+    (s) => gerenciadoraChave ? chaveSecretaria(s) !== gerenciadoraChave : Number(s.numero) !== gerenciadoraNumero,
   );
+  const secretariaGerenciadora = todasSecretarias.find((s) => chaveSecretaria(s) === gerenciadoraChave) ||
+    todasSecretarias.find((s) => Number(s.numero) === gerenciadoraNumero) ||
+    { numero: gerenciadoraNumero, chave: gerenciadoraChave };
 
   // 1. DFD
   onProgress({ etapa: "criar_dfd", mensagem: "Criando DFD da Gerenciadora…", progresso: 4 });
@@ -113,7 +136,7 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
   const itensCriados = []; // { input, itemPadronizadoId }
   for (let i = 0; i < itens.length; i++) {
     const item = itens[i];
-    const qtyGer = Number(item?.quantidades?.[gerenciadoraNumero] ?? 0);
+    const qtyGer = quantidadeDoItem(item, secretariaGerenciadora, [gerenciadoraChave]);
     onProgress({
       etapa: "incluir_itens",
       mensagem: `Cadastrando item ${i + 1}/${itens.length}: ${String(item.descricao || "").slice(0, 60)}…`,
@@ -170,11 +193,12 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
   //    fuzzy match. Se não bater nenhuma → ignora; se bater mas a soma de
   //    quantidades for 0 → ignora.
   const participantesPorUoId = new Map();
+  const participantesPorOrgaoUoId = new Map();
   for (const sec of participantes) {
     const uo = String(sec.m2a_uo_id || "").trim();
     if (!uo) continue;
-    // pode haver várias secretarias_id apontando para a mesma UO
-    // (todas com mesmo `numero`); guardamos a primeira.
+    const orgao = String(sec.m2a_orgao_id || sec.m2a_dot_orgao_id || "").trim();
+    if (orgao) participantesPorOrgaoUoId.set(`${orgao}:${uo}`, sec);
     if (!participantesPorUoId.has(uo)) participantesPorUoId.set(uo, sec);
   }
 
@@ -199,20 +223,23 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
       continue;
     }
 
-    // 7b. Match direto pelo m2a_uo_id da secretaria participante.
-    const secretaria = unidadeId ? participantesPorUoId.get(String(unidadeId)) : null;
+    // 7b. Match direto por orgao+unidade; fallback por unidade para manter compatibilidade.
+    const secretaria = unidadeId
+      ? (orgaoId ? participantesPorOrgaoUoId.get(`${orgaoId}:${unidadeId}`) : null) ||
+        participantesPorUoId.get(String(unidadeId))
+      : null;
     if (!secretaria) {
       ignoradasSemMatch++;
       orfas.push(intencao.intencaoId);
       console.log(
-        `[irp] intenção ${intencao.intencaoId} (orgao=${orgaoId || "?"} unidade=${unidadeId || "?"}): nenhuma secretaria participante com esse m2a_uo_id → ignorada.`,
+        `[irp] intenção ${intencao.intencaoId} (orgao=${orgaoId || "?"} unidade=${unidadeId || "?"}): nenhuma secretaria participante com esse orgao+uo → ignorada.`,
       );
       continue;
     }
 
     // 7c. Soma quantidades da secretaria.
     const somaQty = itensCriados.reduce((acc, { input }) => {
-      const q = Number(input?.quantidades?.[secretaria.numero] ?? 0);
+      const q = quantidadeDoItem(input, secretaria, unidadeId ? [`uo:${unidadeId}`] : []);
       return acc + (Number.isFinite(q) && q > 0 ? q : 0);
     }, 0);
     if (somaQty <= 0) {
@@ -250,7 +277,7 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
       for (let j = 0; j < N; j++) {
         const itemIntencao = itensIntencao[j];
         const original = itensCriados[j].input;
-        const qty = Number(original?.quantidades?.[secretaria.numero] ?? 0);
+        const qty = quantidadeDoItem(original, secretaria, unidadeId ? [`uo:${unidadeId}`] : []);
         if (!Number.isFinite(qty) || qty <= 0) continue;
         await atualizarQuantidadeItem({
           itemIntencaoId: itemIntencao.itemIntencaoId,
@@ -273,7 +300,7 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
   }
   if (ignoradasSemMatch || ignoradasSemQuantidade) {
     console.log(
-      `[irp] resumo: ${ignoradasSemMatch} sem secretaria pareada (m2a_uo_id), ${ignoradasSemQuantidade} sem quantidade — ignoradas silenciosamente.`,
+      `[irp] resumo: ${ignoradasSemMatch} sem secretaria pareada (orgao+uo), ${ignoradasSemQuantidade} sem quantidade — ignoradas silenciosamente.`,
     );
   }
 
