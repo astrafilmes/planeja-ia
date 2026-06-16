@@ -4,6 +4,7 @@
 // IRPs já foram consolidadas — evita concorrência no banco do M2A.
 // =====================================================================
 
+import FormData from "form-data";
 import { m2a } from "../m2a-client.js";
 import { config } from "../config.js";
 
