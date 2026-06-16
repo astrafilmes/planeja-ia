@@ -368,15 +368,65 @@ export async function gerarIntencoes(dfdId) {
 // =====================================================================
 // PASSO 4 — lê a tabela e extrai INTENCAO_IDs (com nome do órgão p/ matching)
 // =====================================================================
+// Extrai o nome da Unidade Orçamentária a partir da linha <tr> da tabela
+// de intenções da M2A.
+//
+// Estrutura observada no HTML real do portal (datatable Keenthemes):
+//   <tr class="kt-datatable__row tr_intencao_registro_preco">
+//     <td>checkbox</td>            (índice 0)
+//     <td>número/processo</td>     (índice 1)
+//     <td>órgão</td>               (índice 2)
+//     <td><span>UNIDADE</span></td>(índice 3) ← é AQUI
+//     <td>...</td>
+//   </tr>
+//
+// Mecanismos anti-erro:
+//  1) Tenta a 4ª coluna (índice 3) e busca <span> primeiro (texto "limpo").
+//  2) Fallback p/ td.text() caso o portal mude o markup interno.
+//  3) Fallback final p/ varrer TODAS as <td> procurando a que bate com o
+//     padrão "NN - <nome> (AAAA)" — o regex do dicionário M2A.
+//  4) Normaliza espaços e quebras de linha; nunca retorna null/undefined.
+function extrairNomeUnidadeDaLinha($, $tr) {
+  const limpar = (s) => String(s || "").replace(/\s+/g, " ").trim();
+  // Padrão esperado: "01 - Secretaria ... (2026)"
+  const RE_UO = /^\s*\d{1,2}\s*-\s*.+\(\d{4}\)\s*$/;
+
+  // 1) 4ª coluna, dentro de <span>
+  const $td3 = $tr.find("td").eq(3);
+  let txt = limpar($td3.find("span").first().text());
+  if (txt && RE_UO.test(txt)) return txt;
+  // 2) 4ª coluna inteira
+  if (!txt) txt = limpar($td3.text());
+  if (txt && RE_UO.test(txt)) return txt;
+
+  // 3) Varre todas as <td> à procura do padrão de UO
+  let melhor = txt;
+  $tr.find("td").each((_i, td) => {
+    const candidatos = [
+      limpar($(td).find("span").first().text()),
+      limpar($(td).text()),
+    ];
+    for (const c of candidatos) {
+      if (c && RE_UO.test(c)) {
+        melhor = c;
+        return false; // break
+      }
+    }
+  });
+  return melhor || limpar($tr.text());
+}
+
 export async function listarIntencoes(dfdId) {
   const res = await m2a.get(URL_TABELA_INTENCOES(dfdId));
   if (res.status >= 400) throw new Error(`listarIntencoes: status ${res.status}`);
   const $ = loadDoc(res.html);
-  const linhas = $("tr.kt-datatable__row, tr.tr_intencao_registro_preco").toArray();
+  const linhas = $("tr.tr_intencao_registro_preco, tr.kt-datatable__row").toArray();
   const out = [];
+  const ignoradas = [];
   for (const tr of linhas) {
     const $tr = $(tr);
-    // Procura o PRIMEIRO checkbox com value numérico real (ignora "selecionar todos" cujo value="on").
+    // 1) ID da intenção — primeiro checkbox com value numérico real
+    //    (ignora o "selecionar todos" cujo value="on").
     let id = "";
     $tr
       .find("input.checkboxes, input.checkbox-intencao, input[type=checkbox]")
@@ -389,24 +439,46 @@ export async function listarIntencoes(dfdId) {
       const m = ($tr.attr("id") || "").match(/(\d+)$/);
       if (m && isValidNumericId(m[1])) id = m[1];
     }
-    if (!isValidNumericId(id)) continue;
-    const textoLinha = $tr.text().replace(/\s+/g, " ").trim();
+    if (!isValidNumericId(id)) {
+      ignoradas.push("(sem id numérico)");
+      continue;
+    }
+
+    // 2) Nome da Unidade Orçamentária — 4ª coluna do <tr>
+    const unidadeM2A = extrairNomeUnidadeDaLinha($, $tr);
+    const textoLinha = String($tr.text() || "").replace(/\s+/g, " ").trim();
+
+    // 3) Hints de IDs em data-attrs (quando o portal expõe)
     const orgaoAttr =
       $tr.attr("data-orgao") ||
       $tr.attr("data-orgao-id") ||
       $tr.find("[data-orgao-id]").first().attr("data-orgao-id") ||
       $tr.find("[data-orgao]").first().attr("data-orgao") ||
       null;
+    const unidadeAttr =
+      $tr.attr("data-unidade") ||
+      $tr.attr("data-unidade-id") ||
+      $tr.find("[data-unidade-id]").first().attr("data-unidade-id") ||
+      null;
+
     out.push({
       intencaoId: String(id),
       orgaoIdHint: orgaoAttr ? String(orgaoAttr) : null,
-      texto: textoLinha,
+      unidadeIdHint: unidadeAttr ? String(unidadeAttr) : null,
+      unidadeM2A, // texto LIMPO da 4ª coluna (chave do M2A_DICIONARIO_COMPLETO)
+      texto: textoLinha, // texto bruto da linha (fallback p/ matching)
     });
   }
 
   console.log(
-    `[irp-api] listarIntencoes dfd=${dfdId} encontrou ${out.length} intenções`,
+    `[irp-api] listarIntencoes dfd=${dfdId} → ${out.length} intenções` +
+      (ignoradas.length ? ` (${ignoradas.length} linhas ignoradas)` : ""),
   );
+  for (const it of out) {
+    console.log(
+      `[irp-api]   intenção ${it.intencaoId} UO="${it.unidadeM2A || "(vazio)"}"`,
+    );
+  }
   return out;
 }
 
