@@ -4,6 +4,7 @@
 // IRPs já foram consolidadas — evita concorrência no banco do M2A.
 // =====================================================================
 
+import FormData from "form-data";
 import { m2a } from "../m2a-client.js";
 import { config } from "../config.js";
 
@@ -88,12 +89,18 @@ REGRAS CRÍTICAS DE FORMATAÇÃO:
 }
 
 function textoParaHtmlJustificado(texto) {
+  // O M2A salva o conteúdo do Summernote como HTML. A captura real do
+  // payload mostra parágrafos separados por linha em branco DENTRO do
+  // <div style="text-align: justify;">…</div> — sem <br>, sem <p>.
   const normalizado = String(texto || "")
     .replace(/\r\n/g, "\n")
-    .replace(/\n\s*\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
-  const comBreaks = normalizado.replace(/\n/g, "<br>\n");
-  return `<div style="text-align: justify;">\n${comBreaks}\n</div>`;
+  const paragrafos = normalizado
+    .split(/\n+/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  return `<div style="text-align: justify;">${paragrafos.join("\n\n")}</div>`;
 }
 
 export async function atualizarJustificativaM2A(dfdId, textoGerado) {
@@ -105,17 +112,23 @@ export async function atualizarJustificativaM2A(dfdId, textoGerado) {
   try {
     csrf = await m2a.getCsrf(formPath);
   } catch {
-    // fallback: pega csrf do dashboard
     csrf = await m2a.getCsrf("/");
   }
 
   const html = textoParaHtmlJustificado(textoGerado);
-  const form = new URLSearchParams();
-  form.set("csrfmiddlewaretoken", csrf);
-  form.set("justificativa_demanda", html);
-  form.set("files", "");
 
-  const r = await m2a.postForm(path, form, {
+  // Endpoint real espera multipart/form-data (campo "files" é input file
+  // vazio do Summernote). Replica fielmente a requisição capturada do
+  // navegador.
+  const form = new FormData();
+  form.append("csrfmiddlewaretoken", csrf);
+  form.append("justificativa_demanda", html);
+  form.append("files", Buffer.alloc(0), {
+    filename: "",
+    contentType: "application/octet-stream",
+  });
+
+  const r = await m2a.postMultipart(path, form, {
     headers: {
       Referer: `${config.m2a.baseUrl}${formPath}`,
       Origin: config.m2a.baseUrl,
@@ -129,3 +142,4 @@ export async function atualizarJustificativaM2A(dfdId, textoGerado) {
   console.log(`[m2a] justificativa atualizada na DFD ${dfdId} (status ${r.status})`);
   return { status: r.status };
 }
+
