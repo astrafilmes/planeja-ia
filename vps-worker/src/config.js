@@ -28,5 +28,10 @@ export const config = {
     maxConcurrency: Number(process.env.M2A_MAX_CONCURRENCY ?? 2),
   },
 
+  gemini: {
+    apiKey: (process.env.GEMINI_API_KEY ?? "").trim() || null,
+  },
+
   sharedSecret: required("SHARED_SECRET"),
 };
+

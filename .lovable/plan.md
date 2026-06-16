@@ -1,128 +1,50 @@
+# Plano: Justificativa automática da DFD via Gemini
+
 ## Objetivo
+Ao final do orquestrador de criação do Processo SRP (depois de consolidar todas as IRPs), gerar uma justificativa de demanda com Gemini e injetá-la na DFD via endpoint `atualizar_justificativa/<dfdId>/` do M2A.
 
-Eliminar 100% da dependência da extensão no fluxo de download de documentos. Toda requisição ao portal M2A passará por:
+## Arquivos a alterar/criar
 
+### 1. `vps-worker/.env.example` e `.env`
+Adicionar:
 ```
-Browser → Edge Function (m2a-proxy) → VPS Worker → M2A
+GEMINI_API_KEY=AQ.Ab8RN6LAgiJ...
 ```
+(usuário precisa colar a chave real no `.env` da VPS; valor já fornecido)
 
-A VPS faz o download autenticado dos PDFs e, quando solicitado, gera o ZIP. O navegador apenas recebe o binário pronto.
+### 2. `vps-worker/src/config.js`
+Expor `gemini.apiKey` lendo `process.env.GEMINI_API_KEY` (sem `required()` — opcional; se ausente, pulamos a etapa com warning).
 
----
+### 3. `vps-worker/src/m2a/justificativa-gemini.js` (novo)
+- `gerarJustificativaGemini({ objeto, eRegistroPreco, itens, secretarias })`
+  - Usa `fetch` direto contra `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent` com header `X-goog-api-key` (evita adicionar dependência `@google/generative-ai`).
+  - Prompt conforme spec: 5 parágrafos, sem títulos, dissertativo, menção à Lei 14.133/2021.
+  - Em erro/sem key → retorna fallback genérico (texto curto com objeto).
+- `atualizarJustificativaM2A(dfdId, textoGerado)`
+  - Usa o `m2aClient` existente (`vps-worker/src/m2a-client.js`) para POST autenticado com CSRF — não recriamos sessão/headers manualmente.
+  - Path: `/gestao_compras/formalizacao_demanda/atualizar_justificativa/${dfdId}/`
+  - Body `x-www-form-urlencoded`: `csrfmiddlewaretoken`, `justificativa_demanda` (HTML envolto em `<div style="text-align: justify;">…<br>…</div>`), `files=''`.
+  - Erro é logado mas não derruba o job (justificativa é "best-effort").
 
-## Fase 1 — VPS Worker: nova rota de download
+### 4. `vps-worker/src/m2a/orquestrador-processo-srp.js`
+Logo antes do `onProgress({ etapa: "concluido" … })`:
+- Construir `listaItens` (string com descrições dos `itensCriados`) e `listaSecretarias` (siglas/nomes de `todasSecretarias`).
+- `onProgress({ etapa: "justificativa", mensagem: "Gerando justificativa via IA…", progresso: 98 })`.
+- `try { texto = await gerarJustificativaGemini(...); await atualizarJustificativaM2A(dfdId, texto); } catch (e) { erros.push({ etapa: "justificativa", erro: e.message }); }`
+- Incluir `justificativaGerada: boolean` no retorno.
 
-Arquivo novo: `vps-worker/src/routes/documentos.js`
+## Por que `fetch` em vez de `@google/generative-ai`
+- Menos uma dependência no worker.
+- A chamada é um único POST simples; SDK não agrega valor.
+- Mantém o worker leve (já roda em VPS via PM2).
 
-- `POST /documentos/baixar`
-  - Body:
-    ```json
-    {
-      "documentos": [
-        { "source": "m2a", "id_m2a": "12345", "nome": "Contrato-001.pdf" },
-        { "source": "url", "url": "https://signed.url/...", "nome": "Aditivo.pdf" }
-      ],
-      "archive": true,
-      "filename": "contrato-123-documentos.zip"
-    }
-    ```
-  - Comportamento:
-    - Para cada `source: "m2a"`, baixa via `m2a.request("GET", "/contratos/documentos/baixar/{id}/", { responseType: "arraybuffer" })` (estender `m2a-client.js` para suportar binário).
-    - Para `source: "url"`, faz `fetch` direto (usado para anexos locais já no Storage).
-    - Se `archive: true` ou houver >1 documento → empacota com `archiver` (stream zip) e devolve `application/zip`.
-    - Se 1 doc e `archive: false` → devolve o binário cru com `Content-Type` original e `Content-Disposition: attachment; filename="..."`.
-  - Concorrência limitada (reaproveita a `PQueue` existente).
-  - Detecta página de login no retorno e força re-login (já implementado em `m2a-client.js`).
+## Não-objetivos
+- Não expor a chave Gemini no frontend.
+- Não chamar Gemini do edge function — fica no worker, junto do resto do fluxo M2A.
+- Não migrar/alterar nenhuma das 4 telas que ainda usam `postMessage` (escopo separado).
 
-Ajustes:
-- `vps-worker/package.json`: adicionar `archiver`.
-- `vps-worker/src/m2a-client.js`: aceitar `opts.responseType === "arraybuffer"` em `_raw`/`request` retornando `Buffer` no campo `bytes` (em vez de `html`).
-- `vps-worker/src/server.js`: registrar `documentosRoutes`.
-
----
-
-## Fase 2 — Edge Function `m2a-proxy`: passthrough binário
-
-`supabase/functions/m2a-proxy/index.ts`:
-
-- Detectar `Content-Type` da resposta do worker. Se não for `application/json`, devolver o corpo como `ArrayBuffer` preservando `Content-Type` e `Content-Disposition`.
-- Manter o caminho JSON intacto para as rotas existentes (`/processos/sync`, etc.).
-
-Como `supabase.functions.invoke()` força parsing, o frontend chamará a função via `fetch` direto na URL pública:
-
-```
-${SUPABASE_URL}/functions/v1/m2a-proxy
-```
-
-com `Authorization: Bearer <session.access_token>`, recebendo `Blob`.
-
----
-
-## Fase 3 — Frontend: substituir a extensão
-
-Arquivo novo: `src/lib/m2a-documents.ts`
-
-```ts
-export async function downloadM2ADocuments(
-  documentos: M2ABulkDownloadDocumento[],
-  opts?: { archive?: boolean; filename?: string },
-  onProgress?: (e: { status; baixados; total; mensagem? }) => void
-): Promise<void>
-```
-
-- Converte entrada (mistura de `M2ADocumentoGerado` e `M2AUrlDocumento`) em payload do worker.
-- Chama `m2a-proxy` via `fetch`, recebe Blob, dispara `saveAs(blob, filename)`.
-- Reporta progresso (iniciado/concluido/erro) via callback — sem progresso intermediário por arquivo (o download é único). Para UX, mostramos um estado "Compactando no servidor…".
-
-Refatorar consumidores para usar a nova função (sem `window.postMessage`):
-
-- `src/components/contratos/DocumentosEditor.tsx`
-  - Remover `listenM2ABulkDownload` / `requestM2ABulkDownload`.
-  - `baixarDocumento(doc)` e `baixarZip(docs)` chamam `downloadM2ADocuments`.
-  - Mistura local + M2A continua funcionando: docs locais são enviados com URL assinada (`source: "url"`) e zipados pelo worker.
-
-- `src/routes/processos.$id.tsx`
-  - Remover listener e trocar `requestM2ABulkDownload` por `downloadM2ADocuments` nas duas funções (`handleDownloadContratoDocs`, `handleDownloadSelectedDocs`).
-
-- `src/routes/contratos.tsx`
-  - Mesmo tratamento.
-
-- `src/lib/m2a.ts`
-  - Manter os tipos (`M2ADocumentoGerado`, `M2AUrlDocumento`, `M2ABulkDownloadDocumento`, `M2ABulkDownloadOptions`) — agora consumidos pelo novo helper.
-  - Marcar `requestM2ABulkDownload` / `listenM2ABulkDownload` como `@deprecated` (manter exports vazios por compatibilidade, ou remover — preferência: remover, já que não há mais extensão).
-
----
-
-## Fase 4 — Validação
-
-1. `vps-worker`: `node scripts/test-call.js` adaptado para chamar `/documentos/baixar` com um `id_m2a` real (a ser fornecido) e validar que retorna `application/pdf` ou `application/zip` com bytes > 0.
-2. Browser: clicar em "Baixar documento" e "Baixar ZIP" em `DocumentosEditor` e nas duas telas (`processos/$id`, `contratos`) — esperar download direto sem extensão.
-3. Confirmar que página de login não aparece no log do PM2 (re-login automático funcionando).
-
----
-
-## Detalhes técnicos pendentes de confirmação
-
-- **URL exata** do M2A para baixar um documento por `id_m2a`. O padrão observado em outros endpoints é `/contratos/documentos/baixar/{id}/`, mas posso precisar ajustar (ex.: `/documentos/baixar/{id}/` ou query string). Vou começar com `/contratos/documentos/baixar/{id}/` e, se 404, varrer a tabela de documentos do contrato (`/contratos/documentos/tabela/{contratoId}/`) procurando o anchor real de download.
-- **Re-deploy da VPS é manual** (`git pull && npm install && pm2 restart`). Vou deixar isso documentado no `vps-worker/README.md`.
-
----
-
-## Arquivos afetados
-
-Criar:
-- `vps-worker/src/routes/documentos.js`
-- `src/lib/m2a-documents.ts`
-
-Editar:
-- `vps-worker/src/m2a-client.js` (suporte a binário)
-- `vps-worker/src/server.js` (registrar rota)
-- `vps-worker/package.json` (`archiver`)
-- `vps-worker/README.md` (nova rota)
-- `supabase/functions/m2a-proxy/index.ts` (passthrough binário)
-- `src/components/contratos/DocumentosEditor.tsx`
-- `src/routes/processos.$id.tsx`
-- `src/routes/contratos.tsx`
-- `src/lib/m2a.ts` (remover funções da extensão, manter tipos)
-
-Posso seguir com a implementação?
+## Validação
+- Rodar um processo SRP de teste; ao final, verificar nos logs:
+  - `[gemini] justificativa gerada (N chars)`
+  - `[m2a] justificativa atualizada na DFD <id> (status 200)`
+- Conferir no portal M2A se o campo "Justificativa da Demanda" da DFD ficou preenchido com 5 parágrafos.

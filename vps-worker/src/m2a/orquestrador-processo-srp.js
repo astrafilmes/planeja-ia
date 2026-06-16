@@ -36,6 +36,10 @@ import {
   consolidarIntencao,
   obterUnidadeOrcamentariaDaIntencao,
 } from "./irp-api.js";
+import {
+  gerarJustificativaGemini,
+  atualizarJustificativaM2A,
+} from "./justificativa-gemini.js";
 
 function chaveSecretaria(sec) {
   if (sec?.chave) return String(sec.chave);
@@ -304,6 +308,34 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
     );
   }
 
+  // 8. Justificativa da Demanda (Gemini → M2A). Best-effort, no fim do fluxo.
+  let justificativaGerada = false;
+  try {
+    onProgress({
+      etapa: "justificativa",
+      mensagem: "Gerando justificativa da demanda via IA…",
+      progresso: 98,
+    });
+    const listaItensTxt = itensCriados
+      .map(({ input }) => String(input?.descricao || "").trim())
+      .filter(Boolean);
+    const listaSecretariasTxt = todasSecretarias
+      .map((s) => s.sigla || s.nome)
+      .filter(Boolean);
+    const texto = await gerarJustificativaGemini({
+      objeto: payload.objeto,
+      eRegistroPreco: true,
+      itens: listaItensTxt,
+      secretarias: listaSecretariasTxt,
+    });
+    await atualizarJustificativaM2A(dfdId, texto);
+    justificativaGerada = true;
+  } catch (err) {
+    const msg = String(err?.message ?? err);
+    console.error(`[justificativa] falhou: ${msg}`);
+    erros.push({ etapa: "justificativa", erro: msg });
+  }
+
   onProgress({
     etapa: "concluido",
     mensagem: erros.length
@@ -317,6 +349,7 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
       totalItens: itens.length,
       totalIntencoes: intencoes.length,
       intencoesOrfas: orfas.length,
+      justificativaGerada,
     },
   });
 
@@ -327,5 +360,7 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
     totalItens: itens.length,
     totalIntencoes: intencoes.length,
     intencoesOrfas: orfas.length,
+    justificativaGerada,
   };
 }
+
