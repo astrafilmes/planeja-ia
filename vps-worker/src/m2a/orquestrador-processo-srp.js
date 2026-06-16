@@ -36,6 +36,11 @@ import {
   consolidarIntencao,
   casarIntencoesComSecretarias,
 } from "./irp-api.js";
+import {
+  encontrarUnidadeNoDicionario,
+  encontrarUnidadePorIds,
+  secretariasParaColunas,
+} from "./m2a-dicionario.js";
 
 /**
  * @param {object} payload
@@ -182,16 +187,33 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
   const todasIntencoes = intencoes;
   let ignoradasSemSecretaria = 0;
   let ignoradasSemQuantidade = 0;
+  let ignoradasForaDoDicionario = 0;
   for (let k = 0; k < todasIntencoes.length; k++) {
     const intencao = todasIntencoes[k];
+
+    // 7a. BYPASS via dicionário oficial M2A: se a UO da intenção não está no
+    //     dicionário, NÃO chamamos disponibilizar/manifestar/finalizar
+    //     (Django retorna 500 ao tentar finalizar IRP vazia/desconhecida).
+    const entryDic =
+      encontrarUnidadePorIds(intencao.orgaoIdHint, intencao.unidadeIdHint) ||
+      encontrarUnidadeNoDicionario(intencao.texto);
+    if (!entryDic) {
+      ignoradasForaDoDicionario++;
+      console.log(
+        `[irp] intenção ${intencao.intencaoId}: UO fora do M2A_DICIONARIO_COMPLETO → ignorada silenciosamente.`,
+      );
+      continue;
+    }
+
     const secretaria = matchByIntencaoId.get(String(intencao.intencaoId)) || null;
     if (!secretaria) {
       ignoradasSemSecretaria++;
       console.log(
-        `[irp] intenção ${intencao.intencaoId}: sem secretaria pareada → ignorada (não vou finalizar IRP vazia).`,
+        `[irp] intenção ${intencao.intencaoId} (${entryDic.key}): sem secretaria pareada no nosso catálogo → ignorada.`,
       );
       continue;
     }
+
     // Soma as quantidades previstas desta secretaria em todos os itens.
     const somaQty = itensCriados.reduce((acc, { input }) => {
       const q = Number(input?.quantidades?.[secretaria.numero] ?? 0);
@@ -254,9 +276,9 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
       });
     }
   }
-  if (ignoradasSemSecretaria || ignoradasSemQuantidade) {
+  if (ignoradasSemSecretaria || ignoradasSemQuantidade || ignoradasForaDoDicionario) {
     console.log(
-      `[irp] resumo: ${ignoradasSemSecretaria} intenções órfãs ignoradas, ${ignoradasSemQuantidade} sem quantidade ignoradas.`,
+      `[irp] resumo: ${ignoradasForaDoDicionario} fora do dicionário, ${ignoradasSemSecretaria} órfãs no catálogo, ${ignoradasSemQuantidade} sem quantidade — todas ignoradas silenciosamente.`,
     );
   }
 
