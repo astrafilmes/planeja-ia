@@ -37,6 +37,25 @@ import {
   obterUnidadeOrcamentariaDaIntencao,
 } from "./irp-api.js";
 
+function chaveSecretaria(sec) {
+  if (sec?.chave) return String(sec.chave);
+  if (sec?.m2a_uo_id) return `uo:${String(sec.m2a_uo_id).trim()}`;
+  if (sec?.ref_coluna !== undefined && sec?.ref_coluna !== null) return `ref:${sec.ref_coluna}`;
+  return String(sec?.numero ?? "");
+}
+
+function quantidadeDoItem(item, sec, chavesExtras = []) {
+  const quantidades = item?.quantidades ?? {};
+  const chaves = [chaveSecretaria(sec), ...chavesExtras, String(sec?.numero ?? "")].filter(Boolean);
+  for (const chave of chaves) {
+    if (Object.prototype.hasOwnProperty.call(quantidades, chave)) {
+      const q = Number(quantidades[chave] ?? 0);
+      return Number.isFinite(q) ? q : 0;
+    }
+  }
+  return 0;
+}
+
 /**
  * @param {object} payload
  *   {
@@ -62,12 +81,16 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
   if (!gerenciadoraNumero) {
     throw new Error("gerenciadora_numero obrigatório (numero da secretaria gerenciadora).");
   }
+  const gerenciadoraChave = String(payload.gerenciadora_chave || "").trim();
   const todasSecretarias = Array.isArray(payload.secretariasParticipantes)
     ? payload.secretariasParticipantes
     : [];
   const participantes = todasSecretarias.filter(
-    (s) => Number(s.numero) !== gerenciadoraNumero,
+    (s) => gerenciadoraChave ? chaveSecretaria(s) !== gerenciadoraChave : Number(s.numero) !== gerenciadoraNumero,
   );
+  const secretariaGerenciadora = todasSecretarias.find((s) => chaveSecretaria(s) === gerenciadoraChave) ||
+    todasSecretarias.find((s) => Number(s.numero) === gerenciadoraNumero) ||
+    { numero: gerenciadoraNumero, chave: gerenciadoraChave };
 
   // 1. DFD
   onProgress({ etapa: "criar_dfd", mensagem: "Criando DFD da Gerenciadora…", progresso: 4 });
@@ -113,7 +136,7 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
   const itensCriados = []; // { input, itemPadronizadoId }
   for (let i = 0; i < itens.length; i++) {
     const item = itens[i];
-    const qtyGer = Number(item?.quantidades?.[gerenciadoraNumero] ?? 0);
+    const qtyGer = quantidadeDoItem(item, secretariaGerenciadora, [gerenciadoraChave]);
     onProgress({
       etapa: "incluir_itens",
       mensagem: `Cadastrando item ${i + 1}/${itens.length}: ${String(item.descricao || "").slice(0, 60)}…`,
