@@ -823,7 +823,7 @@ function Page() {
    processoM2AForm.unidade_orcamentaria.trim()
   );
   const rowGerenciadora =
-   selectedImportRows.find((r) => r.unidadePk && r.unidadePk === uoGerenciadora) ||
+   selectedImportRows.find((r) => enrichRowForM2A(r).uoId === uoGerenciadora) ||
    selectedImportRows[0];
   if (!rowGerenciadora?.secretaria) {
    throw new Error("Secretaria gerenciadora não identificada.");
@@ -834,15 +834,20 @@ function Page() {
   const secretariasParticipantes: M2ASrpPayload["secretariasParticipantes"] =
    selectedImportRows
     .filter((r) => r.secretaria)
-    .map((r) => ({
-     numero: r.secretaria!.numero,
-     sigla: r.secretaria!.sigla,
-     nome: r.secretaria!.nome,
-     m2a_orgao_id: enrichRowForM2A(r).orgaoId,
-     m2a_dot_orgao_id: r.secretaria!.m2a_dot_orgao_id,
-     m2a_uo_id: enrichRowForM2A(r).uoId,
-     ref_coluna: r.resultado?.unidade.ref_coluna ?? null,
-    }));
+    .map((r) => {
+     const ids = enrichRowForM2A(r);
+     const refColuna = r.resultado?.unidade.ref_coluna ?? null;
+     return {
+      chave: ids.uoId ? `uo:${ids.uoId}` : `ref:${refColuna ?? r.key}`,
+      numero: r.secretaria!.numero,
+      sigla: r.secretaria!.sigla,
+      nome: r.secretaria!.nome,
+      m2a_orgao_id: ids.orgaoId,
+      m2a_dot_orgao_id: r.secretaria!.m2a_dot_orgao_id,
+      m2a_uo_id: ids.uoId,
+      ref_coluna: refColuna,
+     };
+    });
 
   // 3) Lista mestre de itens (dedup pelo sourceRow|identificador) + qtd por secretaria
   type ItemAgreg = M2ASrpPayload["itens"][number] & { _key: string };
@@ -864,7 +869,9 @@ function Page() {
      };
      map.set(key, agg);
     }
-    agg.quantidades[String(row.secretaria.numero)] = it.quantidade;
+     const ids = enrichRowForM2A(row);
+     const refColuna = row.resultado?.unidade.ref_coluna ?? null;
+     agg.quantidades[ids.uoId ? `uo:${ids.uoId}` : `ref:${refColuna ?? row.key}`] = it.quantidade;
    }
   }
   const itens = Array.from(map.values()).map(({ _key: _k, ...rest }) => rest);
