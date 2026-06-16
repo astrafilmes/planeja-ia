@@ -36,6 +36,11 @@ import {
   consolidarIntencao,
   casarIntencoesComSecretarias,
 } from "./irp-api.js";
+import {
+  encontrarUnidadeNoDicionario,
+  encontrarUnidadePorIds,
+  secretariasParaColunas,
+} from "./m2a-dicionario.js";
 
 /**
  * @param {object} payload
