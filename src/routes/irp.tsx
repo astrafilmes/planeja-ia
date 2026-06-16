@@ -55,6 +55,7 @@ const saveAs =
  (FileSaver as any).default;
 import { logAudit } from"@/lib/audit";
 import { IrpCabecalhoCard } from"@/components/irp/IrpCabecalhoCard";
+import { findIrpUnidadeCanonicaByRefColuna } from"@/lib/m2a-orgaos-mapping";
 
 import { IrpConfirmacaoProcessoModal } from"@/components/irp/IrpConfirmacaoProcessoModal";
 import { criarProcessoSrpM2A, blobToBase64, type M2ASrpPayload } from"@/lib/m2a-srp";
@@ -461,6 +462,14 @@ function Page() {
  return [];
  }, [analise, resultadoSalvo, resolveSecretariaM2A, unidadeById]);
 
+  const enrichRowForM2A = useCallback((row: IrpImportRow) => {
+    const canonica = findIrpUnidadeCanonicaByRefColuna(row.resultado?.unidade.ref_coluna ?? null);
+    return {
+      orgaoId: canonica?.orgaoId ?? row.secretaria?.m2a_dot_orgao_id ?? row.secretaria?.m2a_orgao_id ?? null,
+      uoId: canonica?.uoId ?? row.secretaria?.m2a_uo_id ?? null,
+    };
+  }, []);
+
  const importableKeys = useMemo(
  () => importableRows.map((row) => row.key).join("|"),
  [importableRows],
@@ -829,8 +838,10 @@ function Page() {
      numero: r.secretaria!.numero,
      sigla: r.secretaria!.sigla,
      nome: r.secretaria!.nome,
-     m2a_orgao_id: r.secretaria!.m2a_orgao_id,
-     m2a_uo_id: r.secretaria!.m2a_uo_id,
+     m2a_orgao_id: enrichRowForM2A(r).orgaoId,
+     m2a_dot_orgao_id: r.secretaria!.m2a_dot_orgao_id,
+     m2a_uo_id: enrichRowForM2A(r).uoId,
+     ref_coluna: r.resultado?.unidade.ref_coluna ?? null,
     }));
 
   // 3) Lista mestre de itens (dedup pelo sourceRow|identificador) + qtd por secretaria
