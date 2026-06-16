@@ -194,16 +194,24 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
     // 7a. BYPASS via dicionário oficial M2A: se a UO da intenção não está no
     //     dicionário, NÃO chamamos disponibilizar/manifestar/finalizar
     //     (Django retorna 500 ao tentar finalizar IRP vazia/desconhecida).
+    // Ordem de matching (mais confiável → mais tolerante):
+    //  1) Chave EXATA do dicionário, usando o texto da 4ª coluna do <tr>.
+    //  2) IDs (orgao_id/unidade_id) expostos via data-attrs do portal.
+    //  3) Fuzzy match por inclusão normalizada no texto bruto da linha.
     const entryDic =
+      (intencao.unidadeM2A && M2A_DICIONARIO_COMPLETO[intencao.unidadeM2A]
+        ? { key: intencao.unidadeM2A, ...M2A_DICIONARIO_COMPLETO[intencao.unidadeM2A] }
+        : null) ||
       encontrarUnidadePorIds(intencao.orgaoIdHint, intencao.unidadeIdHint) ||
-      encontrarUnidadeNoDicionario(intencao.texto);
+      encontrarUnidadeNoDicionario(intencao.unidadeM2A || intencao.texto);
     if (!entryDic) {
       ignoradasForaDoDicionario++;
       console.log(
-        `[irp] intenção ${intencao.intencaoId}: UO fora do M2A_DICIONARIO_COMPLETO → ignorada silenciosamente.`,
+        `[irp] intenção ${intencao.intencaoId} ("${intencao.unidadeM2A || "(sem UO)"}"): UO fora do M2A_DICIONARIO_COMPLETO → ignorada silenciosamente.`,
       );
       continue;
     }
+
 
     const secretaria = matchByIntencaoId.get(String(intencao.intencaoId)) || null;
     if (!secretaria) {
