@@ -36,6 +36,7 @@ export interface M2ASrpSecretariaParticipante {
   sigla: string;
   nome: string;
   m2a_orgao_id: string | null;
+  m2a_uo_id: string | null;
 }
 
 export interface M2ASrpPayload {

@@ -830,6 +830,7 @@ function Page() {
      sigla: r.secretaria!.sigla,
      nome: r.secretaria!.nome,
      m2a_orgao_id: r.secretaria!.m2a_orgao_id,
+     m2a_uo_id: r.secretaria!.m2a_uo_id,
     }));
 
   // 3) Lista mestre de itens (dedup pelo sourceRow|identificador) + qtd por secretaria

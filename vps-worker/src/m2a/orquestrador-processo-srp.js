@@ -34,11 +34,8 @@ import {
   atualizarQuantidadeItem,
   finalizarParaConsolidacao,
   consolidarIntencao,
-  casarIntencoesComSecretarias,
   obterUnidadeOrcamentariaDaIntencao,
-  MAPA_ID_UNIDADE_PARA_CSV,
 } from "./irp-api.js";
-import { normalizeComparableText } from "./utils.js";
 
 /**
  * @param {object} payload
@@ -167,60 +164,53 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
   });
   const intencoes = await listarIntencoes(dfdId);
 
-  // 7. Casa intenção → secretaria participante (mas processa TODAS)
-  const { matches, orfas } = casarIntencoesComSecretarias(intencoes, participantes);
-  const matchByIntencaoId = new Map(
-    matches.map((m) => [String(m.intencao.intencaoId), m.secretaria]),
-  );
-  if (orfas.length) {
-    console.warn(
-      `[irp] ${orfas.length} intenção(ões) sem correspondência exata com secretarias participantes — serão processadas com quantidade 0 para fechar o ciclo. IDs: ${orfas.map((o) => o.intencaoId).join(",")}`,
-    );
+  // 7. Para cada intenção: GET na página de edição → extrai
+  //    unidade_orcamentaria (ID numérico canônico do Django) → procura a
+  //    secretaria participante cujo m2a_uo_id bate. Sem dicionário, sem
+  //    fuzzy match. Se não bater nenhuma → ignora; se bater mas a soma de
+  //    quantidades for 0 → ignora.
+  const participantesPorUoId = new Map();
+  for (const sec of participantes) {
+    const uo = String(sec.m2a_uo_id || "").trim();
+    if (!uo) continue;
+    // pode haver várias secretarias_id apontando para a mesma UO
+    // (todas com mesmo `numero`); guardamos a primeira.
+    if (!participantesPorUoId.has(uo)) participantesPorUoId.set(uo, sec);
   }
 
-  // 8. Para cada intenção pareada com uma secretaria participante COM quantidade > 0:
-  //    disponibilizar + manifestar + setar qty + finalizar + consolidar.
-  //    Intenções órfãs (sem secretaria) ou de secretarias sem itens são ignoradas
-  //    silenciosamente — o Django retorna 500 ao tentar finalizar IRP vazia.
-  const todasIntencoes = intencoes;
-  let ignoradasSemSecretaria = 0;
+  let ignoradasSemMatch = 0;
   let ignoradasSemQuantidade = 0;
-  let ignoradasForaDoDicionario = 0;
-  for (let k = 0; k < todasIntencoes.length; k++) {
-    const intencao = todasIntencoes[k];
+  const orfas = [];
+  for (let k = 0; k < intencoes.length; k++) {
+    const intencao = intencoes[k];
 
-    // 7a. BYPASS via dicionário oficial M2A: se a UO da intenção não está no
-    //     dicionário, NÃO chamamos disponibilizar/manifestar/finalizar
-    //     (Django retorna 500 ao tentar finalizar IRP vazia/desconhecida).
-    // Ordem de matching (mais confiável → mais tolerante):
-    //  1) Chave EXATA do dicionário, usando o texto da 4ª coluna do <tr>.
-    //  2) IDs (orgao_id/unidade_id) expostos via data-attrs do portal.
-    //  3) Fuzzy match por inclusão normalizada no texto bruto da linha.
-    const entryDic =
-      (intencao.unidadeM2A && M2A_DICIONARIO_COMPLETO[intencao.unidadeM2A]
-        ? { key: intencao.unidadeM2A, ...M2A_DICIONARIO_COMPLETO[intencao.unidadeM2A] }
-        : null) ||
-      encontrarUnidadePorIds(intencao.orgaoIdHint, intencao.unidadeIdHint) ||
-      encontrarUnidadeNoDicionario(intencao.unidadeM2A || intencao.texto);
-    if (!entryDic) {
-      ignoradasForaDoDicionario++;
-      console.log(
-        `[irp] intenção ${intencao.intencaoId} ("${intencao.unidadeM2A || "(sem UO)"}"): UO fora do M2A_DICIONARIO_COMPLETO → ignorada silenciosamente.`,
+    // 7a. Extrai os IDs canônicos do formulário de edição da IRP.
+    let unidadeId = null;
+    let orgaoId = null;
+    try {
+      const ids = await obterUnidadeOrcamentariaDaIntencao(intencao.intencaoId);
+      unidadeId = ids.unidadeId;
+      orgaoId = ids.orgaoId;
+    } catch (err) {
+      console.warn(
+        `[irp] intenção ${intencao.intencaoId}: falha ao ler UO do formulário → ignorada (${err?.message ?? err}).`,
       );
+      orfas.push(intencao.intencaoId);
       continue;
     }
 
-
-    const secretaria = matchByIntencaoId.get(String(intencao.intencaoId)) || null;
+    // 7b. Match direto pelo m2a_uo_id da secretaria participante.
+    const secretaria = unidadeId ? participantesPorUoId.get(String(unidadeId)) : null;
     if (!secretaria) {
-      ignoradasSemSecretaria++;
+      ignoradasSemMatch++;
+      orfas.push(intencao.intencaoId);
       console.log(
-        `[irp] intenção ${intencao.intencaoId} (${entryDic.key}): sem secretaria pareada no nosso catálogo → ignorada.`,
+        `[irp] intenção ${intencao.intencaoId} (orgao=${orgaoId || "?"} unidade=${unidadeId || "?"}): nenhuma secretaria participante com esse m2a_uo_id → ignorada.`,
       );
       continue;
     }
 
-    // Soma as quantidades previstas desta secretaria em todos os itens.
+    // 7c. Soma quantidades da secretaria.
     const somaQty = itensCriados.reduce((acc, { input }) => {
       const q = Number(input?.quantidades?.[secretaria.numero] ?? 0);
       return acc + (Number.isFinite(q) && q > 0 ? q : 0);
@@ -232,13 +222,14 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
       );
       continue;
     }
+
     const rotulo = secretaria.sigla || secretaria.nome;
-    const baseProg = 55 + (k / Math.max(todasIntencoes.length, 1)) * 42;
+    const baseProg = 55 + (k / Math.max(intencoes.length, 1)) * 42;
     onProgress({
       etapa: "intencoes",
-      mensagem: `Processando ${rotulo} (${k + 1}/${todasIntencoes.length})…`,
+      mensagem: `Processando ${rotulo} (${k + 1}/${intencoes.length})…`,
       progresso: baseProg,
-      payload: { itemAtual: k + 1, totalItens: todasIntencoes.length, sigla: rotulo },
+      payload: { itemAtual: k + 1, totalItens: intencoes.length, sigla: rotulo },
     });
     try {
       await disponibilizarIntencao(intencao.intencaoId);
@@ -260,7 +251,7 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
         const itemIntencao = itensIntencao[j];
         const original = itensCriados[j].input;
         const qty = Number(original?.quantidades?.[secretaria.numero] ?? 0);
-        if (!Number.isFinite(qty) || qty <= 0) continue; // pula item sem demanda
+        if (!Number.isFinite(qty) || qty <= 0) continue;
         await atualizarQuantidadeItem({
           itemIntencaoId: itemIntencao.itemIntencaoId,
           intencaoId: intencao.intencaoId,
@@ -271,9 +262,7 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
       await consolidarIntencao(intencao.intencaoId, payload.data_consolidacao || payload.data);
     } catch (err) {
       const msg = String(err?.message ?? err);
-      console.error(
-        `[irp] falha na intenção ${intencao.intencaoId} (${rotulo}): ${msg}`,
-      );
+      console.error(`[irp] falha na intenção ${intencao.intencaoId} (${rotulo}): ${msg}`);
       erros.push({
         etapa: "intencao",
         intencaoId: intencao.intencaoId,
@@ -282,9 +271,9 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
       });
     }
   }
-  if (ignoradasSemSecretaria || ignoradasSemQuantidade || ignoradasForaDoDicionario) {
+  if (ignoradasSemMatch || ignoradasSemQuantidade) {
     console.log(
-      `[irp] resumo: ${ignoradasForaDoDicionario} fora do dicionário, ${ignoradasSemSecretaria} órfãs no catálogo, ${ignoradasSemQuantidade} sem quantidade — todas ignoradas silenciosamente.`,
+      `[irp] resumo: ${ignoradasSemMatch} sem secretaria pareada (m2a_uo_id), ${ignoradasSemQuantidade} sem quantidade — ignoradas silenciosamente.`,
     );
   }
 
