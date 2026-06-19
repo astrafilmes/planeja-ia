@@ -55,21 +55,42 @@ export async function tryRestoreFromTrustedDevice(): Promise<boolean> {
       valid?: boolean;
       email?: string;
       hashed_token?: string;
+      action_link?: string;
     } | null;
-    if (!payload?.valid || !payload.email || !payload.hashed_token) {
+    if (!payload?.valid || !payload.email) {
+      console.info("[trusted-device] token inválido/expirado, limpando.");
       clearTrustedToken();
       return false;
     }
-    const { error: vErr } = await supabase.auth.verifyOtp({
-      type: "magiclink",
-      email: payload.email,
-      token_hash: payload.hashed_token,
-    } as any);
-    if (vErr) {
-      console.warn("[trusted-device] verifyOtp falhou:", vErr.message);
+
+    // Token hash pode vir direto, ou ser extraído do action_link.
+    const tokenHash =
+      payload.hashed_token ||
+      (payload.action_link
+        ? new URL(payload.action_link).searchParams.get("token") ?? undefined
+        : undefined);
+
+    if (!tokenHash) {
+      console.warn("[trusted-device] resposta sem token_hash/action_link.");
       return false;
     }
-    return true;
+
+    // Supabase JS v2: { token_hash, type }. Testa magiclink e cai em email.
+    for (const type of ["magiclink", "email"] as const) {
+      const { error: vErr } = await supabase.auth.verifyOtp({
+        type,
+        token_hash: tokenHash,
+      });
+      if (!vErr) {
+        console.info(`[trusted-device] sessão restaurada (type=${type}).`);
+        return true;
+      }
+      console.warn(
+        `[trusted-device] verifyOtp (type=${type}) falhou:`,
+        vErr.message,
+      );
+    }
+    return false;
   } catch (e) {
     console.warn("[trusted-device] erro inesperado:", e);
     return false;
