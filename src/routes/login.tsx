@@ -372,24 +372,39 @@ function Login() {
                         />
                       </Field>
 
-                      <div className="flex items-center justify-between text-[13px]">
-                        <label className="flex cursor-pointer items-center gap-2 text-muted-foreground select-none">
-                          <input
-                            type="checkbox"
-                            className="size-4 rounded border-input accent-primary"
-                            checked={trustDevice}
-                            onChange={(e) => setTrustDevice(e.target.checked)}
-                          />
-                          Confiar neste dispositivo (60 dias)
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => setMode("recover")}
-                          className="font-medium text-primary hover:underline underline-offset-4"
-                        >
-                          Esqueci minha senha
-                        </button>
+                      <div className="-mt-1 flex flex-col gap-2">
+                        <div className="flex items-center justify-between gap-3 text-[13px]">
+                          <label
+                            htmlFor="li-trust"
+                            className="flex cursor-pointer items-center gap-2 select-none text-foreground"
+                          >
+                            <input
+                              id="li-trust"
+                              type="checkbox"
+                              className="size-4 cursor-pointer rounded border-input accent-primary"
+                              checked={trustDevice}
+                              onChange={(e) => setTrustDevice(e.target.checked)}
+                            />
+                            <span className="font-medium">
+                              Confiar neste dispositivo
+                            </span>
+                            <span className="text-muted-foreground">(60 dias)</span>
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setMode("recover")}
+                            className="font-medium text-primary hover:underline underline-offset-4"
+                          >
+                            Esqueci minha senha
+                          </button>
+                        </div>
+                        <p className="pl-6 text-[11.5px] leading-relaxed text-muted-foreground">
+                          Mantém você conectado automaticamente neste navegador
+                          mesmo após a sessão expirar. Desative em computadores
+                          compartilhados.
+                        </p>
                       </div>
+
 
 
                       <Button
