@@ -941,7 +941,7 @@ function Page() {
  })
  .eq("id", jobId);
  }
- } else if (evt.type === "done") {
+  } else if (evt.type === "done") {
  if (jobId) {
  await supabase
  .from("irp_jobs")
@@ -962,9 +962,56 @@ function Page() {
  payload: { processoId: evt.processoId, dfdId: evt.dfdId, erros: evt.erros },
  });
  }
+
+ // Cria registro local em "processos" a partir da DFD enviada.
+ // Info parcial é OK — campos em branco podem ser preenchidos depois.
+ let processoLocalId: string | null = null;
+ try {
+   const orgaoSel = processoM2AForm.orgao_solicitante.trim();
+   const secretariaLocal = orgaoSel
+     ? secretariasM2A.find(
+         (s) =>
+           String(s.m2a_orgao_id ?? "") === orgaoSel ||
+           String(s.m2a_dot_orgao_id ?? "") === orgaoSel,
+       ) ?? null
+     : null;
+   const anoNum = Number.parseInt(processoM2AForm.ano_orcamento, 10);
+   const { data: userData } = await supabase.auth.getUser();
+   const { data: novoProc, error: procErr } = await supabase
+     .from("processos")
+     .insert({
+       objeto:
+         processoM2AForm.objeto.trim() ||
+         `DFD ${evt.dfdId} (sem objeto)`,
+       secretaria_id: secretariaLocal?.id ?? null,
+       m2a_processo_id: evt.processoId,
+       ano: Number.isFinite(anoNum) ? anoNum : null,
+       data_abertura: processoM2AForm.data || null,
+       status: "rascunho",
+       modalidade: "SRP",
+       observacoes: `Criado automaticamente a partir do envio IRP/DFD ${evt.dfdId}.`,
+       created_by: userData.user?.id ?? null,
+     })
+     .select("id")
+     .single();
+   if (procErr) throw procErr;
+   processoLocalId = novoProc?.id ?? null;
+   if (jobId && processoLocalId) {
+     await supabase
+       .from("irp_jobs")
+       .update({ processo_id: processoLocalId } as any)
+       .eq("id", jobId);
+   }
+ } catch (err: any) {
+   console.error("[irp] falha ao criar processo local", err);
+   toast.warning("Processo M2A criado, mas o registro local falhou", {
+     description: err?.message ?? "Crie manualmente em Processos se necessário.",
+   });
+ }
+
  finishTask(`Processo SRP ${evt.processoId} criado.`);
  toast.success("Processo SRP criado no M2A", {
- description: `Processo ${evt.processoId} · ${evt.totalPlanilhas - evt.erros.length}/${evt.totalPlanilhas} planilhas OK`,
+ description: `Processo ${evt.processoId} · ${evt.totalPlanilhas - evt.erros.length}/${evt.totalPlanilhas} planilhas OK${processoLocalId ? " · registro local criado" : ""}`,
  });
  setBusy(false);
  } else if (evt.type === "error") {
