@@ -199,7 +199,9 @@ class M2aClient {
       transformResponse: [(data) => data],
     };
     if (opts.maxRedirects !== undefined) cfg.maxRedirects = opts.maxRedirects;
+    if (opts.timeout !== undefined) cfg.timeout = opts.timeout;
     if (opts.body !== undefined) cfg.data = opts.body;
+
     const res = await this.http.request(cfg);
     const finalUrl = res.request?.res?.responseUrl || "";
     const contentType = res.headers?.["content-type"] || "";
