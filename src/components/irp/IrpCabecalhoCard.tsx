@@ -32,6 +32,8 @@ export interface IrpCabecalhoForm {
   responsavel_dfd: string;
   comissao_planejamento: string;
   classificacao: string;
+  /** Se false, fluxo "processo comum" (sem IRP/consolidação). */
+  e_registro_preco: boolean;
 }
 
 interface Props {
@@ -112,6 +114,7 @@ export function IrpCabecalhoCard({
         : form.responsavel_dfd,
       comissao_planejamento: "3911",
       classificacao: initialJob.classificacao ?? form.classificacao,
+      e_registro_preco: form.e_registro_preco ?? true,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialJob?.id]);
@@ -164,13 +167,15 @@ export function IrpCabecalhoCard({
     }
   }
 
+  const eSRP = form.e_registro_preco !== false;
+
   return (
     <Card className="border-border/60">
       <CardHeader className="flex flex-row items-start justify-between gap-3 pb-3">
         <div>
           <CardTitle className="flex items-center gap-2">
             <FileText className="size-4 text-primary" />
-            Cabeçalho do processo SRP
+            {eSRP ? "Cabeçalho do processo SRP" : "Cabeçalho do processo comum"}
           </CardTitle>
           <p className="mt-1 text-[12px] text-muted-foreground">
             Dados gerais do processo. Salvo automaticamente ao sair de cada campo.
@@ -190,11 +195,33 @@ export function IrpCabecalhoCard({
             onClick={onSubmit}
             disabled={submitDisabled}
           >
-            <Send className="size-4" /> Criar no M2A
+            <Send className="size-4" />{" "}
+            {eSRP ? "Criar SRP no M2A" : "Criar processo no M2A"}
           </Button>
         </div>
       </CardHeader>
       <CardContent className="grid gap-3 md:grid-cols-3">
+        <div className="md:col-span-3 flex items-center justify-between rounded-md border border-border/60 bg-muted/30 px-3 py-2">
+          <div>
+            <Label
+              htmlFor="e_registro_preco"
+              className="text-[13px] font-medium"
+            >
+              É Registro de Preços (SRP)?
+            </Label>
+            <p className="text-[11px] text-muted-foreground">
+              Desmarque para criar um processo comum: uma DFD por secretaria,
+              sem IRP/consolidação.
+            </p>
+          </div>
+          <input
+            id="e_registro_preco"
+            type="checkbox"
+            checked={eSRP}
+            onChange={(e) => update({ e_registro_preco: e.target.checked })}
+            className="size-4 accent-primary"
+          />
+        </div>
         {submitHelper && (
           <div className="md:col-span-3 rounded-md border border-amber-500/40 bg-amber-50/40 px-3 py-2 text-[12px] text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
             {submitHelper}
@@ -232,18 +259,20 @@ export function IrpCabecalhoCard({
             usada como data do processo, manifestação e finalização da IRP.
           </p>
         </div>
-        <div className="flex flex-col gap-1.5">
-          <Label>Data Consolidação *</Label>
-          <Input
-            type="date"
-            value={form.data_consolidacao}
-            onChange={(e) => update({ data_consolidacao: e.target.value })}
-            onBlur={persist}
-          />
-          <p className="text-[10px] text-muted-foreground">
-            geralmente 1 dia útil após a data da DFD.
-          </p>
-        </div>
+        {eSRP && (
+          <div className="flex flex-col gap-1.5">
+            <Label>Data Consolidação *</Label>
+            <Input
+              type="date"
+              value={form.data_consolidacao}
+              onChange={(e) => update({ data_consolidacao: e.target.value })}
+              onBlur={persist}
+            />
+            <p className="text-[10px] text-muted-foreground">
+              geralmente 1 dia útil após a data da DFD.
+            </p>
+          </div>
+        )}
         <div className="flex flex-col gap-1.5">
           <Label>Ano orçamentário *</Label>
           <Input

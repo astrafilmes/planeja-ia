@@ -59,6 +59,7 @@ import { findIrpUnidadeCanonicaByRefColuna } from"@/lib/m2a-orgaos-mapping";
 
 import { IrpConfirmacaoProcessoModal } from"@/components/irp/IrpConfirmacaoProcessoModal";
 import { criarProcessoSrpM2A, blobToBase64, type M2ASrpPayload } from"@/lib/m2a-srp";
+import { criarProcessoComumM2A, type M2AComumPayload } from"@/lib/m2a-comum";
 
 type AppFile = Database["public"]["Tables"]["app_files"]["Row"];
 type IrpJob = Database["public"]["Tables"]["irp_jobs"]["Row"];
@@ -293,6 +294,7 @@ function Page() {
       responsavel_dfd: "",
       comissao_planejamento: "3911",
       classificacao: "1",
+      e_registro_preco: true,
     };
   });
 
@@ -890,16 +892,18 @@ function Page() {
  }
 
  async function confirmarCriacaoProcessoM2A() {
+ const eSRP = processoM2AForm.e_registro_preco !== false;
  setBusy(true);
- startTask("Criando processo SRP no M2A","Preparando planilhas...");
+ startTask(
+   eSRP ? "Criando processo SRP no M2A" : "Criando processo comum no M2A",
+   "Preparando planilhas...",
+ );
  try {
   const { itens, secretariasParticipantes, gerenciadora_numero, gerenciadora_chave } =
    await buildM2AIrpPayload();
-   const payload: M2ASrpPayload = {
+   const payloadBase = {
     objeto: processoM2AForm.objeto.trim(),
     data: processoM2AForm.data,
-    data_consolidacao:
-      processoM2AForm.data_consolidacao || processoM2AForm.data,
     ano_orcamento: processoM2AForm.ano_orcamento.trim(),
     orgao_solicitante: processoM2AForm.orgao_solicitante.trim(),
     unidade_orcamentaria: processoM2AForm.unidade_orcamentaria.trim(),
@@ -910,11 +914,17 @@ function Page() {
     comissao_planejamento:
      processoM2AForm.comissao_planejamento.trim() || "3911",
     classificacao: processoM2AForm.classificacao.trim(),
-     gerenciadora_numero,
-     gerenciadora_chave,
+    gerenciadora_numero,
+    gerenciadora_chave,
     itens,
     secretariasParticipantes,
    };
+   const payload: M2ASrpPayload = {
+    ...payloadBase,
+    data_consolidacao:
+      processoM2AForm.data_consolidacao || processoM2AForm.data,
+   };
+   const payloadComum: M2AComumPayload = payloadBase;
 
  setM2aConfirmOpen(false);
  if (jobId) {
@@ -929,7 +939,11 @@ function Page() {
  .eq("id", jobId);
  }
 
- await criarProcessoSrpM2A(payload, async (evt) => {
+ const runner: Promise<void> = eSRP
+   ? criarProcessoSrpM2A(payload, handleM2AEvent)
+   : criarProcessoComumM2A(payloadComum, handleM2AEvent as any);
+
+ async function handleM2AEvent(evt: any) {
  if (evt.type === "progress") {
  updateProgress(evt.progresso ?? 0, evt.mensagem);
  if (jobId) {
@@ -986,32 +1000,36 @@ function Page() {
        secretaria_id: secretariaLocal?.id ?? null,
        m2a_processo_id: evt.processoId,
        ano: Number.isFinite(anoNum) ? anoNum : null,
-       data_abertura: processoM2AForm.data || null,
-       status: "rascunho",
-       modalidade: "SRP",
-       observacoes: `Criado automaticamente a partir do envio IRP/DFD ${evt.dfdId}.`,
-       created_by: userData.user?.id ?? null,
-     })
-     .select("id")
-     .single();
-   if (procErr) throw procErr;
-   processoLocalId = novoProc?.id ?? null;
-   if (jobId && processoLocalId) {
-     await supabase
-       .from("irp_jobs")
-       .update({ processo_id: processoLocalId } as any)
-       .eq("id", jobId);
-   }
- } catch (err: any) {
-   console.error("[irp] falha ao criar processo local", err);
-   toast.warning("Processo M2A criado, mas o registro local falhou", {
-     description: err?.message ?? "Crie manualmente em Processos se necessário.",
-   });
- }
+        data_abertura: processoM2AForm.data || null,
+        status: "rascunho",
+        modalidade: eSRP ? "SRP" : "comum",
+        observacoes: `Criado automaticamente a partir do envio IRP/DFD ${evt.dfdId}.`,
+        created_by: userData.user?.id ?? null,
+      })
+      .select("id")
+      .single();
+    if (procErr) throw procErr;
+    processoLocalId = novoProc?.id ?? null;
+    if (jobId && processoLocalId) {
+      await supabase
+        .from("irp_jobs")
+        .update({ processo_id: processoLocalId } as any)
+        .eq("id", jobId);
+    }
+  } catch (err: any) {
+    console.error("[irp] falha ao criar processo local", err);
+    toast.warning("Processo M2A criado, mas o registro local falhou", {
+      description: err?.message ?? "Crie manualmente em Processos se necessário.",
+    });
+  }
 
- finishTask(`Processo SRP ${evt.processoId} criado.`);
- toast.success("Processo SRP criado no M2A", {
- description: `Processo ${evt.processoId} · ${evt.totalPlanilhas - evt.erros.length}/${evt.totalPlanilhas} planilhas OK${processoLocalId ? " · registro local criado" : ""}`,
+ const tituloOk = eSRP ? "Processo SRP" : "Processo comum";
+ finishTask(`${tituloOk} ${evt.processoId} criado.`);
+ const okCount = eSRP
+   ? `${(evt.totalPlanilhas ?? 0) - (evt.erros?.length ?? 0)}/${evt.totalPlanilhas ?? 0} planilhas OK`
+   : `${(evt.totalDfds ?? 0)} DFD(s) criadas · ${evt.erros?.length ?? 0} aviso(s)`;
+ toast.success(`${tituloOk} criado no M2A`, {
+ description: `Processo ${evt.processoId} · ${okCount}${processoLocalId ? " · registro local criado" : ""}`,
  });
  setBusy(false);
  } else if (evt.type === "error") {
@@ -1029,7 +1047,9 @@ function Page() {
  toast.error("Falha ao criar processo M2A", { description: evt.error });
  setBusy(false);
  }
- });
+ }
+
+ await runner;
  } catch (e: any) {
  failTask(e?.message ??"Falha ao iniciar criacao do processo M2A.");
  toast.error("Falha ao iniciar processo M2A", { description: e?.message });
