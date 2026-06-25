@@ -56,25 +56,36 @@ const PROXY_URL = `${(import.meta as any).env.VITE_SUPABASE_URL}/functions/v1/m2
 export async function criarProcessoComumM2A(
   payload: M2AComumPayload,
   onEvent: (evt: M2AComumProgressEvent) => void,
+  signal?: AbortSignal,
 ): Promise<void> {
   const { data: session } = await supabase.auth.getSession();
   const token = session?.session?.access_token;
   if (!token) throw new Error("Sessão expirada — refaça o login.");
 
-  const res = await fetch(PROXY_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      apikey: (import.meta as any).env.VITE_SUPABASE_PUBLISHABLE_KEY,
-      Accept: "text/event-stream",
-    },
-    body: JSON.stringify({
-      path: "/processos/comum/criar",
+  let res: Response;
+  try {
+    res = await fetch(PROXY_URL, {
       method: "POST",
-      body: payload,
-    }),
-  });
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        apikey: (import.meta as any).env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        Accept: "text/event-stream",
+      },
+      body: JSON.stringify({
+        path: "/processos/comum/criar",
+        method: "POST",
+        body: payload,
+      }),
+      signal,
+    });
+  } catch (err: any) {
+    if (err?.name === "AbortError") {
+      onEvent({ type: "cancelled", mensagem: "Envio cancelado." });
+      return;
+    }
+    throw err;
+  }
 
   if (!res.ok || !res.body) {
     const txt = await res.text().catch(() => "");
