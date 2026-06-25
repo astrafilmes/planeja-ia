@@ -32,6 +32,8 @@ export interface IrpCabecalhoForm {
   responsavel_dfd: string;
   comissao_planejamento: string;
   classificacao: string;
+  /** Se false, fluxo "processo comum" (sem IRP/consolidação). Default true. */
+  e_registro_preco?: boolean;
 }
 
 interface Props {
