@@ -133,13 +133,36 @@ export async function cadastrarDotacao({
     throw new Error(`cadastrarDotacao(${dfdId}): status ${res.status}`);
   }
   const $ = loadDoc(res.html);
-  const erros = $(".errorlist, .alert-danger, .alert-error")
+  const erros = $(".errorlist, .alert-danger, .alert-error, .invalid-feedback")
     .map((_, el) => $(el).text().replace(/\s+/g, " ").trim())
     .get()
     .filter(Boolean);
+  // Heurística adicional: se a finalUrl não mudou (continuou em
+  // solicitacao_despesa_atividade/incluir) E não há ancora de sucesso, o
+  // form não foi aceito — extraímos qualquer mensagem visível.
+  const finalUrl = String(res.finalUrl || "");
+  const sucessoPorRedirect =
+    /formalizacao_demanda\/\d+\/(?:#|$)/.test(finalUrl) ||
+    finalUrl.includes("#solicitacao_projeto_atividade");
   if (erros.length) {
+    console.error(
+      `[cadastrarDotacao] DFD ${dfdId} REJEITADO: ${erros.join(" | ")} (finalUrl=${finalUrl})`,
+    );
     throw new Error(`cadastrarDotacao(${dfdId}) rejeitado: ${erros.join(" | ")}`);
   }
+  if (!sucessoPorRedirect) {
+    // Tenta capturar texto de erro inline (ex.: "Selecione uma opção válida").
+    const texto = $("form").text().replace(/\s+/g, " ").trim().slice(0, 300);
+    console.warn(
+      `[cadastrarDotacao] DFD ${dfdId} sem redirect de sucesso. finalUrl=${finalUrl} payload=despesa_projeto_atividade=${despesaProjetoAtividade} uo=${unidadeOrcamentaria} formText="${texto}"`,
+    );
+    throw new Error(
+      `cadastrarDotacao(${dfdId}): portal não confirmou inclusão (despesa_projeto_atividade=${despesaProjetoAtividade}).`,
+    );
+  }
+  console.log(
+    `[cadastrarDotacao] DFD ${dfdId} OK (despesa_projeto_atividade=${despesaProjetoAtividade}, uo=${unidadeOrcamentaria})`,
+  );
   return { ok: true };
 }
 
