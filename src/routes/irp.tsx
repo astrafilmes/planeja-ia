@@ -316,7 +316,7 @@ function Page() {
  queryFn: async () => {
  const { data, error } = await supabase
  .from("secretarias")
-  .select("id, numero, sigla, nome, m2a_orgao_id, m2a_dot_orgao_id, m2a_uo_id")
+  .select("id, numero, sigla, nome, m2a_orgao_id, m2a_dot_orgao_id, m2a_uo_id, m2a_dot_id")
  .eq("ativa", true);
  if (error) throw error;
  return (data ?? []) as SecretariaM2A[];
