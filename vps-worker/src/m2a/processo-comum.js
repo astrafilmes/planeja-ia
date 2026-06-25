@@ -56,6 +56,16 @@ export async function criarDFDComum(payload) {
   );
   body.set("_salvar", "");
 
+  // Log do payload enviado (sem CSRF) para debug de "escolha válida"
+  const payloadDebug = {};
+  for (const [k, v] of body.entries()) {
+    if (k === "csrfmiddlewaretoken") continue;
+    payloadDebug[k] = v;
+  }
+  console.log(
+    `[criarDFDComum] POST payload=${JSON.stringify(payloadDebug)}`,
+  );
+
   const res = await m2a.request("POST", DFD_INCLUIR_PATH, {
     body: body.toString(),
     headers: {
@@ -95,6 +105,66 @@ export async function criarDFDComum(payload) {
       ? Array.from(erros).join(" | ")
       : `sem mensagem de erro identificável (finalUrl=${finalUrl}, bytes=${(res.html || "").length})`;
     console.error(`[criarDFDComum] FALHA: ${errStr}`);
+
+    // Mapeia erros por campo (Django re-renderiza o form com .errorlist
+    // dentro do .form-group do campo inválido).
+    const errosPorCampo = [];
+    $("select[name], input[name]").each((_, el) => {
+      const $el = $(el);
+      const name = $el.attr("name");
+      if (!name || name === "csrfmiddlewaretoken") return;
+      const $group = $el.closest(".form-group, .form-row, .field-row, div");
+      const errTxt = $group
+        .find(".errorlist, .invalid-feedback, .help-block.text-danger")
+        .first()
+        .text()
+        .replace(/\s+/g, " ")
+        .trim();
+      if (!errTxt) return;
+      errosPorCampo.push({
+        campo: name,
+        erro: errTxt,
+        enviado: payloadDebug[name],
+      });
+    });
+    if (errosPorCampo.length) {
+      console.error(
+        `[criarDFDComum] erros por campo: ${JSON.stringify(errosPorCampo)}`,
+      );
+    }
+
+    // Dump dos selects-chave: mostra o valor enviado vs. opções disponíveis
+    // para o usuário identificar qual ID está fora da lista (ex.: unidade
+    // orçamentária da SMA cadastrada no Supabase não existe mais no M2A).
+    const dumpSelects = {};
+    for (const name of [
+      "orgao_solicitante",
+      "unidade_orcamentaria",
+      "responsavel_dfd",
+      "comissao_planejamento",
+      "fundamentacao",
+    ]) {
+      const $sel = $(`select[name="${name}"]`);
+      if (!$sel.length) continue;
+      const opts = [];
+      $sel.find("option").each((_, opt) => {
+        const v = $(opt).attr("value");
+        const t = $(opt).text().replace(/\s+/g, " ").trim();
+        if (v !== undefined && v !== "") opts.push(`${v}=${t.slice(0, 70)}`);
+      });
+      const enviado = payloadDebug[name];
+      const existe = enviado ? opts.some((o) => o.startsWith(`${enviado}=`)) : null;
+      dumpSelects[name] = {
+        enviado,
+        existeNasOpcoes: existe,
+        totalOpcoes: opts.length,
+        opcoes: opts.slice(0, 30),
+      };
+    }
+    console.error(
+      `[criarDFDComum] selects do formulário (enviado vs. opções):\n${JSON.stringify(dumpSelects, null, 2)}`,
+    );
+
     throw new Error(`DFD comum não foi criada: ${errStr}`);
   }
   if (erros.size) {
