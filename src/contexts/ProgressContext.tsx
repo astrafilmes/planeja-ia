@@ -78,7 +78,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
   }, [clearAutoClose]);
 
   const startTask = useCallback(
-    (title: string, statusText = "Preparando tarefa...", options) => {
+    (title: string, statusText = "Preparando tarefa...", options?: { onCancel?: () => void }) => {
       clearAutoClose();
       onCancelRef.current = options?.onCancel ?? null;
       setState({
