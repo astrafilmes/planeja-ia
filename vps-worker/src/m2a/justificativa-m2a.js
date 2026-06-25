@@ -72,54 +72,90 @@ export function montarHtmlJustificativaDoTextoM2A(texto) {
  * já formatado (pronto para o atualizar_justificativa).
  * Lança erro em qualquer falha — o orquestrador decide o fallback.
  */
-export async function gerarJustificativaM2A(dfdId, { prompt } = {}) {
+export async function gerarJustificativaM2A(
+  dfdId,
+  { prompt, timeoutMs = 300_000, tentativas = 2, signal } = {},
+) {
   if (!dfdId) throw new Error("gerarJustificativaM2A: dfdId obrigatório");
   const path = `/gestao_compras/formalizacao_demanda/gerar_conteudo_justificativa/${dfdId}/`;
   const formPath = `/gestao_compras/formalizacao_demanda/${dfdId}/`;
 
-  let csrf;
-  try {
-    csrf = await m2a.getCsrf(formPath);
-  } catch {
-    csrf = await m2a.getCsrf("/");
-  }
+  let ultimoErro = null;
+  for (let attempt = 1; attempt <= tentativas; attempt++) {
+    if (signal?.aborted) throw new Error("Operação cancelada pelo usuário.");
+    let csrf;
+    try {
+      csrf = await m2a.getCsrf(formPath, attempt > 1 ? { force: true } : {});
+    } catch {
+      csrf = await m2a.getCsrf("/", attempt > 1 ? { force: true } : {});
+    }
 
-  const body = new URLSearchParams({
-    csrfmiddlewaretoken: csrf,
-    prompt: prompt || PROMPT_PADRAO,
-  });
+    const body = new URLSearchParams({
+      csrfmiddlewaretoken: csrf,
+      prompt: prompt || PROMPT_PADRAO,
+    });
 
-  const r = await m2a.postForm(path, body, {
-    headers: {
-      Referer: `${config.m2a.baseUrl}${formPath}`,
-      Origin: config.m2a.baseUrl,
-      Accept: "*/*",
-    },
-  });
-  if (r.status >= 400) {
-    throw new Error(
-      `gerar_conteudo_justificativa falhou (status=${r.status})`,
+    const t0 = Date.now();
+    console.log(
+      `[m2a-ia] DFD ${dfdId}: chamando IA nativa (tentativa ${attempt}/${tentativas}, timeout=${Math.round(timeoutMs / 1000)}s) — aguardando resposta…`,
     );
-  }
-  let data;
-  try {
-    data = typeof r.html === "string" ? JSON.parse(r.html) : r.html;
-  } catch {
-    throw new Error(
-      `gerar_conteudo_justificativa: resposta não-JSON (status=${r.status})`,
+    let r;
+    try {
+      r = await m2a.postForm(path, body, {
+        timeout: timeoutMs,
+        headers: {
+          Referer: `${config.m2a.baseUrl}${formPath}`,
+          Origin: config.m2a.baseUrl,
+          Accept: "*/*",
+        },
+      });
+    } catch (err) {
+      ultimoErro = err;
+      const dur = ((Date.now() - t0) / 1000).toFixed(1);
+      console.warn(
+        `[m2a-ia] DFD ${dfdId} tentativa ${attempt} falhou após ${dur}s: ${err?.message || err}`,
+      );
+      continue;
+    }
+    const dur = ((Date.now() - t0) / 1000).toFixed(1);
+    if (r.status >= 400) {
+      ultimoErro = new Error(`status=${r.status}`);
+      console.warn(
+        `[m2a-ia] DFD ${dfdId} tentativa ${attempt}: HTTP ${r.status} após ${dur}s`,
+      );
+      continue;
+    }
+    let data;
+    try {
+      data = typeof r.html === "string" ? JSON.parse(r.html) : r.html;
+    } catch {
+      ultimoErro = new Error("resposta não-JSON");
+      console.warn(
+        `[m2a-ia] DFD ${dfdId} tentativa ${attempt}: resposta não-JSON após ${dur}s (${r.html?.slice?.(0, 120) || ""})`,
+      );
+      continue;
+    }
+    const htmlForm = data?.html_form || data?.htmlForm || "";
+    const texto = extrairTextareaJustificativa(htmlForm);
+    if (!texto) {
+      ultimoErro = new Error("textarea vazia");
+      console.warn(
+        `[m2a-ia] DFD ${dfdId} tentativa ${attempt}: textarea vazia após ${dur}s`,
+      );
+      continue;
+    }
+    const html = montarHtmlJustificativaDoTextoM2A(texto);
+    if (!html) {
+      ultimoErro = new Error("parágrafos vazios");
+      continue;
+    }
+    console.log(
+      `[m2a-ia] DFD ${dfdId}: IA respondeu em ${dur}s (${html.length} chars, tentativa ${attempt})`,
     );
+    return html;
   }
-  const htmlForm = data?.html_form || data?.htmlForm || "";
-  const texto = extrairTextareaJustificativa(htmlForm);
-  if (!texto) {
-    throw new Error("gerar_conteudo_justificativa: textarea vazia/ausente.");
-  }
-  const html = montarHtmlJustificativaDoTextoM2A(texto);
-  if (!html) {
-    throw new Error("gerar_conteudo_justificativa: parágrafos vazios.");
-  }
-  console.log(
-    `[m2a-ia] justificativa gerada para DFD ${dfdId} (${html.length} chars)`,
+  throw new Error(
+    `gerar_conteudo_justificativa esgotou ${tentativas} tentativas: ${ultimoErro?.message || ultimoErro}`,
   );
-  return html;
 }
+
