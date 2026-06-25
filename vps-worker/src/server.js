@@ -7,6 +7,7 @@ import { authRoutes } from "./routes/auth.js";
 import { contratosRoutes } from "./routes/contratos.js";
 import { documentosRoutes } from "./routes/documentos.js";
 import { processosSrpRoutes } from "./routes/processos-srp.js";
+import { processosComumRoutes } from "./routes/processos-comum.js";
 
 const app = Fastify({
   logger: { level: config.logLevel },
