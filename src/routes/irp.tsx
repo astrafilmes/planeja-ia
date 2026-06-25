@@ -858,6 +858,7 @@ function Page() {
       m2a_orgao_id: ids.orgaoId,
       m2a_dot_orgao_id: r.secretaria!.m2a_dot_orgao_id,
       m2a_uo_id: ids.uoId,
+      m2a_dot_id: r.secretaria!.m2a_dot_id,
       ref_coluna: refColuna,
      };
     });
