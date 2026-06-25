@@ -892,16 +892,18 @@ function Page() {
  }
 
  async function confirmarCriacaoProcessoM2A() {
+ const eSRP = processoM2AForm.e_registro_preco !== false;
  setBusy(true);
- startTask("Criando processo SRP no M2A","Preparando planilhas...");
+ startTask(
+   eSRP ? "Criando processo SRP no M2A" : "Criando processo comum no M2A",
+   "Preparando planilhas...",
+ );
  try {
   const { itens, secretariasParticipantes, gerenciadora_numero, gerenciadora_chave } =
    await buildM2AIrpPayload();
-   const payload: M2ASrpPayload = {
+   const payloadBase = {
     objeto: processoM2AForm.objeto.trim(),
     data: processoM2AForm.data,
-    data_consolidacao:
-      processoM2AForm.data_consolidacao || processoM2AForm.data,
     ano_orcamento: processoM2AForm.ano_orcamento.trim(),
     orgao_solicitante: processoM2AForm.orgao_solicitante.trim(),
     unidade_orcamentaria: processoM2AForm.unidade_orcamentaria.trim(),
@@ -912,11 +914,17 @@ function Page() {
     comissao_planejamento:
      processoM2AForm.comissao_planejamento.trim() || "3911",
     classificacao: processoM2AForm.classificacao.trim(),
-     gerenciadora_numero,
-     gerenciadora_chave,
+    gerenciadora_numero,
+    gerenciadora_chave,
     itens,
     secretariasParticipantes,
    };
+   const payload: M2ASrpPayload = {
+    ...payloadBase,
+    data_consolidacao:
+      processoM2AForm.data_consolidacao || processoM2AForm.data,
+   };
+   const payloadComum: M2AComumPayload = payloadBase;
 
  setM2aConfirmOpen(false);
  if (jobId) {
@@ -931,7 +939,11 @@ function Page() {
  .eq("id", jobId);
  }
 
- await criarProcessoSrpM2A(payload, async (evt) => {
+ const runner: Promise<void> = eSRP
+   ? criarProcessoSrpM2A(payload, handleM2AEvent)
+   : criarProcessoComumM2A(payloadComum, handleM2AEvent as any);
+
+ async function handleM2AEvent(evt: any) {
  if (evt.type === "progress") {
  updateProgress(evt.progresso ?? 0, evt.mensagem);
  if (jobId) {
