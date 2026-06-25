@@ -39,12 +39,19 @@ export async function processosComumRoutes(app) {
     };
 
     // AbortController acionado se o cliente fechar a conexão.
+    // IMPORTANTE: escutar em reply.raw (ServerResponse), não em req.raw
+    // (IncomingMessage). Em Node moderno, IncomingMessage emite 'close' assim
+    // que o corpo da requisição termina de ser lido, mesmo com a conexão
+    // ainda aberta — isso fazia o worker abortar logo no início. Só
+    // consideramos desconexão real quando a resposta fecha sem ter sido
+    // encerrada pelo próprio handler (writableEnded === false).
     const abortCtrl = new AbortController();
     const onClose = () => {
+      if (reply.raw.writableEnded) return;
       app.log.warn("Cliente desconectou — cancelando processo comum.");
       abortCtrl.abort();
     };
-    req.raw.on("close", onClose);
+    reply.raw.on("close", onClose);
 
     const onProgress = (evt) => {
       try {
@@ -80,7 +87,7 @@ export async function processosComumRoutes(app) {
       }
     } finally {
       clearInterval(hb);
-      req.raw.off("close", onClose);
+      reply.raw.off("close", onClose);
       try {
         reply.raw.end();
       } catch {
