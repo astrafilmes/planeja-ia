@@ -255,40 +255,33 @@ export async function vincularDFDsAoProcesso(processoId, dfdIds) {
   }
   const path = ADICIONAR_SOLICITACOES(processoId);
   const referer = `${m2a.http.defaults.baseURL || ""}/processo_administrativo/${processoId}/`;
-  let vinculadas = 0;
-  const falhas = [];
-  // O portal espera UMA DFD por POST (itens=<id>), não lista CSV.
-  for (const dfdId of ids) {
-    const csrf = await m2a.getCsrf(`/processo_administrativo/${processoId}/`, {
-      force: true,
-    });
-    const body = new URLSearchParams();
-    body.set("csrfmiddlewaretoken", csrf);
-    body.set("itens", dfdId);
-    const res = await m2a.request("POST", path, {
-      body: body.toString(),
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-        "X-Requested-With": "XMLHttpRequest",
-        Accept: "application/json, text/javascript, */*; q=0.01",
-        Referer: referer,
-      },
-    });
-    const bodyTxt = String(res.html || "").slice(0, 300);
-    if (res.status >= 400) {
-      console.error(
-        `[vincularDFDsAoProcesso] DFD ${dfdId} → status ${res.status} body="${bodyTxt}"`,
-      );
-      falhas.push({ dfdId, status: res.status, body: bodyTxt });
-      continue;
-    }
-    console.log(
-      `[vincularDFDsAoProcesso] processoId=${processoId} dfd=${dfdId} OK body="${bodyTxt}"`,
+  const csrf = await m2a.getCsrf(`/processo_administrativo/${processoId}/`, {
+    force: true,
+  });
+  const body = new URLSearchParams();
+  body.set("csrfmiddlewaretoken", csrf);
+  // O portal aceita lista de DFDs separadas por vírgula no campo `itens`.
+  body.set("itens", ids.join(","));
+  const res = await m2a.request("POST", path, {
+    body: body.toString(),
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+      "X-Requested-With": "XMLHttpRequest",
+      Accept: "application/json, text/javascript, */*; q=0.01",
+      Referer: referer,
+    },
+  });
+  const bodyTxt = String(res.html || "").slice(0, 500);
+  if (res.status >= 400) {
+    console.error(
+      `[vincularDFDsAoProcesso] status ${res.status} body="${bodyTxt}"`,
     );
-    vinculadas++;
-    await sleep(300);
+    throw new Error(`vincularDFDsAoProcesso(${processoId}): status ${res.status}`);
   }
-  return { ok: !falhas.length, vinculadas, falhas };
+  console.log(
+    `[vincularDFDsAoProcesso] processoId=${processoId} dfds=[${ids.join(",")}] resp.bytes=${(res.html || "").length} body="${bodyTxt}"`,
+  );
+  return { ok: true, vinculadas: ids.length, respostaBruta: bodyTxt };
 }
 
 // ---------------------------------------------------------------------
