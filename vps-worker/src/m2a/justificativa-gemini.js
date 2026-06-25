@@ -114,19 +114,19 @@ REGRAS CRÍTICAS DE REDAÇÃO E FORMATAÇÃO:
 }
 
 function textoParaHtmlJustificado(texto) {
-  // O M2A salva o conteúdo do Summernote como HTML. A captura real do
-  // payload mostra parágrafos separados por linha em branco DENTRO do
-  // <div style="text-align: justify;">…</div> — sem <br>, sem <p>.
-  const normalizado = String(texto || "")
+  const str = String(texto || "").trim();
+  // Se já vier como HTML pronto (ex.: vindo da IA nativa do M2A), repassa.
+  if (/^<(div|p|span)\b/i.test(str)) return str;
+  const normalizado = str
     .replace(/\r\n/g, "\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+    .replace(/\n{3,}/g, "\n\n");
   const paragrafos = normalizado
     .split(/\n+/)
     .map((p) => p.trim())
     .filter(Boolean);
-  return `<div style="text-align: justify;">${paragrafos.join("\n\n")}</div>`;
+  return `<div style="text-align: justify;">${paragrafos.join("<br><br>")}</div>`;
 }
+
 
 export async function atualizarJustificativaM2A(dfdId, textoGerado) {
   if (!dfdId) throw new Error("atualizarJustificativaM2A: dfdId obrigatório");
