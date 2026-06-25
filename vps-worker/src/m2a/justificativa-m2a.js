@@ -11,7 +11,7 @@ import { m2a } from "../m2a-client.js";
 import { config } from "../config.js";
 
 const PROMPT_PADRAO =
-  "Por favor, expanda de forma abrangente a descrição, elaborando um texto no formato dissertativo argumentativo, contendo um mínimo de 5 parágrafos, iniciando cada um com o numero que representa cada paragrafo, ex: 1, bem estruturados por etapa (Introdução, 1 parágrafo - Desenvolvimento, 3 parágrafos - Conclusão, 1 parágrafo), para justificar esta demanda.\n";
+  "Atue como redator técnico-jurídico da Administração Pública municipal e elabore a Justificativa da Demanda para o Documento de Formalização de Demanda (DFD), em conformidade com a Lei nº 14.133/2021. Expanda de forma DENSA e ARGUMENTATIVA a descrição do objeto, em texto dissertativo-argumentativo de NO MÍNIMO 5 parágrafos extensos (entre 80 e 150 palavras cada), estruturados em: 1) Introdução com contextualização da relevância da aquisição/contratação para o interesse público; 2-4) Desenvolvimento com (a) cenário atual e necessidade concreta para a continuidade dos serviços, (b) benefícios técnicos e econômicos — padronização, ganhos de escala, previsibilidade, competitividade —, (c) otimização de recursos públicos, planejamento orçamentário, transparência e isonomia entre fornecedores; 5) Conclusão reafirmando a aderência aos princípios da legalidade, eficiência, economicidade e transparência. NÃO cite o nome de secretaria específica nem do município. Use tom formal, impessoal (3ª pessoa), vocabulário próprio da Administração Pública. Cada parágrafo iniciado por sua numeração (1., 2., 3., …). Sem títulos, listas, marcadores ou markdown. Apenas texto corrido.\n";
 
 function decodeHtmlEntities(s) {
   return String(s || "")
