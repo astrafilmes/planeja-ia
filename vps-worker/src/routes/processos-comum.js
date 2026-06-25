@@ -87,7 +87,7 @@ export async function processosComumRoutes(app) {
       }
     } finally {
       clearInterval(hb);
-      req.raw.off("close", onClose);
+      reply.raw.off("close", onClose);
       try {
         reply.raw.end();
       } catch {
