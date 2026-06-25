@@ -70,42 +70,66 @@ REGRAS CRÍTICAS DE REDAÇÃO E FORMATAÇÃO:
 - NÃO use markdown (sem **, sem *, sem #). Texto puro.
 - O resultado final deve ter no mínimo 500 palavras no total.`;
 
-  try {
-    const res = await fetch(GEMINI_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-goog-api-key": apiKey,
-      },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.85,
-          topP: 0.95,
-          maxOutputTokens: 4096,
+  // Retry com backoff exponencial para 429/503/5xx (modelo sob alta demanda).
+  const delays = [2000, 5000, 15000];
+  const maxTentativas = delays.length + 1;
+  for (let tentativa = 1; tentativa <= maxTentativas; tentativa++) {
+    try {
+      const res = await fetch(GEMINI_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-goog-api-key": apiKey,
         },
-      }),
-    });
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      console.error(`[gemini] HTTP ${res.status}: ${body.slice(0, 300)}`);
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.85,
+            topP: 0.95,
+            maxOutputTokens: 4096,
+          },
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        const retriable = res.status === 429 || res.status === 503 || res.status >= 500;
+        console.error(
+          `[gemini] HTTP ${res.status} (tentativa ${tentativa}/${maxTentativas}${retriable ? ", retriable" : ""}): ${body.slice(0, 300)}`,
+        );
+        if (retriable && tentativa < maxTentativas) {
+          const wait = delays[tentativa - 1];
+          console.warn(`[gemini] aguardando ${wait}ms antes de retry…`);
+          await new Promise((r) => setTimeout(r, wait));
+          continue;
+        }
+        return fallbackJustificativa(objeto);
+      }
+      const data = await res.json();
+      const texto = data?.candidates?.[0]?.content?.parts
+        ?.map((p) => p?.text || "")
+        .join("")
+        .trim();
+      if (!texto) {
+        console.warn("[gemini] resposta sem texto — usando fallback.");
+        return fallbackJustificativa(objeto);
+      }
+      console.log(
+        `[gemini] justificativa gerada (${texto.length} chars, tentativa ${tentativa})`,
+      );
+      return texto;
+    } catch (err) {
+      console.error(
+        `[gemini] erro tentativa ${tentativa}/${maxTentativas}: ${err?.message || err}`,
+      );
+      if (tentativa < maxTentativas) {
+        const wait = delays[tentativa - 1];
+        await new Promise((r) => setTimeout(r, wait));
+        continue;
+      }
       return fallbackJustificativa(objeto);
     }
-    const data = await res.json();
-    const texto = data?.candidates?.[0]?.content?.parts
-      ?.map((p) => p?.text || "")
-      .join("")
-      .trim();
-    if (!texto) {
-      console.warn("[gemini] resposta sem texto — usando fallback.");
-      return fallbackJustificativa(objeto);
-    }
-    console.log(`[gemini] justificativa gerada (${texto.length} chars)`);
-    return texto;
-  } catch (err) {
-    console.error(`[gemini] erro: ${err?.message || err}`);
-    return fallbackJustificativa(objeto);
   }
+  return fallbackJustificativa(objeto);
 }
 
 function textoParaHtmlJustificado(texto) {
