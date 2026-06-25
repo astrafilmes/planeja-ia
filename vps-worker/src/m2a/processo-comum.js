@@ -246,42 +246,59 @@ export async function descobrirProcessoDaDFD(dfdId) {
 // Vincula uma lista de DFDs (participantes) ao processo administrativo.
 // `dfdIds` deve ser array de IDs numéricos das DFDs a anexar.
 // ---------------------------------------------------------------------
-export async function vincularDFDsAoProcesso(processoId, dfdIds) {
+export async function vincularDFDsAoProcesso(processoId, dfdIds, onProgress) {
   const ids = (dfdIds || []).map((x) => String(x).trim()).filter(Boolean);
   if (!processoId) throw new Error("vincularDFDsAoProcesso: processoId obrigatório");
   if (!ids.length) {
     console.log(`[vincularDFDsAoProcesso] nenhum DFD para anexar — ignorado.`);
-    return { ok: true, vinculadas: 0 };
+    return { ok: true, vinculadas: 0, falhas: [] };
   }
   const path = ADICIONAR_SOLICITACOES(processoId);
   const referer = `${m2a.http.defaults.baseURL || ""}/processo_administrativo/${processoId}/`;
-  const csrf = await m2a.getCsrf(`/processo_administrativo/${processoId}/`, {
-    force: true,
-  });
-  const body = new URLSearchParams();
-  body.set("csrfmiddlewaretoken", csrf);
-  // O portal aceita lista de DFDs separadas por vírgula no campo `itens`.
-  body.set("itens", ids.join(","));
-  const res = await m2a.request("POST", path, {
-    body: body.toString(),
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-      "X-Requested-With": "XMLHttpRequest",
-      Accept: "application/json, text/javascript, */*; q=0.01",
-      Referer: referer,
-    },
-  });
-  const bodyTxt = String(res.html || "").slice(0, 500);
-  if (res.status >= 400) {
-    console.error(
-      `[vincularDFDsAoProcesso] status ${res.status} body="${bodyTxt}"`,
-    );
-    throw new Error(`vincularDFDsAoProcesso(${processoId}): status ${res.status}`);
+
+  // Endpoint do M2A processa de fato 1 DFD por chamada (itens=<id>). Mandar
+  // lista CSV retorna 200 mas só persiste o primeiro. Fazemos 1 POST por DFD.
+  let vinculadas = 0;
+  const falhas = [];
+  for (let i = 0; i < ids.length; i++) {
+    const id = ids[i];
+    try {
+      if (typeof onProgress === "function") onProgress(i, ids.length, id);
+      const csrf = await m2a.getCsrf(`/processo_administrativo/${processoId}/`, {
+        force: true,
+      });
+      const body = new URLSearchParams();
+      body.set("csrfmiddlewaretoken", csrf);
+      body.set("itens", id);
+      const res = await m2a.request("POST", path, {
+        body: body.toString(),
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+          "X-Requested-With": "XMLHttpRequest",
+          Accept: "application/json, text/javascript, */*; q=0.01",
+          Referer: referer,
+        },
+      });
+      const bodyTxt = String(res.html || "").slice(0, 300);
+      if (res.status >= 400) {
+        console.error(
+          `[vincularDFDsAoProcesso] DFD ${id} status ${res.status} body="${bodyTxt}"`,
+        );
+        falhas.push({ dfdId: id, status: res.status, body: bodyTxt });
+        continue;
+      }
+      console.log(
+        `[vincularDFDsAoProcesso] DFD ${id} → processo ${processoId} OK (status=${res.status})`,
+      );
+      vinculadas++;
+      await sleep(400);
+    } catch (err) {
+      const msg = String(err?.message ?? err);
+      console.error(`[vincularDFDsAoProcesso] DFD ${id} erro: ${msg}`);
+      falhas.push({ dfdId: id, erro: msg });
+    }
   }
-  console.log(
-    `[vincularDFDsAoProcesso] processoId=${processoId} dfds=[${ids.join(",")}] resp.bytes=${(res.html || "").length} body="${bodyTxt}"`,
-  );
-  return { ok: true, vinculadas: ids.length, respostaBruta: bodyTxt };
+  return { ok: falhas.length === 0, vinculadas, falhas };
 }
 
 // ---------------------------------------------------------------------

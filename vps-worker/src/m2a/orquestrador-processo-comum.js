@@ -86,9 +86,18 @@ function dedupItensParaSecretaria(itens, sec) {
   return Array.from(grupos.values());
 }
 
+function ensureNotAborted(signal) {
+  if (signal?.aborted) {
+    const e = new Error("Operação cancelada pelo usuário.");
+    e.code = "ABORTED";
+    throw e;
+  }
+}
+
 export async function orquestrarCriacaoProcessoComum(
   payload,
   onProgress = () => {},
+  signal,
 ) {
   const itens = Array.isArray(payload.itens) ? payload.itens : [];
   if (!itens.length) throw new Error("Nenhum item informado em payload.itens");
@@ -118,14 +127,22 @@ export async function orquestrarCriacaoProcessoComum(
 
   // 1. Loop de criação de DFDs por secretaria
   for (let i = 0; i < ordenadas.length; i++) {
+    ensureNotAborted(signal);
     const sec = ordenadas[i];
     const rotulo = sec.sigla || sec.nome || `sec#${sec.numero}`;
     const baseProg = 2 + (i / ordenadas.length) * 60;
+    // Pré-calcula grupos para mostrar quantos itens a secretaria vai receber
+    const gruposPreview = dedupItensParaSecretaria(itens, sec);
     onProgress({
       etapa: "criar_dfd_secretaria",
-      mensagem: `Criando DFD de ${rotulo} (${i + 1}/${ordenadas.length})…`,
+      mensagem: `Criando DFD de ${rotulo} (${i + 1}/${ordenadas.length}) — ${gruposPreview.length} item(ns)`,
       progresso: baseProg,
-      payload: { secretaria: rotulo, atual: i + 1, total: ordenadas.length },
+      payload: {
+        secretaria: rotulo,
+        atual: i + 1,
+        total: ordenadas.length,
+        itensPlanejados: gruposPreview.length,
+      },
     });
 
     const orgaoSec = String(
@@ -153,6 +170,12 @@ export async function orquestrarCriacaoProcessoComum(
           sec.comissao_planejamento || payload.comissao_planejamento,
       });
       dfdId = r.dfdId;
+      onProgress({
+        etapa: "dfd_criada",
+        mensagem: `DFD ${dfdId} criada para ${rotulo}`,
+        progresso: baseProg + 1,
+        payload: { secretaria: rotulo, dfdId },
+      });
     } catch (err) {
       const msg = String(err?.message ?? err);
       console.error(`[comum] DFD ${rotulo} falhou: ${msg}`);
@@ -160,23 +183,34 @@ export async function orquestrarCriacaoProcessoComum(
       continue;
     }
 
-    // 2. Itens da secretaria — dedupe por (produto+unidade) para evitar
-    //    "Já existe um item com o mesmo produto/serviço e unidade de
-    //    fornecimento" que o M2A rejeita dentro da mesma DFD.
-    const grupos = dedupItensParaSecretaria(itens, sec);
-    if (grupos.length < itens.filter((it) => quantidadeDoItem(it, sec) > 0).length) {
-      console.log(
-        `[comum] ${rotulo}: dedupe agrupou itens duplicados (produto+unidade) → ${grupos.length} itens únicos.`,
-      );
-    }
+    // 2. Itens da secretaria — dedupe por (produto+unidade)
+    const grupos = gruposPreview;
+    // LOG: lista exatamente o que vai ser inserido nesta DFD para diagnóstico
+    console.log(
+      `[comum] DFD ${dfdId} (${rotulo}) — ${grupos.length} item(ns) a inserir:` +
+        grupos
+          .map(
+            (g) =>
+              `\n  · IRP#${g.indices.join("/")} qty=${g.qty} "${String(g.item.descricao || "").slice(0, 80)}"`,
+          )
+          .join(""),
+    );
     const itensInseridos = [];
     for (let j = 0; j < grupos.length; j++) {
+      ensureNotAborted(signal);
       const { item, qty, indices } = grupos[j];
       onProgress({
         etapa: "incluir_itens",
-        mensagem: `${rotulo}: item ${j + 1}/${grupos.length} (${String(item.descricao || "").slice(0, 50)})`,
+        mensagem: `${rotulo} (DFD ${dfdId}): item ${j + 1}/${grupos.length} — ${String(item.descricao || "").slice(0, 60)}`,
         progresso: baseProg + (j / grupos.length) * (60 / ordenadas.length) * 0.6,
-        payload: { secretaria: rotulo, atual: j + 1, total: grupos.length },
+        payload: {
+          secretaria: rotulo,
+          dfdId,
+          atual: j + 1,
+          total: grupos.length,
+          descricao: item.descricao,
+          qty,
+        },
       });
       try {
         await criarItemEAdicionarNaDFD({
@@ -208,18 +242,18 @@ export async function orquestrarCriacaoProcessoComum(
 
 
     // 3. Dotação (best-effort)
-    // Aceita tanto o ID Django numérico cadastrado na secretaria (m2a_dot_id —
-    // padrão usado pelo fluxo de contratos) quanto aliases legados.
     const despesaProjeto =
       sec.m2a_dot_id ||
       sec.m2a_despesa_projeto_id ||
       sec.despesa_projeto_atividade ||
       null;
     if (despesaProjeto) {
+      ensureNotAborted(signal);
       onProgress({
         etapa: "cadastrar_dotacao",
-        mensagem: `${rotulo}: cadastrando dotação…`,
+        mensagem: `${rotulo} (DFD ${dfdId}): cadastrando dotação…`,
         progresso: baseProg + (60 / ordenadas.length) * 0.85,
+        payload: { secretaria: rotulo, dfdId },
       });
       try {
         await cadastrarDotacao({
@@ -241,6 +275,7 @@ export async function orquestrarCriacaoProcessoComum(
     dfdsCriadas.push({ sec, dfdId, itensInseridos });
   }
 
+
   const dfdGer = dfdsCriadas.find(
     (d) => chaveSecretaria(d.sec) === chaveSecretaria(secretariaGerenciadora),
   );
@@ -254,6 +289,7 @@ export async function orquestrarCriacaoProcessoComum(
     .map((d) => d.dfdId);
 
   // 4. Gerar processo a partir da DFD da gerenciadora
+  ensureNotAborted(signal);
   onProgress({
     etapa: "gerar_processo",
     mensagem: "Gerando processo administrativo a partir da DFD gerenciadora…",
@@ -301,16 +337,35 @@ export async function orquestrarCriacaoProcessoComum(
       payload.unidade_orcamentaria_gerenciadora || payload.unidade_orcamentaria,
   });
 
-  // 7. Vincula TODAS as DFDs (inclusive a da gerenciadora — safety net, caso
-  //    o gerar_processo crie a casca sem puxar os itens) ao processo.
+  // 7. Vincula TODAS as DFDs ao processo — 1 POST por DFD (CSV não funciona
+  //    no portal: persiste só a primeira).
+  ensureNotAborted(signal);
   const todasDfds = [dfdGer.dfdId, ...outrasDfds];
   onProgress({
     etapa: "vincular_dfds",
-    mensagem: `Vinculando ${todasDfds.length} DFD(s) ao processo…`,
+    mensagem: `Vinculando ${todasDfds.length} DFD(s) ao processo ${processoId}…`,
     progresso: 88,
+    payload: { total: todasDfds.length, dfdIds: todasDfds },
   });
   try {
-    await vincularDFDsAoProcesso(processoId, todasDfds);
+    const r = await vincularDFDsAoProcesso(processoId, todasDfds, (i, total, dfdId) => {
+      onProgress({
+        etapa: "vincular_dfd",
+        mensagem: `Vinculando DFD ${dfdId} (${i + 1}/${total})…`,
+        progresso: 88 + ((i + 1) / total) * 3,
+        payload: { dfdId, atual: i + 1, total },
+      });
+    });
+    if (r.falhas?.length) {
+      erros.push({
+        etapa: "vincular_dfds",
+        erro: `Falhas em ${r.falhas.length}/${todasDfds.length} DFD(s)`,
+        detalhes: r.falhas,
+      });
+    }
+    console.log(
+      `[comum] vinculadas=${r.vinculadas}/${todasDfds.length} falhas=${r.falhas?.length || 0}`,
+    );
   } catch (err) {
     const msg = String(err?.message ?? err);
     console.error(`[comum] vincular DFDs: ${msg}`);
@@ -318,6 +373,7 @@ export async function orquestrarCriacaoProcessoComum(
   }
 
   // 8. Reordena itens conforme ordem da planilha (master list)
+  ensureNotAborted(signal);
   onProgress({
     etapa: "reordenar_itens",
     mensagem: "Reordenando itens do processo…",
@@ -333,18 +389,20 @@ export async function orquestrarCriacaoProcessoComum(
     erros.push({ etapa: "reordenar_itens", erro: msg });
   }
 
-  // 9. Justificativa Gemini — uma para CADA DFD criada (cada secretaria
-  //    precisa ter sua justificativa preenchida no portal).
+  // 9. Justificativa Gemini — uma para CADA DFD criada (sem retry; fallback
+  //    imediato em caso de erro/limite do Gemini).
   let justificativaGerada = false;
   let justificativasOk = 0;
-  onProgress({
-    etapa: "justificativa",
-    mensagem: `Gerando justificativas (${dfdsCriadas.length} DFDs)…`,
-    progresso: 96,
-  });
   for (let k = 0; k < dfdsCriadas.length; k++) {
+    ensureNotAborted(signal);
     const d = dfdsCriadas[k];
     const rotulo = d.sec.sigla || d.sec.nome || `sec#${d.sec.numero}`;
+    onProgress({
+      etapa: "justificativa",
+      mensagem: `Justificativa ${k + 1}/${dfdsCriadas.length} — DFD ${d.dfdId} (${rotulo})`,
+      progresso: 95 + ((k + 1) / dfdsCriadas.length) * 4,
+      payload: { dfdId: d.dfdId, secretaria: rotulo, atual: k + 1, total: dfdsCriadas.length },
+    });
     try {
       const texto = await gerarJustificativaGemini({
         objeto: payload.objeto,
@@ -365,6 +423,7 @@ export async function orquestrarCriacaoProcessoComum(
   console.log(
     `[comum] justificativas: ${justificativasOk}/${dfdsCriadas.length} concluídas`,
   );
+
 
   onProgress({
     etapa: "concluido",

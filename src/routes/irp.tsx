@@ -896,9 +896,11 @@ function Page() {
  async function confirmarCriacaoProcessoM2A() {
  const eSRP = processoM2AForm.e_registro_preco !== false;
  setBusy(true);
+ const abortCtrl = new AbortController();
  startTask(
    eSRP ? "Criando processo SRP no M2A" : "Criando processo comum no M2A",
    "Preparando planilhas...",
+   { onCancel: () => abortCtrl.abort() },
  );
  try {
   const { itens, secretariasParticipantes, gerenciadora_numero, gerenciadora_chave } =
@@ -942,12 +944,12 @@ function Page() {
  }
 
  const runner: Promise<void> = eSRP
-   ? criarProcessoSrpM2A(payload, handleM2AEvent)
-   : criarProcessoComumM2A(payloadComum, handleM2AEvent as any);
+   ? criarProcessoSrpM2A(payload, handleM2AEvent, abortCtrl.signal)
+   : criarProcessoComumM2A(payloadComum, handleM2AEvent as any, abortCtrl.signal);
 
  async function handleM2AEvent(evt: any) {
  if (evt.type === "progress") {
- updateProgress(evt.progresso ?? 0, evt.mensagem);
+ updateProgress(evt.progresso ?? 0, evt.mensagem, { etapa: evt.etapa });
  if (jobId) {
  await supabase
  .from("irp_jobs")
@@ -957,6 +959,20 @@ function Page() {
  })
  .eq("id", jobId);
  }
+ } else if (evt.type === "cancelled") {
+ if (jobId) {
+ await supabase
+ .from("irp_jobs")
+ .update({
+ m2a_envio_status: "cancelado",
+ m2a_envio_mensagem: evt.mensagem ?? "Cancelado.",
+ m2a_envio_completed_at: new Date().toISOString(),
+ })
+ .eq("id", jobId);
+ }
+ failTask(evt.mensagem ?? "Envio cancelado.");
+ toast.warning("Envio cancelado", { description: evt.mensagem });
+ setBusy(false);
   } else if (evt.type === "done") {
  if (jobId) {
  await supabase

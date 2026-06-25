@@ -83,25 +83,36 @@ export async function blobToBase64(blob: Blob): Promise<string> {
 export async function criarProcessoSrpM2A(
   payload: M2ASrpPayload,
   onEvent: (evt: M2ASrpProgressEvent) => void,
+  signal?: AbortSignal,
 ): Promise<void> {
   const { data: session } = await supabase.auth.getSession();
   const token = session?.session?.access_token;
   if (!token) throw new Error("Sessão expirada — refaça o login.");
 
-  const res = await fetch(PROXY_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      apikey: (import.meta as any).env.VITE_SUPABASE_PUBLISHABLE_KEY,
-      Accept: "text/event-stream",
-    },
-    body: JSON.stringify({
-      path: "/processos/srp/criar",
+  let res: Response;
+  try {
+    res = await fetch(PROXY_URL, {
       method: "POST",
-      body: payload,
-    }),
-  });
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        apikey: (import.meta as any).env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        Accept: "text/event-stream",
+      },
+      body: JSON.stringify({
+        path: "/processos/srp/criar",
+        method: "POST",
+        body: payload,
+      }),
+      signal,
+    });
+  } catch (err: any) {
+    if (err?.name === "AbortError") {
+      onEvent({ type: "error", error: "Envio cancelado." });
+      return;
+    }
+    throw err;
+  }
 
   if (!res.ok || !res.body) {
     const txt = await res.text().catch(() => "");
