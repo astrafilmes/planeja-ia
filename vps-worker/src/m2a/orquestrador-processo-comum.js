@@ -398,50 +398,96 @@ export async function orquestrarCriacaoProcessoComum(
     erros.push({ etapa: "reordenar_itens", erro: msg });
   }
 
-  // 9. Justificativa Gemini — uma para CADA DFD criada (sem retry; fallback
-  //    imediato em caso de erro/limite do Gemini).
+  // 9. Justificativa — GERA UMA ÚNICA justificativa GENÉRICA (sem citar
+  //    secretaria específica) e reaproveita em TODAS as DFDs. Evita gastar
+  //    minutos esperando a IA nativa do M2A para cada DFD individualmente.
+  //
+  //    Estratégia:
+  //      a) Tenta a IA nativa do M2A na primeira DFD com janela curta de
+  //         polling (~30s). Se vier, ótimo — usa o texto retornado.
+  //      b) Se falhar/exceder tempo, gera via Gemini com prompt GENÉRICO
+  //         (sem `secretarias`, sem nomes próprios), que cai para o
+  //         fallback textual caso a chave não exista.
+  //      c) Faz POST em /atualizar_justificativa/ para cada DFD em paralelo.
   let justificativaGerada = false;
   let justificativasOk = 0;
-  for (let k = 0; k < dfdsCriadas.length; k++) {
-    ensureNotAborted(signal);
-    const d = dfdsCriadas[k];
-    const rotulo = d.sec.sigla || d.sec.nome || `sec#${d.sec.numero}`;
-    onProgress({
-      etapa: "justificativa",
-      mensagem: `Justificativa ${k + 1}/${dfdsCriadas.length} — DFD ${d.dfdId} (${rotulo})`,
-      progresso: 95 + ((k + 1) / dfdsCriadas.length) * 4,
-      payload: { dfdId: d.dfdId, secretaria: rotulo, atual: k + 1, total: dfdsCriadas.length },
-    });
-    try {
-      let htmlJustificativa = null;
-      // 1ª tentativa: IA NATIVA do M2A (MIA!) — usa o próprio endpoint do portal.
-      try {
-        htmlJustificativa = await gerarJustificativaM2A(d.dfdId);
-      } catch (errMia) {
-        console.warn(
-          `[comum] IA nativa M2A falhou para DFD ${d.dfdId} (${rotulo}): ${errMia?.message || errMia} — tentando Gemini.`,
-        );
-        // 2ª tentativa: Gemini (já cai em fallback textual se falhar).
-        htmlJustificativa = await gerarJustificativaGemini({
-          objeto: payload.objeto,
-          eRegistroPreco: false,
-          itens: itens.map((i) => String(i.descricao || "")).filter(Boolean),
-          secretarias: [rotulo],
-        });
-      }
-      await atualizarJustificativaM2A(d.dfdId, htmlJustificativa);
-      justificativasOk++;
-      if (d === dfdGer) justificativaGerada = true;
-      console.log(`[comum] justificativa OK para DFD ${d.dfdId} (${rotulo})`);
-    } catch (err) {
-      const msg = String(err?.message ?? err);
-      console.error(`[comum] justificativa ${rotulo} (DFD ${d.dfdId}): ${msg}`);
-      erros.push({ etapa: "justificativa", secretaria: rotulo, erro: msg });
-    }
+  let htmlJustificativaGenerica = null;
 
+  onProgress({
+    etapa: "justificativa",
+    mensagem: `Gerando justificativa genérica (única para todas as DFDs)…`,
+    progresso: 95,
+    payload: { total: dfdsCriadas.length },
+  });
+
+  // (a) tenta IA nativa M2A na primeira DFD, com polling curto
+  try {
+    htmlJustificativaGenerica = await gerarJustificativaM2A(dfdsCriadas[0].dfdId, {
+      tentativas: 1,
+      pollMaxMs: 30_000,
+      pollMs: 5_000,
+      timeoutMs: 60_000,
+      signal,
+    });
+    console.log(
+      `[comum] justificativa GENÉRICA obtida via IA nativa M2A (${htmlJustificativaGenerica.length} chars)`,
+    );
+  } catch (errMia) {
+    console.warn(
+      `[comum] IA nativa M2A não retornou a tempo: ${errMia?.message || errMia} — gerando via Gemini (genérica).`,
+    );
+  }
+
+  // (b) fallback Gemini — SEM citar secretarias específicas
+  if (!htmlJustificativaGenerica) {
+    try {
+      htmlJustificativaGenerica = await gerarJustificativaGemini({
+        objeto: payload.objeto,
+        eRegistroPreco: false,
+        itens: itens.map((i) => String(i.descricao || "")).filter(Boolean),
+        secretarias: [], // <- genérico, sem nomes
+      });
+      console.log(
+        `[comum] justificativa GENÉRICA obtida via Gemini (${htmlJustificativaGenerica.length} chars)`,
+      );
+    } catch (errGem) {
+      console.error(
+        `[comum] falha total ao gerar justificativa genérica: ${errGem?.message || errGem}`,
+      );
+      erros.push({ etapa: "justificativa", erro: String(errGem?.message || errGem) });
+    }
+  }
+
+  // (c) aplica a mesma justificativa em TODAS as DFDs (em paralelo, com limite leve)
+  if (htmlJustificativaGenerica) {
+    const tarefas = dfdsCriadas.map((d, k) => async () => {
+      ensureNotAborted(signal);
+      const rotulo = d.sec.sigla || d.sec.nome || `sec#${d.sec.numero}`;
+      onProgress({
+        etapa: "justificativa",
+        mensagem: `Aplicando justificativa ${k + 1}/${dfdsCriadas.length} — DFD ${d.dfdId} (${rotulo})`,
+        progresso: 96 + ((k + 1) / dfdsCriadas.length) * 3,
+        payload: { dfdId: d.dfdId, secretaria: rotulo, atual: k + 1, total: dfdsCriadas.length },
+      });
+      try {
+        await atualizarJustificativaM2A(d.dfdId, htmlJustificativaGenerica);
+        justificativasOk++;
+        if (d === dfdGer) justificativaGerada = true;
+        console.log(`[comum] justificativa aplicada em DFD ${d.dfdId} (${rotulo})`);
+      } catch (err) {
+        const msg = String(err?.message ?? err);
+        console.error(`[comum] aplicar justificativa ${rotulo} (DFD ${d.dfdId}): ${msg}`);
+        erros.push({ etapa: "justificativa", secretaria: rotulo, erro: msg });
+      }
+    });
+    // executa em série leve (2 por vez) para não martelar o M2A
+    const LIMITE = 2;
+    for (let i = 0; i < tarefas.length; i += LIMITE) {
+      await Promise.all(tarefas.slice(i, i + LIMITE).map((fn) => fn()));
+    }
   }
   console.log(
-    `[comum] justificativas: ${justificativasOk}/${dfdsCriadas.length} concluídas`,
+    `[comum] justificativas: ${justificativasOk}/${dfdsCriadas.length} aplicadas (texto único)`,
   );
 
 
