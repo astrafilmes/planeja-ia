@@ -38,13 +38,12 @@ function chaveSecretaria(sec) {
   return String(sec?.numero ?? "");
 }
 
-function quantidadeDoItem(item, sec, chavesExtras = []) {
+function quantidadeDoItem(item, sec) {
+  // No fluxo COMUM cada secretaria tem ITENS PRÓPRIOS — não fazemos fallback
+  // para a chave da gerenciadora (isso fazia o item da gerenciadora vazar para
+  // todas as outras DFDs).
   const quantidades = item?.quantidades ?? {};
-  const chaves = [
-    chaveSecretaria(sec),
-    ...chavesExtras,
-    String(sec?.numero ?? ""),
-  ].filter(Boolean);
+  const chaves = [chaveSecretaria(sec), String(sec?.numero ?? "")].filter(Boolean);
   for (const chave of chaves) {
     if (Object.prototype.hasOwnProperty.call(quantidades, chave)) {
       const q = Number(quantidades[chave] ?? 0);
