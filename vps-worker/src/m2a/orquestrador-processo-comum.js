@@ -262,6 +262,10 @@ export async function orquestrarCriacaoProcessoComum(
           dfdId,
           unidadeOrcamentaria: uoSec,
           despesaProjetoAtividade: despesaProjeto,
+          despesaProjetoNumero:
+            sec.m2a_dot_numero || sec.m2a_despesa_projeto_numero || null,
+          despesaProjetoDescricao:
+            sec.m2a_dot_descricao || sec.m2a_despesa_projeto_descricao || null,
         });
       } catch (err) {
         const msg = String(err?.message ?? err);
