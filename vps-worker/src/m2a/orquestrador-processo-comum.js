@@ -289,6 +289,7 @@ export async function orquestrarCriacaoProcessoComum(
     .map((d) => d.dfdId);
 
   // 4. Gerar processo a partir da DFD da gerenciadora
+  ensureNotAborted(signal);
   onProgress({
     etapa: "gerar_processo",
     mensagem: "Gerando processo administrativo a partir da DFD gerenciadora…",
