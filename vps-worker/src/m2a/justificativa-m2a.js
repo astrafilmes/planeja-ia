@@ -96,11 +96,11 @@ export async function gerarJustificativaM2A(
   dfdId,
   {
     prompt,
-    timeoutMs = 300_000,
-    tentativas = 2,
+    timeoutMs = 90_000,
+    tentativas = 1,
     signal,
-    pollMs = 5_000,
-    pollMaxMs = 240_000,
+    pollMs = 6_000,
+    pollMaxMs = 30_000,
   } = {},
 ) {
   if (!dfdId) throw new Error("gerarJustificativaM2A: dfdId obrigatório");
