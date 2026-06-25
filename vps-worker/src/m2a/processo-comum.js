@@ -100,20 +100,65 @@ export async function criarDFDComum(payload) {
 // ---------------------------------------------------------------------
 // Cadastra dotação (Solicitação de Despesa) numa DFD.
 // `despesaProjetoAtividade` é o ID numérico (Django) do projeto/atividade.
-// Se não vier preenchido, lança erro para o caller decidir.
+// Se o portal rejeitar o ID (não pertence à UO), faz fallback consultando
+// /estrutura_organizacional/despesa_projeto_atividade_list/?unidade_orcamentaria=UO
+// e tenta achar uma dotação equivalente para a mesma UO (por número ou
+// substring de descrição). Se conseguir, refaz o POST com o novo ID.
 // ---------------------------------------------------------------------
-export async function cadastrarDotacao({
+async function listarDespesasProjetoAtividade(uo) {
+  const path = `/estrutura_organizacional/despesa_projeto_atividade_list/?unidade_orcamentaria=${encodeURIComponent(String(uo))}`;
+  const res = await m2a.get(path);
+  if (res.status >= 400) {
+    throw new Error(
+      `listarDespesasProjetoAtividade(${uo}): status ${res.status}`,
+    );
+  }
+  let json;
+  try {
+    json = JSON.parse(res.html);
+  } catch {
+    throw new Error(
+      `listarDespesasProjetoAtividade(${uo}): resposta não-JSON (${String(res.html || "").slice(0, 200)})`,
+    );
+  }
+  return Array.isArray(json?.results) ? json.results : [];
+}
+
+function escolherDespesaCompativel(lista, hints) {
+  if (!Array.isArray(lista) || !lista.length) return null;
+  const { numero, descricaoHint } = hints || {};
+  const numNorm = numero ? String(numero).trim() : "";
+  const descNorm = descricaoHint
+    ? String(descricaoHint).toUpperCase().replace(/\s+/g, " ").trim()
+    : "";
+  if (numNorm) {
+    const byNumero = lista.find(
+      (d) => String(d.numero || "").trim() === numNorm,
+    );
+    if (byNumero) return byNumero;
+    const byNumeroEmbutido = lista.find((d) =>
+      new RegExp(`\\.${numNorm.replace(/^0+/, "")}(?:\\b|$)`).test(
+        String(d.descricao || ""),
+      ),
+    );
+    if (byNumeroEmbutido) return byNumeroEmbutido;
+  }
+  if (descNorm) {
+    const byDesc = lista.find((d) =>
+      String(d.descricao || "")
+        .toUpperCase()
+        .includes(descNorm.slice(0, 20)),
+    );
+    if (byDesc) return byDesc;
+  }
+  return null;
+}
+
+async function postCadastrarDotacao({
   dfdId,
   unidadeOrcamentaria,
   despesaProjetoAtividade,
 }) {
-  if (!dfdId) throw new Error("cadastrarDotacao: dfdId obrigatório");
-  if (!unidadeOrcamentaria) {
-    throw new Error("cadastrarDotacao: unidadeOrcamentaria obrigatória");
-  }
-  if (!despesaProjetoAtividade) {
-    throw new Error("cadastrarDotacao: despesaProjetoAtividade obrigatória");
-  }
   const path = SOLIC_DESPESA_INCLUIR(dfdId);
   const csrf = await m2a.getCsrf(path, { force: true });
   const body = new URLSearchParams();
@@ -130,36 +175,101 @@ export async function cadastrarDotacao({
     },
   });
   if (res.status >= 400) {
-    throw new Error(`cadastrarDotacao(${dfdId}): status ${res.status}`);
+    return { ok: false, erros: [`HTTP ${res.status}`], finalUrl: res.finalUrl };
   }
   const $ = loadDoc(res.html);
   const erros = $(".errorlist, .alert-danger, .alert-error, .invalid-feedback")
     .map((_, el) => $(el).text().replace(/\s+/g, " ").trim())
     .get()
     .filter(Boolean);
-  // Heurística adicional: se a finalUrl não mudou (continuou em
-  // solicitacao_despesa_atividade/incluir) E não há ancora de sucesso, o
-  // form não foi aceito — extraímos qualquer mensagem visível.
   const finalUrl = String(res.finalUrl || "");
   const sucessoPorRedirect =
     /formalizacao_demanda\/\d+\/(?:#|$)/.test(finalUrl) ||
     finalUrl.includes("#solicitacao_projeto_atividade");
-  if (erros.length) {
-    console.error(
-      `[cadastrarDotacao] DFD ${dfdId} REJEITADO: ${erros.join(" | ")} (finalUrl=${finalUrl})`,
-    );
-    throw new Error(`cadastrarDotacao(${dfdId}) rejeitado: ${erros.join(" | ")}`);
-  }
+  if (erros.length) return { ok: false, erros, finalUrl };
   if (!sucessoPorRedirect) {
-    // Tenta capturar texto de erro inline (ex.: "Selecione uma opção válida").
     const texto = $("form").text().replace(/\s+/g, " ").trim().slice(0, 300);
+    return {
+      ok: false,
+      erros: [`sem redirect de sucesso. formText="${texto}"`],
+      finalUrl,
+    };
+  }
+  return { ok: true, finalUrl };
+}
+
+export async function cadastrarDotacao({
+  dfdId,
+  unidadeOrcamentaria,
+  despesaProjetoAtividade,
+  despesaProjetoNumero,
+  despesaProjetoDescricao,
+}) {
+  if (!dfdId) throw new Error("cadastrarDotacao: dfdId obrigatório");
+  if (!unidadeOrcamentaria) {
+    throw new Error("cadastrarDotacao: unidadeOrcamentaria obrigatória");
+  }
+  if (!despesaProjetoAtividade) {
+    throw new Error("cadastrarDotacao: despesaProjetoAtividade obrigatória");
+  }
+
+  let attempt = await postCadastrarDotacao({
+    dfdId,
+    unidadeOrcamentaria,
+    despesaProjetoAtividade,
+  });
+
+  if (!attempt.ok) {
+    const errMsg = attempt.erros.join(" | ");
+    const ehEscolhaInvalida = /escolha\s+v[aá]lida/i.test(errMsg);
     console.warn(
-      `[cadastrarDotacao] DFD ${dfdId} sem redirect de sucesso. finalUrl=${finalUrl} payload=despesa_projeto_atividade=${despesaProjetoAtividade} uo=${unidadeOrcamentaria} formText="${texto}"`,
+      `[cadastrarDotacao] DFD ${dfdId} 1ª tentativa rejeitada (id=${despesaProjetoAtividade}, uo=${unidadeOrcamentaria}): ${errMsg}`,
     );
+    if (ehEscolhaInvalida) {
+      try {
+        const lista = await listarDespesasProjetoAtividade(unidadeOrcamentaria);
+        console.log(
+          `[cadastrarDotacao] DFD ${dfdId} fallback: ${lista.length} dotações disponíveis para UO ${unidadeOrcamentaria}.`,
+        );
+        const escolha = escolherDespesaCompativel(lista, {
+          numero: despesaProjetoNumero,
+          descricaoHint: despesaProjetoDescricao,
+        });
+        if (escolha?.id) {
+          console.log(
+            `[cadastrarDotacao] DFD ${dfdId} fallback retry com id=${escolha.id} (numero=${escolha.numero} desc="${String(escolha.descricao || "").slice(0, 60)}")`,
+          );
+          attempt = await postCadastrarDotacao({
+            dfdId,
+            unidadeOrcamentaria,
+            despesaProjetoAtividade: escolha.id,
+          });
+          if (attempt.ok) {
+            console.log(
+              `[cadastrarDotacao] DFD ${dfdId} OK via fallback (id=${escolha.id})`,
+            );
+            return { ok: true, fallbackId: escolha.id };
+          }
+        } else {
+          const amostra = lista
+            .slice(0, 8)
+            .map((d) => `${d.id}/${d.numero}`)
+            .join(", ");
+          console.error(
+            `[cadastrarDotacao] DFD ${dfdId} fallback: nenhum match (hint numero="${despesaProjetoNumero || ""}" desc="${despesaProjetoDescricao || ""}"). Disponíveis: ${amostra}`,
+          );
+        }
+      } catch (err) {
+        console.error(
+          `[cadastrarDotacao] DFD ${dfdId} fallback falhou: ${String(err?.message ?? err)}`,
+        );
+      }
+    }
     throw new Error(
-      `cadastrarDotacao(${dfdId}): portal não confirmou inclusão (despesa_projeto_atividade=${despesaProjetoAtividade}).`,
+      `cadastrarDotacao(${dfdId}) rejeitado: ${attempt.erros.join(" | ")}`,
     );
   }
+
   console.log(
     `[cadastrarDotacao] DFD ${dfdId} OK (despesa_projeto_atividade=${despesaProjetoAtividade}, uo=${unidadeOrcamentaria})`,
   );
