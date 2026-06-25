@@ -231,32 +231,44 @@ export async function cadastrarDotacao({
         console.log(
           `[cadastrarDotacao] DFD ${dfdId} fallback: ${lista.length} dotações disponíveis para UO ${unidadeOrcamentaria}.`,
         );
-        const escolha = escolherDespesaCompativel(lista, {
+
+        // Ordena: primeiro a melhor compatível (numero/descrição), depois as demais.
+        const melhor = escolherDespesaCompativel(lista, {
           numero: despesaProjetoNumero,
           descricaoHint: despesaProjetoDescricao,
         });
-        if (escolha?.id) {
-          console.log(
-            `[cadastrarDotacao] DFD ${dfdId} fallback retry com id=${escolha.id} (numero=${escolha.numero} desc="${String(escolha.descricao || "").slice(0, 60)}")`,
+        const ordemTentativas = [];
+        if (melhor?.id) ordemTentativas.push(melhor);
+        for (const d of lista) {
+          if (!d?.id) continue;
+          if (String(d.id) === String(despesaProjetoAtividade)) continue; // já falhou
+          if (melhor?.id && String(d.id) === String(melhor.id)) continue;
+          ordemTentativas.push(d);
+        }
+
+        if (!ordemTentativas.length) {
+          console.error(
+            `[cadastrarDotacao] DFD ${dfdId} fallback: lista vazia para UO ${unidadeOrcamentaria}.`,
           );
-          attempt = await postCadastrarDotacao({
+        }
+
+        for (const cand of ordemTentativas) {
+          console.log(
+            `[cadastrarDotacao] DFD ${dfdId} fallback retry com id=${cand.id} (numero=${cand.numero} desc="${String(cand.descricao || "").slice(0, 60)}")`,
+          );
+          const tentativa = await postCadastrarDotacao({
             dfdId,
             unidadeOrcamentaria,
-            despesaProjetoAtividade: escolha.id,
+            despesaProjetoAtividade: cand.id,
           });
-          if (attempt.ok) {
+          if (tentativa.ok) {
             console.log(
-              `[cadastrarDotacao] DFD ${dfdId} OK via fallback (id=${escolha.id})`,
+              `[cadastrarDotacao] DFD ${dfdId} OK via fallback (id=${cand.id}, numero=${cand.numero})`,
             );
-            return { ok: true, fallbackId: escolha.id };
+            return { ok: true, fallbackId: cand.id };
           }
-        } else {
-          const amostra = lista
-            .slice(0, 8)
-            .map((d) => `${d.id}/${d.numero}`)
-            .join(", ");
-          console.error(
-            `[cadastrarDotacao] DFD ${dfdId} fallback: nenhum match (hint numero="${despesaProjetoNumero || ""}" desc="${despesaProjetoDescricao || ""}"). Disponíveis: ${amostra}`,
+          console.warn(
+            `[cadastrarDotacao] DFD ${dfdId} fallback id=${cand.id} também rejeitada: ${tentativa.erros.join(" | ")}`,
           );
         }
       } catch (err) {
