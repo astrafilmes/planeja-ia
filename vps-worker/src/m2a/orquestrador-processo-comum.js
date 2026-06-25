@@ -29,6 +29,8 @@ import {
   gerarJustificativaGemini,
   atualizarJustificativaM2A,
 } from "./justificativa-gemini.js";
+import { gerarJustificativaM2A } from "./justificativa-m2a.js";
+
 
 function chaveSecretaria(sec) {
   if (sec?.chave) return String(sec.chave);
