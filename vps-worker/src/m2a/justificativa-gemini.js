@@ -40,20 +40,35 @@ export async function gerarJustificativaGemini({
     ? secretarias.join(", ")
     : String(secretarias || "");
 
-  const prompt = `Atue como um Especialista em Licitações Públicas brasileiras. Redija a "Justificativa da Demanda" para um Documento de Formalização de Demanda (DFD), em conformidade com a Lei 14.133/2021.
+  const prompt = `Atue como um Especialista em Licitações Públicas brasileiras e redator técnico da Administração Pública municipal. Sua tarefa é elaborar a "Justificativa da Demanda" para um Documento de Formalização de Demanda (DFD), em conformidade com a Lei 14.133/2021.
 
-DADOS:
+DADOS DA DEMANDA:
 - Objeto: ${objeto}
 - Modalidade: ${eRegistroPreco ? "Sistema de Registro de Preços (SRP)" : "Contratação Direta/Pregão Padrão"}
 - Itens principais:
 ${listaItens}
-- Órgãos Participantes: ${listaSecretarias}
+- Órgãos/Secretarias Participantes: ${listaSecretarias}
 
-REGRAS CRÍTICAS DE FORMATAÇÃO:
-- O texto deve ser estritamente dissertativo-argumentativo, tom formal e técnico.
-- Deve conter EXATAMENTE 5 parágrafos (1. Introdução, 2. Necessidade dos itens, 3. Economia de escala ao agrupar secretarias, 4. Fundamentação legal/SRP com menção à Lei 14.133/2021, 5. Conclusão).
-- NÃO inclua títulos (ex: "Introdução:"). Retorne APENAS o texto corrido.
-- Separe cada parágrafo com UMA quebra de linha (\\n).`;
+TAREFA:
+Expanda de forma abrangente a descrição do objeto, elaborando um texto no formato DISSERTATIVO-ARGUMENTATIVO, robusto e detalhado, justificando de forma convincente a necessidade desta demanda para a Administração Pública municipal.
+
+ESTRUTURA OBRIGATÓRIA (mínimo 5 parágrafos, podendo chegar a 6 ou 7 se houver riqueza de conteúdo):
+1. INTRODUÇÃO (1 parágrafo): contextualize a importância da aquisição/contratação para o município e para o(s) órgão(s) solicitante(s), apresentando o objeto e sua relevância estratégica.
+2. DESENVOLVIMENTO (no MÍNIMO 3 parágrafos extensos, um por aspecto):
+   a) Cenário atual, desafios operacionais e necessidade concreta dos itens/serviços para a continuidade dos serviços públicos prestados à população.
+   b) Benefícios técnicos e econômicos: padronização, previsibilidade, ganhos de escala pelo agrupamento de secretarias, competitividade entre fornecedores, qualidade e melhores condições comerciais.
+   c) Otimização de recursos públicos, planejamento orçamentário, redução de processos licitatórios repetitivos, transparência, isonomia entre fornecedores e fortalecimento da confiança da população na gestão pública.
+3. CONCLUSÃO (1 parágrafo): reafirme a relevância estratégica da demanda, vinculando-a ao interesse público, aos princípios da legalidade, eficiência, economicidade e transparência, e à melhoria da qualidade de vida da população.
+
+REGRAS CRÍTICAS DE REDAÇÃO E FORMATAÇÃO:
+- Cada parágrafo deve ser DENSO e EXTENSO (entre 80 e 150 palavras), com argumentação encadeada — NUNCA frases curtas e isoladas.
+- Tom estritamente formal, técnico-jurídico, impessoal (3ª pessoa). Vocabulário próprio da Administração Pública.
+- Cite expressamente a Lei nº 14.133/2021 ao tratar do SRP/fundamentação legal, quando aplicável.
+- Quando os dados informarem o nome do município e da(s) secretaria(s), MENCIONE-OS nominalmente ao longo do texto para personalizar a justificativa.
+- NÃO inclua títulos, marcadores, numeração de seções, listas ou cabeçalhos (nada de "Introdução:", "1.", "a)" etc.). Retorne APENAS o texto corrido em parágrafos.
+- Separe cada parágrafo por UMA quebra de linha simples (\\n). Não use linhas em branco extras.
+- NÃO use markdown (sem **, sem *, sem #). Texto puro.
+- O resultado final deve ter no mínimo 500 palavras no total.`;
 
   try {
     const res = await fetch(GEMINI_URL, {
