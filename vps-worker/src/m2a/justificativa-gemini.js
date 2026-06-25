@@ -79,6 +79,11 @@ REGRAS CRÍTICAS DE REDAÇÃO E FORMATAÇÃO:
       },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.85,
+          topP: 0.95,
+          maxOutputTokens: 4096,
+        },
       }),
     });
     if (!res.ok) {
