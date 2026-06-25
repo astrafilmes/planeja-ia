@@ -287,27 +287,38 @@ export async function orquestrarCriacaoProcessoComum(
     erros.push({ etapa: "reordenar_itens", erro: msg });
   }
 
-  // 9. Justificativa Gemini
+  // 9. Justificativa Gemini — uma para CADA DFD criada (cada secretaria
+  //    precisa ter sua justificativa preenchida no portal).
   let justificativaGerada = false;
-  try {
-    onProgress({
-      etapa: "justificativa",
-      mensagem: "Gerando justificativa via IA…",
-      progresso: 97,
-    });
-    const texto = await gerarJustificativaGemini({
-      objeto: payload.objeto,
-      eRegistroPreco: false,
-      itens: itens.map((i) => String(i.descricao || "")).filter(Boolean),
-      secretarias: ordenadas.map((s) => s.sigla || s.nome).filter(Boolean),
-    });
-    await atualizarJustificativaM2A(dfdGer.dfdId, texto);
-    justificativaGerada = true;
-  } catch (err) {
-    const msg = String(err?.message ?? err);
-    console.error(`[comum] justificativa: ${msg}`);
-    erros.push({ etapa: "justificativa", erro: msg });
+  let justificativasOk = 0;
+  onProgress({
+    etapa: "justificativa",
+    mensagem: `Gerando justificativas (${dfdsCriadas.length} DFDs)…`,
+    progresso: 96,
+  });
+  for (let k = 0; k < dfdsCriadas.length; k++) {
+    const d = dfdsCriadas[k];
+    const rotulo = d.sec.sigla || d.sec.nome || `sec#${d.sec.numero}`;
+    try {
+      const texto = await gerarJustificativaGemini({
+        objeto: payload.objeto,
+        eRegistroPreco: false,
+        itens: itens.map((i) => String(i.descricao || "")).filter(Boolean),
+        secretarias: [rotulo],
+      });
+      await atualizarJustificativaM2A(d.dfdId, texto);
+      justificativasOk++;
+      if (d === dfdGer) justificativaGerada = true;
+      console.log(`[comum] justificativa OK para DFD ${d.dfdId} (${rotulo})`);
+    } catch (err) {
+      const msg = String(err?.message ?? err);
+      console.error(`[comum] justificativa ${rotulo} (DFD ${d.dfdId}): ${msg}`);
+      erros.push({ etapa: "justificativa", secretaria: rotulo, erro: msg });
+    }
   }
+  console.log(
+    `[comum] justificativas: ${justificativasOk}/${dfdsCriadas.length} concluídas`,
+  );
 
   onProgress({
     etapa: "concluido",
