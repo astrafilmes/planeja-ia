@@ -174,9 +174,10 @@ export async function gerarJustificativaM2A(
         `[m2a-ia] DFD ${dfdId} tentativa ${attempt}: resposta vazia/ack — iniciando polling (até ${Math.round(pollMaxMs / 1000)}s)…`,
       );
       const pollStart = Date.now();
+      let waitMs = pollMs;
       while (Date.now() - pollStart < pollMaxMs) {
         if (signal?.aborted) throw new Error("Operação cancelada pelo usuário.");
-        await new Promise((res) => setTimeout(res, pollMs));
+        await new Promise((res) => setTimeout(res, waitMs));
         try {
           const t = await lerJustificativaDaPaginaDFD(dfdId);
           if (t && t.length > 20) {
@@ -192,6 +193,8 @@ export async function gerarJustificativaM2A(
             `[m2a-ia] DFD ${dfdId} polling: ${e?.message || e}`,
           );
         }
+        // backoff exponencial leve, teto 15s
+        waitMs = Math.min(15_000, Math.round(waitMs * 1.5));
       }
     }
 
