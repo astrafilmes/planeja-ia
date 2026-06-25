@@ -98,56 +98,69 @@ export async function criarProcessoComumM2A(
   const decoder = new TextDecoder();
   let buffer = "";
 
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    let idx;
-    while ((idx = buffer.indexOf("\n\n")) !== -1) {
-      const block = buffer.slice(0, idx);
-      buffer = buffer.slice(idx + 2);
-      const lines = block.split("\n");
-      let event = "message";
-      const dataLines: string[] = [];
-      for (const ln of lines) {
-        if (ln.startsWith("event:")) event = ln.slice(6).trim();
-        else if (ln.startsWith("data:")) dataLines.push(ln.slice(5).trim());
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let idx;
+      while ((idx = buffer.indexOf("\n\n")) !== -1) {
+        const block = buffer.slice(0, idx);
+        buffer = buffer.slice(idx + 2);
+        const lines = block.split("\n");
+        let event = "message";
+        const dataLines: string[] = [];
+        for (const ln of lines) {
+          if (ln.startsWith("event:")) event = ln.slice(6).trim();
+          else if (ln.startsWith("data:")) dataLines.push(ln.slice(5).trim());
+        }
+        if (!dataLines.length) continue;
+        let data: any = null;
+        try {
+          data = JSON.parse(dataLines.join("\n"));
+        } catch {
+          data = { raw: dataLines.join("\n") };
+        }
+        if (event === "start")
+          onEvent({ type: "start", mensagem: data?.mensagem ?? "" });
+        else if (event === "progress")
+          onEvent({
+            type: "progress",
+            etapa: data?.etapa ?? "",
+            mensagem: data?.mensagem ?? "",
+            progresso: data?.progresso,
+            payload: data?.payload,
+          });
+        else if (event === "cancelled")
+          onEvent({
+            type: "cancelled",
+            mensagem: String(data?.mensagem ?? "Cancelado."),
+          });
+        else if (event === "done")
+          onEvent({
+            type: "done",
+            processoId: String(data?.processoId ?? ""),
+            dfdId: String(data?.dfdId ?? ""),
+            dfdsParticipantes: Array.isArray(data?.dfdsParticipantes)
+              ? data.dfdsParticipantes.map(String)
+              : [],
+            totalDfds: Number(data?.totalDfds ?? 0),
+            totalItens: Number(data?.totalItens ?? 0),
+            justificativaGerada: Boolean(data?.justificativaGerada),
+            erros: Array.isArray(data?.erros) ? data.erros : [],
+          });
+        else if (event === "error")
+          onEvent({
+            type: "error",
+            error: String(data?.error ?? "erro desconhecido"),
+          });
       }
-      if (!dataLines.length) continue;
-      let data: any = null;
-      try {
-        data = JSON.parse(dataLines.join("\n"));
-      } catch {
-        data = { raw: dataLines.join("\n") };
-      }
-      if (event === "start")
-        onEvent({ type: "start", mensagem: data?.mensagem ?? "" });
-      else if (event === "progress")
-        onEvent({
-          type: "progress",
-          etapa: data?.etapa ?? "",
-          mensagem: data?.mensagem ?? "",
-          progresso: data?.progresso,
-          payload: data?.payload,
-        });
-      else if (event === "done")
-        onEvent({
-          type: "done",
-          processoId: String(data?.processoId ?? ""),
-          dfdId: String(data?.dfdId ?? ""),
-          dfdsParticipantes: Array.isArray(data?.dfdsParticipantes)
-            ? data.dfdsParticipantes.map(String)
-            : [],
-          totalDfds: Number(data?.totalDfds ?? 0),
-          totalItens: Number(data?.totalItens ?? 0),
-          justificativaGerada: Boolean(data?.justificativaGerada),
-          erros: Array.isArray(data?.erros) ? data.erros : [],
-        });
-      else if (event === "error")
-        onEvent({
-          type: "error",
-          error: String(data?.error ?? "erro desconhecido"),
-        });
     }
+  } catch (err: any) {
+    if (err?.name === "AbortError") {
+      onEvent({ type: "cancelled", mensagem: "Envio cancelado." });
+      return;
+    }
+    throw err;
   }
 }
