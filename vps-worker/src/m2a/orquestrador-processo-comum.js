@@ -406,13 +406,23 @@ export async function orquestrarCriacaoProcessoComum(
       payload: { dfdId: d.dfdId, secretaria: rotulo, atual: k + 1, total: dfdsCriadas.length },
     });
     try {
-      const texto = await gerarJustificativaGemini({
-        objeto: payload.objeto,
-        eRegistroPreco: false,
-        itens: itens.map((i) => String(i.descricao || "")).filter(Boolean),
-        secretarias: [rotulo],
-      });
-      await atualizarJustificativaM2A(d.dfdId, texto);
+      let htmlJustificativa = null;
+      // 1ª tentativa: IA NATIVA do M2A (MIA!) — usa o próprio endpoint do portal.
+      try {
+        htmlJustificativa = await gerarJustificativaM2A(d.dfdId);
+      } catch (errMia) {
+        console.warn(
+          `[comum] IA nativa M2A falhou para DFD ${d.dfdId} (${rotulo}): ${errMia?.message || errMia} — tentando Gemini.`,
+        );
+        // 2ª tentativa: Gemini (já cai em fallback textual se falhar).
+        htmlJustificativa = await gerarJustificativaGemini({
+          objeto: payload.objeto,
+          eRegistroPreco: false,
+          itens: itens.map((i) => String(i.descricao || "")).filter(Boolean),
+          secretarias: [rotulo],
+        });
+      }
+      await atualizarJustificativaM2A(d.dfdId, htmlJustificativa);
       justificativasOk++;
       if (d === dfdGer) justificativaGerada = true;
       console.log(`[comum] justificativa OK para DFD ${d.dfdId} (${rotulo})`);
@@ -421,6 +431,7 @@ export async function orquestrarCriacaoProcessoComum(
       console.error(`[comum] justificativa ${rotulo} (DFD ${d.dfdId}): ${msg}`);
       erros.push({ etapa: "justificativa", secretaria: rotulo, erro: msg });
     }
+
   }
   console.log(
     `[comum] justificativas: ${justificativasOk}/${dfdsCriadas.length} concluídas`,
