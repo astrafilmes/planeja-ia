@@ -255,20 +255,20 @@ export async function orquestrarCriacaoProcessoComum(
       payload.unidade_orcamentaria_gerenciadora || payload.unidade_orcamentaria,
   });
 
-  // 7. Vincula demais DFDs ao processo
-  if (outrasDfds.length) {
-    onProgress({
-      etapa: "vincular_dfds",
-      mensagem: `Vinculando ${outrasDfds.length} DFD(s) ao processo…`,
-      progresso: 88,
-    });
-    try {
-      await vincularDFDsAoProcesso(processoId, outrasDfds);
-    } catch (err) {
-      const msg = String(err?.message ?? err);
-      console.error(`[comum] vincular DFDs: ${msg}`);
-      erros.push({ etapa: "vincular_dfds", erro: msg });
-    }
+  // 7. Vincula TODAS as DFDs (inclusive a da gerenciadora — safety net, caso
+  //    o gerar_processo crie a casca sem puxar os itens) ao processo.
+  const todasDfds = [dfdGer.dfdId, ...outrasDfds];
+  onProgress({
+    etapa: "vincular_dfds",
+    mensagem: `Vinculando ${todasDfds.length} DFD(s) ao processo…`,
+    progresso: 88,
+  });
+  try {
+    await vincularDFDsAoProcesso(processoId, todasDfds);
+  } catch (err) {
+    const msg = String(err?.message ?? err);
+    console.error(`[comum] vincular DFDs: ${msg}`);
+    erros.push({ etapa: "vincular_dfds", erro: msg });
   }
 
   // 8. Reordena itens conforme ordem da planilha (master list)
