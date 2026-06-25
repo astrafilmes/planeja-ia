@@ -336,16 +336,35 @@ export async function orquestrarCriacaoProcessoComum(
       payload.unidade_orcamentaria_gerenciadora || payload.unidade_orcamentaria,
   });
 
-  // 7. Vincula TODAS as DFDs (inclusive a da gerenciadora — safety net, caso
-  //    o gerar_processo crie a casca sem puxar os itens) ao processo.
+  // 7. Vincula TODAS as DFDs ao processo — 1 POST por DFD (CSV não funciona
+  //    no portal: persiste só a primeira).
+  ensureNotAborted(signal);
   const todasDfds = [dfdGer.dfdId, ...outrasDfds];
   onProgress({
     etapa: "vincular_dfds",
-    mensagem: `Vinculando ${todasDfds.length} DFD(s) ao processo…`,
+    mensagem: `Vinculando ${todasDfds.length} DFD(s) ao processo ${processoId}…`,
     progresso: 88,
+    payload: { total: todasDfds.length, dfdIds: todasDfds },
   });
   try {
-    await vincularDFDsAoProcesso(processoId, todasDfds);
+    const r = await vincularDFDsAoProcesso(processoId, todasDfds, (i, total, dfdId) => {
+      onProgress({
+        etapa: "vincular_dfd",
+        mensagem: `Vinculando DFD ${dfdId} (${i + 1}/${total})…`,
+        progresso: 88 + ((i + 1) / total) * 3,
+        payload: { dfdId, atual: i + 1, total },
+      });
+    });
+    if (r.falhas?.length) {
+      erros.push({
+        etapa: "vincular_dfds",
+        erro: `Falhas em ${r.falhas.length}/${todasDfds.length} DFD(s)`,
+        detalhes: r.falhas,
+      });
+    }
+    console.log(
+      `[comum] vinculadas=${r.vinculadas}/${todasDfds.length} falhas=${r.falhas?.length || 0}`,
+    );
   } catch (err) {
     const msg = String(err?.message ?? err);
     console.error(`[comum] vincular DFDs: ${msg}`);
@@ -353,6 +372,7 @@ export async function orquestrarCriacaoProcessoComum(
   }
 
   // 8. Reordena itens conforme ordem da planilha (master list)
+  ensureNotAborted(signal);
   onProgress({
     etapa: "reordenar_itens",
     mensagem: "Reordenando itens do processo…",
@@ -368,18 +388,20 @@ export async function orquestrarCriacaoProcessoComum(
     erros.push({ etapa: "reordenar_itens", erro: msg });
   }
 
-  // 9. Justificativa Gemini — uma para CADA DFD criada (cada secretaria
-  //    precisa ter sua justificativa preenchida no portal).
+  // 9. Justificativa Gemini — uma para CADA DFD criada (sem retry; fallback
+  //    imediato em caso de erro/limite do Gemini).
   let justificativaGerada = false;
   let justificativasOk = 0;
-  onProgress({
-    etapa: "justificativa",
-    mensagem: `Gerando justificativas (${dfdsCriadas.length} DFDs)…`,
-    progresso: 96,
-  });
   for (let k = 0; k < dfdsCriadas.length; k++) {
+    ensureNotAborted(signal);
     const d = dfdsCriadas[k];
     const rotulo = d.sec.sigla || d.sec.nome || `sec#${d.sec.numero}`;
+    onProgress({
+      etapa: "justificativa",
+      mensagem: `Justificativa ${k + 1}/${dfdsCriadas.length} — DFD ${d.dfdId} (${rotulo})`,
+      progresso: 95 + ((k + 1) / dfdsCriadas.length) * 4,
+      payload: { dfdId: d.dfdId, secretaria: rotulo, atual: k + 1, total: dfdsCriadas.length },
+    });
     try {
       const texto = await gerarJustificativaGemini({
         objeto: payload.objeto,
@@ -400,6 +422,7 @@ export async function orquestrarCriacaoProcessoComum(
   console.log(
     `[comum] justificativas: ${justificativasOk}/${dfdsCriadas.length} concluídas`,
   );
+
 
   onProgress({
     etapa: "concluido",
