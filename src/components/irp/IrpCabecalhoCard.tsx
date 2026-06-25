@@ -258,18 +258,20 @@ export function IrpCabecalhoCard({
             usada como data do processo, manifestação e finalização da IRP.
           </p>
         </div>
-        <div className="flex flex-col gap-1.5">
-          <Label>Data Consolidação *</Label>
-          <Input
-            type="date"
-            value={form.data_consolidacao}
-            onChange={(e) => update({ data_consolidacao: e.target.value })}
-            onBlur={persist}
-          />
-          <p className="text-[10px] text-muted-foreground">
-            geralmente 1 dia útil após a data da DFD.
-          </p>
-        </div>
+        {eSRP && (
+          <div className="flex flex-col gap-1.5">
+            <Label>Data Consolidação *</Label>
+            <Input
+              type="date"
+              value={form.data_consolidacao}
+              onChange={(e) => update({ data_consolidacao: e.target.value })}
+              onBlur={persist}
+            />
+            <p className="text-[10px] text-muted-foreground">
+              geralmente 1 dia útil após a data da DFD.
+            </p>
+          </div>
+        )}
         <div className="flex flex-col gap-1.5">
           <Label>Ano orçamentário *</Label>
           <Input
