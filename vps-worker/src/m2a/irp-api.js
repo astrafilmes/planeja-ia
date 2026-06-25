@@ -402,7 +402,19 @@ export async function incluirItemNaDFD({
       `incluirItemNaDFD: status ${res.status} item_padronizado=${itemPadronizadoId}`,
     );
   }
-  ensureOkJson(res, "incluirItemNaDFD", String(itemPadronizadoId));
+  try {
+    ensureOkJson(res, "incluirItemNaDFD", String(itemPadronizadoId));
+  } catch (err) {
+    const msg = String(err?.message ?? err);
+    // Item já existe na DFD: tratamos como sucesso idempotente.
+    if (/já existe um item com o mesmo produto\/serviço/i.test(msg)) {
+      console.warn(
+        `[irp-api] item ${itemPadronizadoId} já presente na DFD ${dfdId} — tratado como sucesso (idempotente).`,
+      );
+      return { ok: true, duplicate: true };
+    }
+    throw err;
+  }
   const afterIds = await listarItensDFD(dfdId);
   const before = new Set(beforeIds.map(String));
   const created = afterIds.filter((id) => !before.has(String(id)));
