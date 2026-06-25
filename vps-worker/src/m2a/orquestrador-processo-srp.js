@@ -40,6 +40,8 @@ import {
   gerarJustificativaGemini,
   atualizarJustificativaM2A,
 } from "./justificativa-gemini.js";
+import { gerarJustificativaM2A } from "./justificativa-m2a.js";
+
 
 function chaveSecretaria(sec) {
   if (sec?.chave) return String(sec.chave);
@@ -322,14 +324,24 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
     const listaSecretariasTxt = todasSecretarias
       .map((s) => s.sigla || s.nome)
       .filter(Boolean);
-    const texto = await gerarJustificativaGemini({
-      objeto: payload.objeto,
-      eRegistroPreco: true,
-      itens: listaItensTxt,
-      secretarias: listaSecretariasTxt,
-    });
-    await atualizarJustificativaM2A(dfdId, texto);
+    let htmlJustificativa = null;
+    try {
+      // 1ª: IA nativa do M2A (MIA!) — chamada por DFD.
+      htmlJustificativa = await gerarJustificativaM2A(dfdId);
+    } catch (errMia) {
+      console.warn(
+        `[justificativa] IA M2A falhou (${errMia?.message || errMia}) — tentando Gemini.`,
+      );
+      htmlJustificativa = await gerarJustificativaGemini({
+        objeto: payload.objeto,
+        eRegistroPreco: true,
+        itens: listaItensTxt,
+        secretarias: listaSecretariasTxt,
+      });
+    }
+    await atualizarJustificativaM2A(dfdId, htmlJustificativa);
     justificativaGerada = true;
+
   } catch (err) {
     const msg = String(err?.message ?? err);
     console.error(`[justificativa] falhou: ${msg}`);
