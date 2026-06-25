@@ -114,6 +114,7 @@ export function IrpCabecalhoCard({
         : form.responsavel_dfd,
       comissao_planejamento: "3911",
       classificacao: initialJob.classificacao ?? form.classificacao,
+      e_registro_preco: form.e_registro_preco ?? true,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialJob?.id]);
