@@ -1,5 +1,6 @@
 // Rota: criação de Processo Administrativo COMUM (não-SRP) no portal M2A.
-// SSE — espelha processos-srp.js.
+// SSE — espelha processos-srp.js. Suporta cancelamento via desconexão do
+// cliente (AbortController do socket).
 
 import { orquestrarCriacaoProcessoComum } from "../m2a/orquestrador-processo-comum.js";
 
@@ -29,9 +30,21 @@ export async function processosComumRoutes(app) {
     });
 
     const send = (event, data) => {
-      reply.raw.write(`event: ${event}\n`);
-      reply.raw.write(`data: ${JSON.stringify(data)}\n\n`);
+      try {
+        reply.raw.write(`event: ${event}\n`);
+        reply.raw.write(`data: ${JSON.stringify(data)}\n\n`);
+      } catch {
+        // socket already closed
+      }
     };
+
+    // AbortController acionado se o cliente fechar a conexão.
+    const abortCtrl = new AbortController();
+    const onClose = () => {
+      app.log.warn("Cliente desconectou — cancelando processo comum.");
+      abortCtrl.abort();
+    };
+    req.raw.on("close", onClose);
 
     const onProgress = (evt) => {
       try {
@@ -41,15 +54,38 @@ export async function processosComumRoutes(app) {
       }
     };
 
+    // Heartbeat para impedir buffering e detectar quebra de conexão.
+    const hb = setInterval(() => {
+      try {
+        reply.raw.write(`: heartbeat ${Date.now()}\n\n`);
+      } catch {
+        clearInterval(hb);
+      }
+    }, 15000);
+
     try {
       send("start", { mensagem: "Iniciando criação do processo comum…" });
-      const result = await orquestrarCriacaoProcessoComum(payload, onProgress);
+      const result = await orquestrarCriacaoProcessoComum(
+        payload,
+        onProgress,
+        abortCtrl.signal,
+      );
       send("done", { ok: true, ...result });
     } catch (err) {
-      app.log.error({ err }, "Falha em orquestrarCriacaoProcessoComum");
-      send("error", { error: String(err?.message ?? err) });
+      if (err?.code === "ABORTED" || abortCtrl.signal.aborted) {
+        send("cancelled", { mensagem: "Operação cancelada pelo usuário." });
+      } else {
+        app.log.error({ err }, "Falha em orquestrarCriacaoProcessoComum");
+        send("error", { error: String(err?.message ?? err) });
+      }
     } finally {
-      reply.raw.end();
+      clearInterval(hb);
+      req.raw.off("close", onClose);
+      try {
+        reply.raw.end();
+      } catch {
+        // already ended
+      }
     }
   });
 }
