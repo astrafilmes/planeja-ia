@@ -86,9 +86,18 @@ function dedupItensParaSecretaria(itens, sec) {
   return Array.from(grupos.values());
 }
 
+function ensureNotAborted(signal) {
+  if (signal?.aborted) {
+    const e = new Error("Operação cancelada pelo usuário.");
+    e.code = "ABORTED";
+    throw e;
+  }
+}
+
 export async function orquestrarCriacaoProcessoComum(
   payload,
   onProgress = () => {},
+  signal,
 ) {
   const itens = Array.isArray(payload.itens) ? payload.itens : [];
   if (!itens.length) throw new Error("Nenhum item informado em payload.itens");
