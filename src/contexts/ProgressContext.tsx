@@ -8,7 +8,14 @@ import {
   useState,
 } from "react";
 
-type ProgressStatus = "idle" | "running" | "success" | "error";
+type ProgressStatus = "idle" | "running" | "success" | "error" | "cancelled";
+
+export type ProgressLogEntry = {
+  id: number;
+  at: number;
+  text: string;
+  etapa?: string;
+};
 
 type ProgressState = {
   isVisible: boolean;
@@ -17,17 +24,24 @@ type ProgressState = {
   progress: number;
   isIndeterminate: boolean;
   status: ProgressStatus;
+  logs: ProgressLogEntry[];
+  cancellable: boolean;
 };
 
 type ProgressContextValue = ProgressState & {
-  startTask: (title: string, statusText?: string) => void;
+  startTask: (
+    title: string,
+    statusText?: string,
+    options?: { onCancel?: () => void },
+  ) => void;
   updateProgress: (
     progress: number,
     statusText?: string,
-    options?: { isIndeterminate?: boolean },
+    options?: { isIndeterminate?: boolean; etapa?: string; addLog?: boolean },
   ) => void;
   finishTask: (successMessage: string) => void;
   failTask: (errorMessage: string) => void;
+  cancelTask: () => void;
   closeTracker: () => void;
 };
 
@@ -38,13 +52,18 @@ const initialState: ProgressState = {
   progress: 0,
   isIndeterminate: false,
   status: "idle",
+  logs: [],
+  cancellable: false,
 };
 
 const ProgressContext = createContext<ProgressContextValue | null>(null);
 
+let logSeq = 0;
+
 export function ProgressProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<ProgressState>(initialState);
   const autoCloseRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onCancelRef = useRef<(() => void) | null>(null);
 
   const clearAutoClose = useCallback(() => {
     if (!autoCloseRef.current) return;
@@ -54,12 +73,14 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
 
   const closeTracker = useCallback(() => {
     clearAutoClose();
+    onCancelRef.current = null;
     setState(initialState);
   }, [clearAutoClose]);
 
   const startTask = useCallback(
-    (title: string, statusText = "Preparando tarefa...") => {
+    (title: string, statusText = "Preparando tarefa...", options) => {
       clearAutoClose();
+      onCancelRef.current = options?.onCancel ?? null;
       setState({
         isVisible: true,
         title,
@@ -67,6 +88,8 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
         progress: 0,
         isIndeterminate: true,
         status: "running",
+        logs: [],
+        cancellable: Boolean(options?.onCancel),
       });
     },
     [clearAutoClose],
@@ -76,17 +99,36 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     (
       progress: number,
       statusText?: string,
-      options?: { isIndeterminate?: boolean },
+      options?: { isIndeterminate?: boolean; etapa?: string; addLog?: boolean },
     ) => {
       clearAutoClose();
-      setState((current) => ({
-        ...current,
-        isVisible: true,
-        status: "running",
-        statusText: statusText ?? current.statusText,
-        progress: clampProgress(progress),
-        isIndeterminate: options?.isIndeterminate ?? false,
-      }));
+      setState((current) => {
+        const nextStatusText = statusText ?? current.statusText;
+        const shouldLog =
+          (options?.addLog ?? true) &&
+          statusText &&
+          statusText !== current.statusText;
+        const logs = shouldLog
+          ? [
+              ...current.logs.slice(-49),
+              {
+                id: ++logSeq,
+                at: Date.now(),
+                text: statusText!,
+                etapa: options?.etapa,
+              },
+            ]
+          : current.logs;
+        return {
+          ...current,
+          isVisible: true,
+          status: "running",
+          statusText: nextStatusText,
+          progress: clampProgress(progress),
+          isIndeterminate: options?.isIndeterminate ?? false,
+          logs,
+        };
+      });
     },
     [clearAutoClose],
   );
@@ -95,12 +137,14 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     clearAutoClose();
     autoCloseRef.current = setTimeout(() => {
       setState(initialState);
+      onCancelRef.current = null;
       autoCloseRef.current = null;
-    }, 3000);
+    }, 5000);
   }, [clearAutoClose]);
 
   const finishTask = useCallback(
     (successMessage: string) => {
+      onCancelRef.current = null;
       setState((current) => ({
         ...current,
         isVisible: true,
@@ -108,6 +152,7 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
         progress: 100,
         isIndeterminate: false,
         status: "success",
+        cancellable: false,
       }));
       scheduleClose();
     },
@@ -117,16 +162,38 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
   const failTask = useCallback(
     (errorMessage: string) => {
       clearAutoClose();
+      onCancelRef.current = null;
       setState((current) => ({
         ...current,
         isVisible: true,
         statusText: errorMessage,
         isIndeterminate: false,
         status: "error",
+        cancellable: false,
       }));
     },
     [clearAutoClose],
   );
+
+  const cancelTask = useCallback(() => {
+    const cb = onCancelRef.current;
+    onCancelRef.current = null;
+    if (cb) {
+      try {
+        cb();
+      } catch (err) {
+        console.error("[progress] erro no onCancel:", err);
+      }
+    }
+    setState((current) => ({
+      ...current,
+      isVisible: true,
+      status: "cancelled",
+      statusText: "Cancelando…",
+      isIndeterminate: true,
+      cancellable: false,
+    }));
+  }, []);
 
   const value = useMemo(
     () => ({
@@ -135,9 +202,10 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       updateProgress,
       finishTask,
       failTask,
+      cancelTask,
       closeTracker,
     }),
-    [closeTracker, failTask, finishTask, startTask, state, updateProgress],
+    [closeTracker, failTask, finishTask, startTask, state, updateProgress, cancelTask],
   );
 
   return (
