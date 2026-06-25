@@ -147,8 +147,11 @@ export async function orquestrarCriacaoProcessoComum(
       },
     });
 
+    // IMPORTANTE: o "orgao_solicitante" da DFD é a Unidade Gestora (m2a_orgao_id),
+    // NÃO o Órgão da Dotação (m2a_dot_orgao_id). Inverter quebra quando a secretaria
+    // usa dotação de outro órgão (ex.: SMA com dotação sob Cultura).
     const orgaoSec = String(
-      sec.m2a_dot_orgao_id || sec.m2a_orgao_id || payload.orgao_solicitante || "",
+      sec.m2a_orgao_id || sec.m2a_dot_orgao_id || payload.orgao_solicitante || "",
     ).trim();
     const uoSec = String(sec.m2a_uo_id || payload.unidade_orcamentaria || "").trim();
     if (!orgaoSec || !uoSec) {
