@@ -131,7 +131,7 @@ export async function orquestrarCriacaoProcessoComum(
     const itensInseridos = [];
     for (let j = 0; j < itens.length; j++) {
       const item = itens[j];
-      const qty = quantidadeDoItem(item, sec, [gerenciadoraChave]);
+      const qty = quantidadeDoItem(item, sec);
       if (!Number.isFinite(qty) || qty <= 0) continue;
       onProgress({
         etapa: "incluir_itens",
