@@ -69,33 +69,42 @@ export async function criarDFDComum(payload) {
     throw new Error(`DFD comum: portal retornou status ${res.status}`);
   }
   const $ = loadDoc(res.html);
-  const erros = $(".errorlist, .alert-danger, .alert-error")
-    .map((_, el) => $(el).text().replace(/\s+/g, " ").trim())
-    .get()
-    .filter(Boolean);
-  if (erros.length) {
-    throw new Error(`DFD comum rejeitada: ${erros.join(" | ")}`);
-  }
+  // Coleta erros do formulário em TODOS os formatos conhecidos do portal
+  const erros = new Set();
+  $(".errorlist li, .errorlist, .alert-danger, .alert-error, .invalid-feedback, .help-block.text-danger")
+    .each((_, el) => {
+      const t = $(el).text().replace(/\s+/g, " ").trim();
+      if (t) erros.add(t);
+    });
+  // django form non_field_errors
+  $("ul.errorlist.nonfield li").each((_, el) => {
+    const t = $(el).text().replace(/\s+/g, " ").trim();
+    if (t) erros.add(t);
+  });
 
-  await sleep(2500);
-  const dfdId = String(res.finalUrl || "").match(
+  const finalUrl = String(res.finalUrl || "");
+  const dfdId = finalUrl.match(
     /\/gestao_compras\/formalizacao_demanda\/(\d+)\/?/,
   )?.[1];
-  console.log(`[criarDFDComum] dfdId=${dfdId || "NAO_IDENTIFICADO"}`);
+
+  // Se voltou para /incluir/ é porque NÃO criou (form re-renderizado).
+  // NUNCA fazer fallback pegando a "última DFD da tabela" — isso já causou
+  // bug grave de mesclar item da SMA na DFD do INF.
   if (!dfdId) {
-    // fallback: procura na tabela pelo objeto recém criado
-    const t = await m2a.get(DFD_TABELA_PATH);
-    const $t = loadDoc(t.html);
-    const linhas = $t("tr.kt-datatable__row.tr_solicitacao_despesa").toArray();
-    for (const el of linhas) {
-      const trId = $t(el).attr("id") || "";
-      const m = trId.match(/tr_(\d+)/);
-      if (m) return { dfdId: m[1] };
-    }
-    throw new Error("DFD comum criada mas ID não foi localizado.");
+    const errStr = erros.size
+      ? Array.from(erros).join(" | ")
+      : `sem mensagem de erro identificável (finalUrl=${finalUrl}, bytes=${(res.html || "").length})`;
+    console.error(`[criarDFDComum] FALHA: ${errStr}`);
+    throw new Error(`DFD comum não foi criada: ${errStr}`);
   }
+  if (erros.size) {
+    console.warn(`[criarDFDComum] dfdId=${dfdId} criada com avisos: ${Array.from(erros).join(" | ")}`);
+  }
+  await sleep(1500);
+  console.log(`[criarDFDComum] dfdId=${dfdId}`);
   return { dfdId };
 }
+
 
 // ---------------------------------------------------------------------
 // Cadastra dotação (Solicitação de Despesa) numa DFD.
