@@ -160,17 +160,23 @@ export async function orquestrarCriacaoProcessoComum(
       continue;
     }
 
-    // 2. Itens da secretaria
+    // 2. Itens da secretaria — dedupe por (produto+unidade) para evitar
+    //    "Já existe um item com o mesmo produto/serviço e unidade de
+    //    fornecimento" que o M2A rejeita dentro da mesma DFD.
+    const grupos = dedupItensParaSecretaria(itens, sec);
+    if (grupos.length < itens.filter((it) => quantidadeDoItem(it, sec) > 0).length) {
+      console.log(
+        `[comum] ${rotulo}: dedupe agrupou itens duplicados (produto+unidade) → ${grupos.length} itens únicos.`,
+      );
+    }
     const itensInseridos = [];
-    for (let j = 0; j < itens.length; j++) {
-      const item = itens[j];
-      const qty = quantidadeDoItem(item, sec);
-      if (!Number.isFinite(qty) || qty <= 0) continue;
+    for (let j = 0; j < grupos.length; j++) {
+      const { item, qty, indices } = grupos[j];
       onProgress({
         etapa: "incluir_itens",
-        mensagem: `${rotulo}: item ${j + 1}/${itens.length} (${String(item.descricao || "").slice(0, 50)})`,
-        progresso: baseProg + (j / itens.length) * (60 / ordenadas.length) * 0.6,
-        payload: { secretaria: rotulo, atual: j + 1, total: itens.length },
+        mensagem: `${rotulo}: item ${j + 1}/${grupos.length} (${String(item.descricao || "").slice(0, 50)})`,
+        progresso: baseProg + (j / grupos.length) * (60 / ordenadas.length) * 0.6,
+        payload: { secretaria: rotulo, atual: j + 1, total: grupos.length },
       });
       try {
         await criarItemEAdicionarNaDFD({
@@ -181,18 +187,25 @@ export async function orquestrarCriacaoProcessoComum(
           unidade: item.unidade,
           quantidadeGerenciadora: qty,
         });
-        itensInseridos.push({ descricao: String(item.descricao || ""), qty });
+        itensInseridos.push({
+          descricao: String(item.descricao || ""),
+          qty,
+          origens: indices,
+        });
       } catch (err) {
         const msg = String(err?.message ?? err);
-        console.error(`[comum] ${rotulo} item #${j + 1}: ${msg}`);
+        const origemTxt = indices.length > 1 ? ` (origens IRP #${indices.join(",")})` : ` (origem IRP #${indices[0]})`;
+        console.error(`[comum] ${rotulo} item ${j + 1}/${grupos.length}${origemTxt}: ${msg}`);
         erros.push({
           etapa: "incluir_itens",
           secretaria: rotulo,
           item: j + 1,
+          origens_irp: indices,
           erro: msg,
         });
       }
     }
+
 
     // 3. Dotação (best-effort)
     // Aceita tanto o ID Django numérico cadastrado na secretaria (m2a_dot_id —
