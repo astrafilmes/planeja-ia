@@ -38,13 +38,12 @@ function chaveSecretaria(sec) {
   return String(sec?.numero ?? "");
 }
 
-function quantidadeDoItem(item, sec, chavesExtras = []) {
+function quantidadeDoItem(item, sec) {
+  // No fluxo COMUM cada secretaria tem ITENS PRÓPRIOS — não fazemos fallback
+  // para a chave da gerenciadora (isso fazia o item da gerenciadora vazar para
+  // todas as outras DFDs).
   const quantidades = item?.quantidades ?? {};
-  const chaves = [
-    chaveSecretaria(sec),
-    ...chavesExtras,
-    String(sec?.numero ?? ""),
-  ].filter(Boolean);
+  const chaves = [chaveSecretaria(sec), String(sec?.numero ?? "")].filter(Boolean);
   for (const chave of chaves) {
     if (Object.prototype.hasOwnProperty.call(quantidades, chave)) {
       const q = Number(quantidades[chave] ?? 0);
@@ -132,7 +131,7 @@ export async function orquestrarCriacaoProcessoComum(
     const itensInseridos = [];
     for (let j = 0; j < itens.length; j++) {
       const item = itens[j];
-      const qty = quantidadeDoItem(item, sec, [gerenciadoraChave]);
+      const qty = quantidadeDoItem(item, sec);
       if (!Number.isFinite(qty) || qty <= 0) continue;
       onProgress({
         etapa: "incluir_itens",
@@ -256,20 +255,20 @@ export async function orquestrarCriacaoProcessoComum(
       payload.unidade_orcamentaria_gerenciadora || payload.unidade_orcamentaria,
   });
 
-  // 7. Vincula demais DFDs ao processo
-  if (outrasDfds.length) {
-    onProgress({
-      etapa: "vincular_dfds",
-      mensagem: `Vinculando ${outrasDfds.length} DFD(s) ao processo…`,
-      progresso: 88,
-    });
-    try {
-      await vincularDFDsAoProcesso(processoId, outrasDfds);
-    } catch (err) {
-      const msg = String(err?.message ?? err);
-      console.error(`[comum] vincular DFDs: ${msg}`);
-      erros.push({ etapa: "vincular_dfds", erro: msg });
-    }
+  // 7. Vincula TODAS as DFDs (inclusive a da gerenciadora — safety net, caso
+  //    o gerar_processo crie a casca sem puxar os itens) ao processo.
+  const todasDfds = [dfdGer.dfdId, ...outrasDfds];
+  onProgress({
+    etapa: "vincular_dfds",
+    mensagem: `Vinculando ${todasDfds.length} DFD(s) ao processo…`,
+    progresso: 88,
+  });
+  try {
+    await vincularDFDsAoProcesso(processoId, todasDfds);
+  } catch (err) {
+    const msg = String(err?.message ?? err);
+    console.error(`[comum] vincular DFDs: ${msg}`);
+    erros.push({ etapa: "vincular_dfds", erro: msg });
   }
 
   // 8. Reordena itens conforme ordem da planilha (master list)
@@ -288,27 +287,38 @@ export async function orquestrarCriacaoProcessoComum(
     erros.push({ etapa: "reordenar_itens", erro: msg });
   }
 
-  // 9. Justificativa Gemini
+  // 9. Justificativa Gemini — uma para CADA DFD criada (cada secretaria
+  //    precisa ter sua justificativa preenchida no portal).
   let justificativaGerada = false;
-  try {
-    onProgress({
-      etapa: "justificativa",
-      mensagem: "Gerando justificativa via IA…",
-      progresso: 97,
-    });
-    const texto = await gerarJustificativaGemini({
-      objeto: payload.objeto,
-      eRegistroPreco: false,
-      itens: itens.map((i) => String(i.descricao || "")).filter(Boolean),
-      secretarias: ordenadas.map((s) => s.sigla || s.nome).filter(Boolean),
-    });
-    await atualizarJustificativaM2A(dfdGer.dfdId, texto);
-    justificativaGerada = true;
-  } catch (err) {
-    const msg = String(err?.message ?? err);
-    console.error(`[comum] justificativa: ${msg}`);
-    erros.push({ etapa: "justificativa", erro: msg });
+  let justificativasOk = 0;
+  onProgress({
+    etapa: "justificativa",
+    mensagem: `Gerando justificativas (${dfdsCriadas.length} DFDs)…`,
+    progresso: 96,
+  });
+  for (let k = 0; k < dfdsCriadas.length; k++) {
+    const d = dfdsCriadas[k];
+    const rotulo = d.sec.sigla || d.sec.nome || `sec#${d.sec.numero}`;
+    try {
+      const texto = await gerarJustificativaGemini({
+        objeto: payload.objeto,
+        eRegistroPreco: false,
+        itens: itens.map((i) => String(i.descricao || "")).filter(Boolean),
+        secretarias: [rotulo],
+      });
+      await atualizarJustificativaM2A(d.dfdId, texto);
+      justificativasOk++;
+      if (d === dfdGer) justificativaGerada = true;
+      console.log(`[comum] justificativa OK para DFD ${d.dfdId} (${rotulo})`);
+    } catch (err) {
+      const msg = String(err?.message ?? err);
+      console.error(`[comum] justificativa ${rotulo} (DFD ${d.dfdId}): ${msg}`);
+      erros.push({ etapa: "justificativa", secretaria: rotulo, erro: msg });
+    }
   }
+  console.log(
+    `[comum] justificativas: ${justificativasOk}/${dfdsCriadas.length} concluídas`,
+  );
 
   onProgress({
     etapa: "concluido",
