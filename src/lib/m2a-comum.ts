@@ -26,6 +26,7 @@ export type M2AComumProgressEvent =
       justificativaGerada: boolean;
       erros: Array<{ etapa: string; erro: string; secretaria?: string }>;
     }
+  | { type: "cancelled"; mensagem: string }
   | { type: "error"; error: string };
 
 export interface M2AComumPayload {
