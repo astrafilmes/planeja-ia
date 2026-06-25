@@ -80,6 +80,7 @@ type SecretariaM2A = {
  m2a_orgao_id: string | null;
   m2a_dot_orgao_id: string | null;
  m2a_uo_id: string | null;
+  m2a_dot_id: string | null;
 };
 
 type IrpImportRow = {
@@ -315,7 +316,7 @@ function Page() {
  queryFn: async () => {
  const { data, error } = await supabase
  .from("secretarias")
-  .select("id, numero, sigla, nome, m2a_orgao_id, m2a_dot_orgao_id, m2a_uo_id")
+  .select("id, numero, sigla, nome, m2a_orgao_id, m2a_dot_orgao_id, m2a_uo_id, m2a_dot_id")
  .eq("ativa", true);
  if (error) throw error;
  return (data ?? []) as SecretariaM2A[];
@@ -857,6 +858,7 @@ function Page() {
       m2a_orgao_id: ids.orgaoId,
       m2a_dot_orgao_id: r.secretaria!.m2a_dot_orgao_id,
       m2a_uo_id: ids.uoId,
+      m2a_dot_id: r.secretaria!.m2a_dot_id,
       ref_coluna: refColuna,
      };
     });

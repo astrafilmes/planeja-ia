@@ -163,8 +163,13 @@ export async function orquestrarCriacaoProcessoComum(
     }
 
     // 3. Dotação (best-effort)
+    // Aceita tanto o ID Django numérico cadastrado na secretaria (m2a_dot_id —
+    // padrão usado pelo fluxo de contratos) quanto aliases legados.
     const despesaProjeto =
-      sec.m2a_despesa_projeto_id || sec.despesa_projeto_atividade || null;
+      sec.m2a_dot_id ||
+      sec.m2a_despesa_projeto_id ||
+      sec.despesa_projeto_atividade ||
+      null;
     if (despesaProjeto) {
       onProgress({
         etapa: "cadastrar_dotacao",
@@ -184,7 +189,7 @@ export async function orquestrarCriacaoProcessoComum(
       }
     } else {
       console.log(
-        `[comum] ${rotulo}: sem despesa_projeto_atividade — dotação pulada.`,
+        `[comum] ${rotulo}: sem m2a_dot_id na secretaria — dotação pulada.`,
       );
     }
 

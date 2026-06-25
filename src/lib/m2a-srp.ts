@@ -39,6 +39,8 @@ export interface M2ASrpSecretariaParticipante {
   m2a_orgao_id: string | null;
   m2a_dot_orgao_id?: string | null;
   m2a_uo_id: string | null;
+  /** ID Django numérico do despesa_projeto_atividade (dotação) cadastrado na secretaria */
+  m2a_dot_id?: string | null;
   ref_coluna?: number | null;
 }
 
