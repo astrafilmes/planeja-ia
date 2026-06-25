@@ -127,14 +127,22 @@ export async function orquestrarCriacaoProcessoComum(
 
   // 1. Loop de criação de DFDs por secretaria
   for (let i = 0; i < ordenadas.length; i++) {
+    ensureNotAborted(signal);
     const sec = ordenadas[i];
     const rotulo = sec.sigla || sec.nome || `sec#${sec.numero}`;
     const baseProg = 2 + (i / ordenadas.length) * 60;
+    // Pré-calcula grupos para mostrar quantos itens a secretaria vai receber
+    const gruposPreview = dedupItensParaSecretaria(itens, sec);
     onProgress({
       etapa: "criar_dfd_secretaria",
-      mensagem: `Criando DFD de ${rotulo} (${i + 1}/${ordenadas.length})…`,
+      mensagem: `Criando DFD de ${rotulo} (${i + 1}/${ordenadas.length}) — ${gruposPreview.length} item(ns)`,
       progresso: baseProg,
-      payload: { secretaria: rotulo, atual: i + 1, total: ordenadas.length },
+      payload: {
+        secretaria: rotulo,
+        atual: i + 1,
+        total: ordenadas.length,
+        itensPlanejados: gruposPreview.length,
+      },
     });
 
     const orgaoSec = String(
@@ -162,6 +170,12 @@ export async function orquestrarCriacaoProcessoComum(
           sec.comissao_planejamento || payload.comissao_planejamento,
       });
       dfdId = r.dfdId;
+      onProgress({
+        etapa: "dfd_criada",
+        mensagem: `DFD ${dfdId} criada para ${rotulo}`,
+        progresso: baseProg + 1,
+        payload: { secretaria: rotulo, dfdId },
+      });
     } catch (err) {
       const msg = String(err?.message ?? err);
       console.error(`[comum] DFD ${rotulo} falhou: ${msg}`);
@@ -169,23 +183,34 @@ export async function orquestrarCriacaoProcessoComum(
       continue;
     }
 
-    // 2. Itens da secretaria — dedupe por (produto+unidade) para evitar
-    //    "Já existe um item com o mesmo produto/serviço e unidade de
-    //    fornecimento" que o M2A rejeita dentro da mesma DFD.
-    const grupos = dedupItensParaSecretaria(itens, sec);
-    if (grupos.length < itens.filter((it) => quantidadeDoItem(it, sec) > 0).length) {
-      console.log(
-        `[comum] ${rotulo}: dedupe agrupou itens duplicados (produto+unidade) → ${grupos.length} itens únicos.`,
-      );
-    }
+    // 2. Itens da secretaria — dedupe por (produto+unidade)
+    const grupos = gruposPreview;
+    // LOG: lista exatamente o que vai ser inserido nesta DFD para diagnóstico
+    console.log(
+      `[comum] DFD ${dfdId} (${rotulo}) — ${grupos.length} item(ns) a inserir:` +
+        grupos
+          .map(
+            (g) =>
+              `\n  · IRP#${g.indices.join("/")} qty=${g.qty} "${String(g.item.descricao || "").slice(0, 80)}"`,
+          )
+          .join(""),
+    );
     const itensInseridos = [];
     for (let j = 0; j < grupos.length; j++) {
+      ensureNotAborted(signal);
       const { item, qty, indices } = grupos[j];
       onProgress({
         etapa: "incluir_itens",
-        mensagem: `${rotulo}: item ${j + 1}/${grupos.length} (${String(item.descricao || "").slice(0, 50)})`,
+        mensagem: `${rotulo} (DFD ${dfdId}): item ${j + 1}/${grupos.length} — ${String(item.descricao || "").slice(0, 60)}`,
         progresso: baseProg + (j / grupos.length) * (60 / ordenadas.length) * 0.6,
-        payload: { secretaria: rotulo, atual: j + 1, total: grupos.length },
+        payload: {
+          secretaria: rotulo,
+          dfdId,
+          atual: j + 1,
+          total: grupos.length,
+          descricao: item.descricao,
+          qty,
+        },
       });
       try {
         await criarItemEAdicionarNaDFD({
@@ -217,18 +242,18 @@ export async function orquestrarCriacaoProcessoComum(
 
 
     // 3. Dotação (best-effort)
-    // Aceita tanto o ID Django numérico cadastrado na secretaria (m2a_dot_id —
-    // padrão usado pelo fluxo de contratos) quanto aliases legados.
     const despesaProjeto =
       sec.m2a_dot_id ||
       sec.m2a_despesa_projeto_id ||
       sec.despesa_projeto_atividade ||
       null;
     if (despesaProjeto) {
+      ensureNotAborted(signal);
       onProgress({
         etapa: "cadastrar_dotacao",
-        mensagem: `${rotulo}: cadastrando dotação…`,
+        mensagem: `${rotulo} (DFD ${dfdId}): cadastrando dotação…`,
         progresso: baseProg + (60 / ordenadas.length) * 0.85,
+        payload: { secretaria: rotulo, dfdId },
       });
       try {
         await cadastrarDotacao({
@@ -249,6 +274,7 @@ export async function orquestrarCriacaoProcessoComum(
 
     dfdsCriadas.push({ sec, dfdId, itensInseridos });
   }
+
 
   const dfdGer = dfdsCriadas.find(
     (d) => chaveSecretaria(d.sec) === chaveSecretaria(secretariaGerenciadora),
