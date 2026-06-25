@@ -80,6 +80,7 @@ type SecretariaM2A = {
  m2a_orgao_id: string | null;
   m2a_dot_orgao_id: string | null;
  m2a_uo_id: string | null;
+  m2a_dot_id: string | null;
 };
 
 type IrpImportRow = {
