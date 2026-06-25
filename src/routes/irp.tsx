@@ -293,6 +293,7 @@ function Page() {
       responsavel_dfd: "",
       comissao_planejamento: "3911",
       classificacao: "1",
+      e_registro_preco: true,
     };
   });
 
