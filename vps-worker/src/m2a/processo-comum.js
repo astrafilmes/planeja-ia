@@ -272,7 +272,11 @@ export async function vincularDFDsAoProcesso(processoId, dfdIds) {
   if (res.status >= 400) {
     throw new Error(`vincularDFDsAoProcesso(${processoId}): status ${res.status}`);
   }
-  return { ok: true, vinculadas: ids.length };
+  const bodyTxt = String(res.html || "").slice(0, 500);
+  console.log(
+    `[vincularDFDsAoProcesso] processoId=${processoId} dfds=[${ids.join(",")}] resp.bytes=${(res.html || "").length} body="${bodyTxt}"`,
+  );
+  return { ok: true, vinculadas: ids.length, respostaBruta: bodyTxt };
 }
 
 // ---------------------------------------------------------------------
