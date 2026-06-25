@@ -72,9 +72,36 @@ export function montarHtmlJustificativaDoTextoM2A(texto) {
  * já formatado (pronto para o atualizar_justificativa).
  * Lança erro em qualquer falha — o orquestrador decide o fallback.
  */
+async function lerJustificativaDaPaginaDFD(dfdId) {
+  const r = await m2a.get(`/gestao_compras/formalizacao_demanda/${dfdId}/`);
+  if (r.status >= 400) return "";
+  // procura o textarea de justificativa OU o div já renderizado dentro do summernote
+  const html = String(r.html || "");
+  const ta = html.match(
+    /<textarea[^>]*name=["']justificativa_demanda["'][^>]*>([\s\S]*?)<\/textarea>/i,
+  );
+  if (ta) {
+    const txt = decodeHtmlEntities(ta[1]).trim();
+    if (txt && txt.length > 20) return txt;
+  }
+  // fallback: bloco renderizado com o conteúdo da IA
+  const m = html.match(
+    /id=["']justificativa_demanda["'][^>]*>([\s\S]{40,}?)<\/(?:div|section|p)>/i,
+  );
+  if (m) return decodeHtmlEntities(m[1]).trim();
+  return "";
+}
+
 export async function gerarJustificativaM2A(
   dfdId,
-  { prompt, timeoutMs = 300_000, tentativas = 2, signal } = {},
+  {
+    prompt,
+    timeoutMs = 300_000,
+    tentativas = 2,
+    signal,
+    pollMs = 5_000,
+    pollMaxMs = 240_000,
+  } = {},
 ) {
   if (!dfdId) throw new Error("gerarJustificativaM2A: dfdId obrigatório");
   const path = `/gestao_compras/formalizacao_demanda/gerar_conteudo_justificativa/${dfdId}/`;
@@ -125,32 +152,65 @@ export async function gerarJustificativaM2A(
       );
       continue;
     }
-    let data;
+
+    // 1) Tenta extrair direto da resposta (caso síncrona).
+    let texto = "";
+    let data = null;
     try {
       data = typeof r.html === "string" ? JSON.parse(r.html) : r.html;
+      const htmlForm = data?.html_form || data?.htmlForm || "";
+      texto = extrairTextareaJustificativa(htmlForm);
     } catch {
-      ultimoErro = new Error("resposta não-JSON");
-      console.warn(
-        `[m2a-ia] DFD ${dfdId} tentativa ${attempt}: resposta não-JSON após ${dur}s (${r.html?.slice?.(0, 120) || ""})`,
-      );
-      continue;
+      // resposta não-JSON — pode ser ack
     }
-    const htmlForm = data?.html_form || data?.htmlForm || "";
-    const texto = extrairTextareaJustificativa(htmlForm);
+    const rawPreview = String(r.html || "").slice(0, 200).replace(/\s+/g, " ");
+    console.log(
+      `[m2a-ia] DFD ${dfdId} resposta POST após ${dur}s (${String(r.html || "").length} bytes): ${rawPreview}`,
+    );
+
+    // 2) Se vazio, faz polling na página da DFD (a IA processa em background).
     if (!texto) {
-      ultimoErro = new Error("textarea vazia");
+      console.log(
+        `[m2a-ia] DFD ${dfdId} tentativa ${attempt}: resposta vazia/ack — iniciando polling (até ${Math.round(pollMaxMs / 1000)}s)…`,
+      );
+      const pollStart = Date.now();
+      while (Date.now() - pollStart < pollMaxMs) {
+        if (signal?.aborted) throw new Error("Operação cancelada pelo usuário.");
+        await new Promise((res) => setTimeout(res, pollMs));
+        try {
+          const t = await lerJustificativaDaPaginaDFD(dfdId);
+          if (t && t.length > 20) {
+            texto = t;
+            const wait = ((Date.now() - pollStart) / 1000).toFixed(1);
+            console.log(
+              `[m2a-ia] DFD ${dfdId}: justificativa apareceu após ${wait}s de polling (${t.length} chars)`,
+            );
+            break;
+          }
+        } catch (e) {
+          console.warn(
+            `[m2a-ia] DFD ${dfdId} polling: ${e?.message || e}`,
+          );
+        }
+      }
+    }
+
+    if (!texto) {
+      ultimoErro = new Error("textarea vazia após polling");
       console.warn(
-        `[m2a-ia] DFD ${dfdId} tentativa ${attempt}: textarea vazia após ${dur}s`,
+        `[m2a-ia] DFD ${dfdId} tentativa ${attempt}: sem conteúdo após polling`,
       );
       continue;
     }
+
     const html = montarHtmlJustificativaDoTextoM2A(texto);
     if (!html) {
       ultimoErro = new Error("parágrafos vazios");
       continue;
     }
+    const total = ((Date.now() - t0) / 1000).toFixed(1);
     console.log(
-      `[m2a-ia] DFD ${dfdId}: IA respondeu em ${dur}s (${html.length} chars, tentativa ${attempt})`,
+      `[m2a-ia] DFD ${dfdId}: IA respondeu em ${total}s (${html.length} chars, tentativa ${attempt})`,
     );
     return html;
   }
