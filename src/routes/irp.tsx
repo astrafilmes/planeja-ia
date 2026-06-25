@@ -949,7 +949,7 @@ function Page() {
 
  async function handleM2AEvent(evt: any) {
  if (evt.type === "progress") {
- updateProgress(evt.progresso ?? 0, evt.mensagem);
+ updateProgress(evt.progresso ?? 0, evt.mensagem, { etapa: evt.etapa });
  if (jobId) {
  await supabase
  .from("irp_jobs")
@@ -959,6 +959,20 @@ function Page() {
  })
  .eq("id", jobId);
  }
+ } else if (evt.type === "cancelled") {
+ if (jobId) {
+ await supabase
+ .from("irp_jobs")
+ .update({
+ m2a_envio_status: "cancelado",
+ m2a_envio_mensagem: evt.mensagem ?? "Cancelado.",
+ m2a_envio_completed_at: new Date().toISOString(),
+ })
+ .eq("id", jobId);
+ }
+ failTask(evt.mensagem ?? "Envio cancelado.");
+ toast.warning("Envio cancelado", { description: evt.mensagem });
+ setBusy(false);
   } else if (evt.type === "done") {
  if (jobId) {
  await supabase
