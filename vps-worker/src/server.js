@@ -27,6 +27,7 @@ await app.register(processosRoutes);
 await app.register(contratosRoutes);
 await app.register(documentosRoutes);
 await app.register(processosSrpRoutes);
+await app.register(processosComumRoutes);
 
 app.setErrorHandler((err, _req, reply) => {
   app.log.error(err);
