@@ -53,6 +53,39 @@ function quantidadeDoItem(item, sec) {
   return 0;
 }
 
+// Normaliza string para detectar duplicatas que o M2A bloqueia
+// ("Já existe um item com o mesmo produto/serviço e unidade de fornecimento").
+function chaveProdutoUnidade(item) {
+  const norm = (v) =>
+    String(v ?? "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+  return `${norm(item?.descricao)}||${norm(item?.unidade)}`;
+}
+
+// Agrupa itens com mesmo (produto+unidade) somando quantidades.
+// Mantém a ordem da primeira ocorrência e preserva os demais campos do primeiro item.
+function dedupItensParaSecretaria(itens, sec) {
+  const grupos = new Map(); // chave -> { item, qty, indices:[] }
+  for (let i = 0; i < itens.length; i++) {
+    const item = itens[i];
+    const qty = quantidadeDoItem(item, sec);
+    if (!Number.isFinite(qty) || qty <= 0) continue;
+    const k = chaveProdutoUnidade(item);
+    const ex = grupos.get(k);
+    if (ex) {
+      ex.qty += qty;
+      ex.indices.push(i + 1);
+    } else {
+      grupos.set(k, { item, qty, indices: [i + 1] });
+    }
+  }
+  return Array.from(grupos.values());
+}
+
 export async function orquestrarCriacaoProcessoComum(
   payload,
   onProgress = () => {},
