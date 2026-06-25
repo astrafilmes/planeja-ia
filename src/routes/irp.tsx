@@ -59,6 +59,7 @@ import { findIrpUnidadeCanonicaByRefColuna } from"@/lib/m2a-orgaos-mapping";
 
 import { IrpConfirmacaoProcessoModal } from"@/components/irp/IrpConfirmacaoProcessoModal";
 import { criarProcessoSrpM2A, blobToBase64, type M2ASrpPayload } from"@/lib/m2a-srp";
+import { criarProcessoComumM2A, type M2AComumPayload } from"@/lib/m2a-comum";
 
 type AppFile = Database["public"]["Tables"]["app_files"]["Row"];
 type IrpJob = Database["public"]["Tables"]["irp_jobs"]["Row"];
