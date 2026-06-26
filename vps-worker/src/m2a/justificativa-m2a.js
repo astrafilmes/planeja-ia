@@ -1,12 +1,25 @@
 // =====================================================================
-// Geração de Justificativa da Demanda via a IA NATIVA do M2A (MIA!).
-// Endpoint: /gestao_compras/formalizacao_demanda/gerar_conteudo_justificativa/{dfdId}/
+// Justificativa da Demanda via IA NATIVA do M2A ("MIA!").
 //
-// Resposta: JSON { html_form: "...<textarea name=\"justificativa_demanda\">TEXTO</textarea>..." }
-// onde TEXTO vem HTML-encoded com parágrafos iniciando por "1.", "2.", etc.,
-// separados por \n. Convertemos para o formato salvo pelo Summernote:
-//   <div style="text-align: justify;">P1<br><br>P2<br><br>...<br><br>Pn</div>
+// Fluxo real observado no navegador (sniffer 26/jun/2026):
+//
+//   1. POST /gestao_compras/formalizacao_demanda/gerar_conteudo_justificativa/{dfdId}/
+//        body: x-www-form-urlencoded { csrfmiddlewaretoken, prompt }
+//        → ~10–20 s, SÍNCRONO. Resposta:
+//          { "status": "success", "mensagem": "Texto atualizado com sucesso!" }
+//        A IA já gravou o texto no banco do M2A.
+//
+//   2. GET /gestao_compras/formalizacao_demanda/atualizar_justificativa/{dfdId}/
+//        → JSON { html_form: "...<textarea name='justificativa_demanda'>TEXTO</textarea>..." }
+//        O TEXTO já é o HTML do Summernote (vem com &lt; e &gt; HTML-encoded).
+//
+//   3. POST /gestao_compras/formalizacao_demanda/atualizar_justificativa/{dfdId}/
+//        multipart: csrfmiddlewaretoken + justificativa_demanda + files (vazio)
+//
+// Não há WebSocket, SSE ou polling — o passo 1 já é bloqueante.
 // =====================================================================
+
+import FormData from "form-data";
 import { m2a } from "../m2a-client.js";
 import { config } from "../config.js";
 
@@ -25,7 +38,6 @@ function decodeHtmlEntities(s) {
 
 function extrairTextareaJustificativa(htmlForm) {
   const html = String(htmlForm || "");
-  // textarea pode aparecer com atributos em ordem variável; busca pelo name.
   const m = html.match(
     /<textarea[^>]*name=["']justificativa_demanda["'][^>]*>([\s\S]*?)<\/textarea>/i,
   );
@@ -33,192 +45,179 @@ function extrairTextareaJustificativa(htmlForm) {
   return decodeHtmlEntities(m[1]).trim();
 }
 
-function limparEnvelopeDiv(texto) {
-  // Remove um eventual <div ...>...</div> externo que a IA do M2A já retorna.
-  const m = texto.match(/^<div[^>]*>([\s\S]*)<\/div>\s*$/i);
-  return m ? m[1].trim() : texto.trim();
-}
-
-function paragrafosDoTextoNumerado(texto) {
-  const limpo = limparEnvelopeDiv(texto)
+function normalizarHtmlJustificativa(texto) {
+  const t = String(texto || "").trim();
+  if (!t) return "";
+  // Se já vier com <div>/<p>, repassa como está (é o formato do Summernote).
+  if (/^<(div|p|span)\b/i.test(t)) return t;
+  // Caso contrário, monta o envelope padrão.
+  const paragrafos = t
     .replace(/\r\n/g, "\n")
-    // remove <br> isolados — vamos reconstruir
-    .replace(/<br\s*\/?>(\s*<br\s*\/?>)?/gi, "\n")
-    .trim();
-
-  // Estratégia: parágrafos começam com "N." ou "N)" no início de linha.
-  // Caso não haja numeração, separa por linhas em branco / \n.
-  const re = /(^|\n)\s*\d+\s*[\.\)]\s*/g;
-  if (re.test(limpo)) {
-    return limpo
-      .split(/(?:^|\n)\s*\d+\s*[\.\)]\s*/)
-      .map((p) => p.trim())
-      .filter(Boolean);
-  }
-  return limpo
     .split(/\n{2,}|\n/)
     .map((p) => p.trim())
     .filter(Boolean);
-}
-
-export function montarHtmlJustificativaDoTextoM2A(texto) {
-  const paragrafos = paragrafosDoTextoNumerado(texto);
   if (!paragrafos.length) return "";
   return `<div style="text-align: justify;">${paragrafos.join("<br><br>")}</div>`;
 }
 
 /**
- * Chama a IA nativa do M2A para gerar a justificativa e retorna o HTML
- * já formatado (pronto para o atualizar_justificativa).
- * Lança erro em qualquer falha — o orquestrador decide o fallback.
+ * Lê a justificativa atualmente salva na DFD (passo 2 do fluxo).
+ * Retorna o HTML pronto para reaplicar via `atualizarJustificativaM2A`,
+ * ou string vazia se não houver texto.
  */
-async function lerJustificativaDaPaginaDFD(dfdId) {
-  const r = await m2a.get(`/gestao_compras/formalizacao_demanda/${dfdId}/`);
+export async function lerJustificativaSalva(dfdId) {
+  const path = `/gestao_compras/formalizacao_demanda/atualizar_justificativa/${dfdId}/`;
+  const r = await m2a.get(path, {
+    headers: {
+      Accept: "application/json, text/javascript, */*; q=0.01",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+  });
   if (r.status >= 400) return "";
-  // procura o textarea de justificativa OU o div já renderizado dentro do summernote
-  const html = String(r.html || "");
-  const ta = html.match(
-    /<textarea[^>]*name=["']justificativa_demanda["'][^>]*>([\s\S]*?)<\/textarea>/i,
-  );
-  if (ta) {
-    const txt = decodeHtmlEntities(ta[1]).trim();
-    if (txt && txt.length > 20) return txt;
+  let data = null;
+  try {
+    data = typeof r.html === "string" ? JSON.parse(r.html) : r.html;
+  } catch {
+    // Resposta não é JSON — pode ser HTML cru com a textarea.
+    return extrairTextareaJustificativa(r.html);
   }
-  // fallback: bloco renderizado com o conteúdo da IA
-  const m = html.match(
-    /id=["']justificativa_demanda["'][^>]*>([\s\S]{40,}?)<\/(?:div|section|p)>/i,
-  );
-  if (m) return decodeHtmlEntities(m[1]).trim();
-  return "";
+  const htmlForm = data?.html_form || data?.htmlForm || "";
+  return extrairTextareaJustificativa(htmlForm);
 }
 
+/**
+ * Chama a IA nativa do M2A. Síncrono: a resposta `success` significa que
+ * o texto JÁ FOI GRAVADO no banco. Em seguida lê o texto via GET e retorna
+ * o HTML pronto para reaplicar nas demais DFDs.
+ *
+ * Não há fallback aqui — o orquestrador decide o que fazer em caso de erro.
+ */
 export async function gerarJustificativaM2A(
   dfdId,
-  {
-    prompt,
-    timeoutMs = 90_000,
-    tentativas = 1,
-    signal,
-    pollMs = 6_000,
-    pollMaxMs = 30_000,
-  } = {},
+  { prompt, timeoutMs = 90_000, signal } = {},
 ) {
   if (!dfdId) throw new Error("gerarJustificativaM2A: dfdId obrigatório");
-  const path = `/gestao_compras/formalizacao_demanda/gerar_conteudo_justificativa/${dfdId}/`;
+  if (signal?.aborted) throw new Error("Operação cancelada pelo usuário.");
+
   const formPath = `/gestao_compras/formalizacao_demanda/${dfdId}/`;
+  const postPath = `/gestao_compras/formalizacao_demanda/gerar_conteudo_justificativa/${dfdId}/`;
 
-  let ultimoErro = null;
-  for (let attempt = 1; attempt <= tentativas; attempt++) {
-    if (signal?.aborted) throw new Error("Operação cancelada pelo usuário.");
-    let csrf;
-    try {
-      csrf = await m2a.getCsrf(formPath, attempt > 1 ? { force: true } : {});
-    } catch {
-      csrf = await m2a.getCsrf("/", attempt > 1 ? { force: true } : {});
-    }
-
-    const body = new URLSearchParams({
-      csrfmiddlewaretoken: csrf,
-      prompt: prompt || PROMPT_PADRAO,
-    });
-
-    const t0 = Date.now();
-    console.log(
-      `[m2a-ia] DFD ${dfdId}: chamando IA nativa (tentativa ${attempt}/${tentativas}, timeout=${Math.round(timeoutMs / 1000)}s) — aguardando resposta…`,
-    );
-    let r;
-    try {
-      r = await m2a.postForm(path, body, {
-        timeout: timeoutMs,
-        headers: {
-          Referer: `${config.m2a.baseUrl}${formPath}`,
-          Origin: config.m2a.baseUrl,
-          Accept: "*/*",
-        },
-      });
-    } catch (err) {
-      ultimoErro = err;
-      const dur = ((Date.now() - t0) / 1000).toFixed(1);
-      console.warn(
-        `[m2a-ia] DFD ${dfdId} tentativa ${attempt} falhou após ${dur}s: ${err?.message || err}`,
-      );
-      continue;
-    }
-    const dur = ((Date.now() - t0) / 1000).toFixed(1);
-    if (r.status >= 400) {
-      ultimoErro = new Error(`status=${r.status}`);
-      console.warn(
-        `[m2a-ia] DFD ${dfdId} tentativa ${attempt}: HTTP ${r.status} após ${dur}s`,
-      );
-      continue;
-    }
-
-    // 1) Tenta extrair direto da resposta (caso síncrona).
-    let texto = "";
-    let data = null;
-    try {
-      data = typeof r.html === "string" ? JSON.parse(r.html) : r.html;
-      const htmlForm = data?.html_form || data?.htmlForm || "";
-      texto = extrairTextareaJustificativa(htmlForm);
-    } catch {
-      // resposta não-JSON — pode ser ack
-    }
-    const rawPreview = String(r.html || "").slice(0, 200).replace(/\s+/g, " ");
-    console.log(
-      `[m2a-ia] DFD ${dfdId} resposta POST após ${dur}s (${String(r.html || "").length} bytes): ${rawPreview}`,
-    );
-
-    // 2) Se vazio, faz polling na página da DFD (a IA processa em background).
-    if (!texto) {
-      console.log(
-        `[m2a-ia] DFD ${dfdId} tentativa ${attempt}: resposta vazia/ack — iniciando polling (até ${Math.round(pollMaxMs / 1000)}s)…`,
-      );
-      const pollStart = Date.now();
-      let waitMs = pollMs;
-      while (Date.now() - pollStart < pollMaxMs) {
-        if (signal?.aborted) throw new Error("Operação cancelada pelo usuário.");
-        await new Promise((res) => setTimeout(res, waitMs));
-        try {
-          const t = await lerJustificativaDaPaginaDFD(dfdId);
-          if (t && t.length > 20) {
-            texto = t;
-            const wait = ((Date.now() - pollStart) / 1000).toFixed(1);
-            console.log(
-              `[m2a-ia] DFD ${dfdId}: justificativa apareceu após ${wait}s de polling (${t.length} chars)`,
-            );
-            break;
-          }
-        } catch (e) {
-          console.warn(
-            `[m2a-ia] DFD ${dfdId} polling: ${e?.message || e}`,
-          );
-        }
-        // backoff exponencial leve, teto 15s
-        waitMs = Math.min(15_000, Math.round(waitMs * 1.5));
-      }
-    }
-
-    if (!texto) {
-      ultimoErro = new Error("textarea vazia após polling");
-      console.warn(
-        `[m2a-ia] DFD ${dfdId} tentativa ${attempt}: sem conteúdo após polling`,
-      );
-      continue;
-    }
-
-    const html = montarHtmlJustificativaDoTextoM2A(texto);
-    if (!html) {
-      ultimoErro = new Error("parágrafos vazios");
-      continue;
-    }
-    const total = ((Date.now() - t0) / 1000).toFixed(1);
-    console.log(
-      `[m2a-ia] DFD ${dfdId}: IA respondeu em ${total}s (${html.length} chars, tentativa ${attempt})`,
-    );
-    return html;
+  let csrf;
+  try {
+    csrf = await m2a.getCsrf(formPath);
+  } catch {
+    csrf = await m2a.getCsrf("/");
   }
-  throw new Error(
-    `gerar_conteudo_justificativa esgotou ${tentativas} tentativas: ${ultimoErro?.message || ultimoErro}`,
+
+  const body = new URLSearchParams({
+    csrfmiddlewaretoken: csrf,
+    prompt: prompt || PROMPT_PADRAO,
+  });
+
+  const t0 = Date.now();
+  console.log(
+    `[m2a-ia] DFD ${dfdId}: chamando MIA! (síncrono, timeout=${Math.round(timeoutMs / 1000)}s)…`,
   );
+  const r = await m2a.postForm(postPath, body, {
+    timeout: timeoutMs,
+    headers: {
+      Referer: `${config.m2a.baseUrl}${formPath}`,
+      Origin: config.m2a.baseUrl,
+      Accept: "*/*",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+  });
+  const dur = ((Date.now() - t0) / 1000).toFixed(1);
+  if (r.status >= 400) {
+    throw new Error(`gerar_conteudo_justificativa HTTP ${r.status} após ${dur}s`);
+  }
+
+  // Confirma sucesso ({"status":"success","mensagem":"Texto atualizado com sucesso!"}).
+  let okIa = false;
+  try {
+    const data = typeof r.html === "string" ? JSON.parse(r.html) : r.html;
+    okIa = String(data?.status || "").toLowerCase() === "success";
+  } catch {
+    // Algumas respostas vêm sem JSON estrito — não fatal.
+    okIa = /success/i.test(String(r.html || ""));
+  }
+  console.log(
+    `[m2a-ia] DFD ${dfdId}: MIA! retornou em ${dur}s (status=${r.status}, ok=${okIa})`,
+  );
+  if (!okIa) {
+    throw new Error(
+      `MIA! respondeu sem sucesso: ${String(r.html || "").slice(0, 200)}`,
+    );
+  }
+
+  // Lê o texto que a MIA acabou de gravar.
+  const texto = await lerJustificativaSalva(dfdId);
+  if (!texto || texto.length < 20) {
+    throw new Error("MIA! reportou sucesso, mas a textarea ficou vazia.");
+  }
+  const html = normalizarHtmlJustificativa(texto);
+  console.log(
+    `[m2a-ia] DFD ${dfdId}: justificativa lida (${html.length} chars).`,
+  );
+  return html;
 }
 
+/**
+ * POST /atualizar_justificativa/ — sobrescreve o texto da DFD com `textoGerado`.
+ * Aceita texto puro (parágrafos por \n) OU HTML já pronto.
+ */
+export async function atualizarJustificativaM2A(dfdId, textoGerado) {
+  if (!dfdId) throw new Error("atualizarJustificativaM2A: dfdId obrigatório");
+  const path = `/gestao_compras/formalizacao_demanda/atualizar_justificativa/${dfdId}/`;
+  const formPath = `/gestao_compras/formalizacao_demanda/atualizar/${dfdId}/`;
+
+  let csrf;
+  try {
+    csrf = await m2a.getCsrf(formPath);
+  } catch {
+    csrf = await m2a.getCsrf("/");
+  }
+
+  const html = normalizarHtmlJustificativa(textoGerado);
+  if (!html) throw new Error("atualizarJustificativaM2A: texto vazio");
+
+  const form = new FormData();
+  form.append("csrfmiddlewaretoken", csrf);
+  form.append("justificativa_demanda", html);
+  form.append("files", Buffer.alloc(0), {
+    filename: "",
+    contentType: "application/octet-stream",
+  });
+
+  const r = await m2a.postMultipart(path, form, {
+    headers: {
+      Referer: `${config.m2a.baseUrl}${formPath}`,
+      Origin: config.m2a.baseUrl,
+    },
+  });
+  if (r.status >= 400) {
+    throw new Error(
+      `atualizar_justificativa falhou (status=${r.status}, finalUrl=${r.finalUrl || "-"})`,
+    );
+  }
+  console.log(`[m2a] justificativa atualizada na DFD ${dfdId} (status ${r.status})`);
+  return { status: r.status };
+}
+
+/**
+ * Texto puro de emergência — usado se a MIA! falhar redondamente.
+ * Não cita secretaria ou município (genérico, reutilizável).
+ */
+export function justificativaFallback(objeto, eRegistroPreco = false) {
+  const base = objeto && String(objeto).trim() ? String(objeto).trim() : "bens e serviços de interesse público";
+  const srpTxt = eRegistroPreco
+    ? "A adoção do Sistema de Registro de Preços, com fundamento na Lei nº 14.133/2021, mostra-se a modalidade mais adequada diante da imprevisibilidade dos quantitativos exatos a serem consumidos e da necessidade de entregas parceladas conforme a demanda das unidades administrativas, permitindo maior eficiência na gestão dos recursos públicos e racionalização dos procedimentos licitatórios."
+    : "A presente contratação encontra fundamento na Lei nº 14.133/2021, observados os princípios constitucionais que regem a Administração Pública, em especial os da legalidade, impessoalidade, moralidade, publicidade, eficiência e economicidade.";
+  return [
+    `A presente demanda visa à aquisição/contratação de ${base}, indispensável à continuidade e ao adequado funcionamento das atividades-fim e meio das unidades administrativas envolvidas, observados os princípios constitucionais que regem a Administração Pública, em especial os da legalidade, impessoalidade, moralidade, publicidade, eficiência e economicidade, em estrita conformidade com o ordenamento jurídico vigente.`,
+    `O cenário atual evidencia a necessidade concreta dos itens/serviços solicitados, cuja indisponibilidade comprometeria diretamente a prestação dos serviços públicos à população, com prejuízos potenciais à execução das políticas públicas planejadas, ao atendimento das obrigações legais e à manutenção da regularidade operacional das atividades administrativas e finalísticas das unidades envolvidas no presente certame.`,
+    `Sob o aspecto técnico e econômico, a consolidação da demanda proporciona ganhos de escala, padronização, previsibilidade orçamentária, ampliação da competitividade entre fornecedores e obtenção de melhores condições comerciais, mediante procedimento licitatório único, em substituição a múltiplas contratações fragmentadas, com reflexos positivos na qualidade dos bens e serviços recebidos e na racionalização dos custos de transação inerentes a cada processo.`,
+    `${srpTxt} A medida fortalece a transparência, a isonomia entre licitantes e o controle social sobre a aplicação dos recursos públicos, em conformidade com as melhores práticas de governança e com os deveres de planejamento e de motivação dos atos administrativos.`,
+    `Conclui-se, portanto, que a presente contratação atende plenamente ao interesse público, alinhando-se aos preceitos de legalidade, eficiência, economicidade e transparência exigidos pela legislação vigente, sendo medida necessária, adequada e proporcional à satisfação da demanda identificada, motivo pelo qual se justifica sua formalização nos termos propostos.`,
+  ].join("\n");
+}
