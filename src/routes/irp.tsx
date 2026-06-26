@@ -383,7 +383,7 @@ function Page() {
        setJobId(null);
        setResultadoSalvo(null);
        setAnalise(null);
-       navigate({ to: "/irp", search: {} });
+       navigate({ to: "/irp", search: { job: undefined } });
      }
      qc.invalidateQueries({ queryKey: ["irp-jobs-list"] });
    } catch (e: any) {
