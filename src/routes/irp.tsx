@@ -1,7 +1,21 @@
-import { createFileRoute } from"@tanstack/react-router";
+import { createFileRoute, useNavigate } from"@tanstack/react-router";
 import { routeHead } from"@/lib/route-head";
 import { useCallback, useEffect, useMemo, useRef, useState } from"react";
-import { useQuery } from"@tanstack/react-query";
+import { useQuery, useQueryClient } from"@tanstack/react-query";
+import { Badge } from"@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from"@/components/ui/alert-dialog";
+import { WorkflowGuide } from"@/components/layout/WorkflowGuide";
+import { Trash2, Loader2, FileText, FileSignature } from"lucide-react";
 import { AppShell, StatusBadge } from"@/components/layout/AppShell";
 import { EmptyState } from"@/components/layout/EmptyState";
 import { useProgress } from"@/contexts/ProgressContext";
@@ -260,6 +274,8 @@ async function carregarResultadoSalvo(
 
 function Page() {
  const search = Route.useSearch();
+ const navigate = useNavigate();
+ const qc = useQueryClient();
  const { startTask, updateProgress, finishTask, failTask } = useProgress();
  const { ensureConnected } = useM2AConnection();
  const m2aProcessOffRef = useRef<(() => void) | null>(null);
@@ -345,6 +361,35 @@ function Page() {
  () => new Map(jobSecretariaRows.map((r) => [r.numero, r])),
  [jobSecretariaRows],
  );
+
+ const { data: irpJobs = [] } = useQuery({
+   queryKey: ["irp-jobs-list"],
+   queryFn: async () => {
+     const { data } = await supabase
+       .from("irp_jobs")
+       .select("id, original_filename, status, total_secretarias, secretarias_com_itens, total_linhas, total_valor, created_at")
+       .order("created_at", { ascending: false })
+       .limit(50);
+     return data ?? [];
+   },
+ });
+
+ async function excluirIrpJob(id: string) {
+   try {
+     const { error } = await supabase.from("irp_jobs").delete().eq("id", id);
+     if (error) throw error;
+     toast.success("Importação excluída.");
+     if (jobId === id) {
+       setJobId(null);
+       setResultadoSalvo(null);
+       setAnalise(null);
+       navigate({ to: "/irp", search: { job: undefined } });
+     }
+     qc.invalidateQueries({ queryKey: ["irp-jobs-list"] });
+   } catch (e: any) {
+     toast.error("Falha ao excluir", { description: e?.message });
+   }
+ }
 
  useEffect(() => {
  if (!search.job) {
@@ -1080,14 +1125,26 @@ function Page() {
  title="Importação IRP"
  subtitle="Carregue a planilha consolidada e gere os arquivos por secretaria"
  >
- <div className="grid gap-4 lg:grid-cols-3">
- <Card className="border-border/60 lg:col-span-1">
- <CardHeader className="pb-3">
- <CardTitle className="flex items-center gap-2">
- <Upload className="size-4 text-primary" />
- 1. Upload
- </CardTitle>
- </CardHeader>
+  <WorkflowGuide
+    title="Fluxo da importação"
+    steps={[
+      { label: "Importar", description: "Planilha consolidada IRP", to: "/irp", icon: Upload, state: "active" },
+      { label: "Processos", description: "Snapshot e geração", to: "/processos", icon: FileText },
+      { label: "Contratos", description: "Gerar em lote", to: "/contratos", icon: FileSignature },
+      { label: "Enviar", description: "Portal e documentos", to: "/contratos", icon: Send },
+    ]}
+  />
+
+  <div className="grid gap-5 xl:grid-cols-[360px_1fr]">
+   {/* Sidebar: upload + histórico */}
+   <div className="flex flex-col gap-4">
+  <Card className="border-border/60">
+   <CardHeader className="pb-3">
+    <CardTitle className="flex items-center gap-2">
+     <Upload className="size-4 text-primary" />
+     Nova importação
+    </CardTitle>
+   </CardHeader>
  <CardContent className="flex flex-col gap-3">
  <div className="flex flex-col gap-1.5">
  <Label htmlFor="f">Arquivo .xlsx</Label>
@@ -1127,13 +1184,100 @@ function Page() {
  </CardContent>
  </Card>
 
- <Card className="border-border/60 lg:col-span-2">
+ <Card className="overflow-hidden border-border/60">
+   <CardHeader className="pb-3">
+     <CardTitle>Importações recentes</CardTitle>
+   </CardHeader>
+   <CardContent className="p-0">
+     <div>
+       {irpJobs.map((j: any) => (
+         <div
+           key={j.id}
+           className={`group relative w-full border-b border-border/60 transition-colors hover:bg-muted/40 ${jobId === j.id ? "bg-muted/40 dark:bg-slate-800/50" : ""}`}
+         >
+           <button
+             type="button"
+             onClick={() => navigate({ to: "/irp", search: { job: j.id } })}
+             className="w-full text-left px-4 py-2.5 pr-10"
+           >
+             <div className="flex items-center justify-between gap-2">
+               <div className="truncate text-[13px] font-medium">
+                 {j.original_filename ?? "—"}
+               </div>
+               <Badge variant="secondary" className="text-[10px]">
+                 {j.status ?? "—"}
+               </Badge>
+             </div>
+             <div className="mt-0.5 flex gap-3 text-[12px] text-muted-foreground">
+               <span>{j.secretarias_com_itens ?? 0}/{j.total_secretarias ?? 0} secretarias</span>
+               <span>{formatNumber(j.total_linhas ?? 0)} itens</span>
+               <span>{formatBRL(Number(j.total_valor ?? 0))}</span>
+             </div>
+             <div className="mt-0.5 text-[11px] text-muted-foreground">
+               {j.created_at ? new Date(j.created_at).toLocaleString("pt-BR") : ""}
+             </div>
+           </button>
+           <AlertDialog>
+             <AlertDialogTrigger asChild>
+               <Button
+                 type="button"
+                 size="icon"
+                 variant="ghost"
+                 className="absolute top-1.5 right-1.5 size-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                 onClick={(e) => e.stopPropagation()}
+                 title="Excluir importação"
+               >
+                 <Trash2 className="size-3.5" />
+               </Button>
+             </AlertDialogTrigger>
+             <AlertDialogContent onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+               <AlertDialogHeader>
+                 <AlertDialogTitle>Excluir importação?</AlertDialogTitle>
+                 <AlertDialogDescription>
+                   "{j.original_filename}" será removida do histórico. Arquivos já gerados nas secretarias não serão afetados.
+                 </AlertDialogDescription>
+               </AlertDialogHeader>
+               <AlertDialogFooter>
+                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                 <AlertDialogAction onClick={() => excluirIrpJob(j.id)}>Excluir</AlertDialogAction>
+               </AlertDialogFooter>
+             </AlertDialogContent>
+           </AlertDialog>
+         </div>
+       ))}
+
+       {irpJobs.length === 0 && (
+         <EmptyState
+           icon={FileSpreadsheet}
+           title="Nenhuma importação ainda"
+           description="Envie uma planilha consolidada para criar o primeiro registro."
+         />
+       )}
+     </div>
+   </CardContent>
+ </Card>
+   </div>
+
+   {/* Principal: resultado */}
+   <div className="min-w-0">
+ {!jobId && !analise && (
+   <Card className="border-dashed border-border/60">
+     <EmptyState
+       icon={Upload}
+       title="Selecione uma importação"
+       description="Escolha um registro recente no histórico ou envie uma nova planilha."
+     />
+   </Card>
+ )}
+
+ {(jobId || analise) && (
+ <Card className="overflow-hidden border-border/60">
  <CardHeader className="flex flex-row items-center justify-between gap-3 pb-3">
  <CardTitle className="flex items-center gap-2">
  <FileSpreadsheet className="size-4 text-primary" />
  {resultadoSalvo
- ?"2. Resultado salvo"
- :"2. Resultado por secretaria"}
+ ?"Resultado salvo"
+ :"Resultado por secretaria"}
  </CardTitle>
  {(analise || resultadoSalvo) && (
  <Button
@@ -1400,6 +1544,8 @@ function Page() {
  ) : null}
  </CardContent>
  </Card>
+ )}
+   </div>
  </div>
         <IrpConfirmacaoProcessoModal
           open={m2aConfirmOpen}
