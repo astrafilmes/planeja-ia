@@ -1544,6 +1544,8 @@ function Page() {
  ) : null}
  </CardContent>
  </Card>
+ )}
+   </div>
  </div>
         <IrpConfirmacaoProcessoModal
           open={m2aConfirmOpen}
