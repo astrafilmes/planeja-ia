@@ -73,12 +73,12 @@ const nav: NavEntry[] = [
     label: "Importação",
     icon: FileUp,
     items: [
+      { to: "/irp", label: "Importação de Processos", icon: FileSpreadsheet },
       {
         to: "/importar-contratos",
-        label: "Contratos por planilha",
+        label: "Importação de Contratos",
         icon: FileUp,
       },
-      { to: "/irp", label: "IRP por secretaria", icon: FileSpreadsheet },
       { to: "/historico", label: "Histórico", icon: History },
     ],
   },
