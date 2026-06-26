@@ -37,10 +37,11 @@ import {
   obterUnidadeOrcamentariaDaIntencao,
 } from "./irp-api.js";
 import {
-  gerarJustificativaGemini,
+  gerarJustificativaM2A,
   atualizarJustificativaM2A,
-} from "./justificativa-gemini.js";
-import { gerarJustificativaM2A } from "./justificativa-m2a.js";
+  justificativaFallback,
+} from "./justificativa-m2a.js";
+
 
 
 function chaveSecretaria(sec) {
