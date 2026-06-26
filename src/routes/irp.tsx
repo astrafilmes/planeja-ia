@@ -274,6 +274,8 @@ async function carregarResultadoSalvo(
 
 function Page() {
  const search = Route.useSearch();
+ const navigate = useNavigate();
+ const qc = useQueryClient();
  const { startTask, updateProgress, finishTask, failTask } = useProgress();
  const { ensureConnected } = useM2AConnection();
  const m2aProcessOffRef = useRef<(() => void) | null>(null);
