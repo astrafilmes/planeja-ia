@@ -1184,13 +1184,100 @@ function Page() {
  </CardContent>
  </Card>
 
- <Card className="border-border/60 lg:col-span-2">
+ <Card className="overflow-hidden border-border/60">
+   <CardHeader className="pb-3">
+     <CardTitle>Importações recentes</CardTitle>
+   </CardHeader>
+   <CardContent className="p-0">
+     <div>
+       {irpJobs.map((j: any) => (
+         <div
+           key={j.id}
+           className={`group relative w-full border-b border-border/60 transition-colors hover:bg-muted/40 ${jobId === j.id ? "bg-muted/40 dark:bg-slate-800/50" : ""}`}
+         >
+           <button
+             type="button"
+             onClick={() => navigate({ to: "/irp", search: { job: j.id } })}
+             className="w-full text-left px-4 py-2.5 pr-10"
+           >
+             <div className="flex items-center justify-between gap-2">
+               <div className="truncate text-[13px] font-medium">
+                 {j.original_filename ?? "—"}
+               </div>
+               <Badge variant="secondary" className="text-[10px]">
+                 {j.status ?? "—"}
+               </Badge>
+             </div>
+             <div className="mt-0.5 flex gap-3 text-[12px] text-muted-foreground">
+               <span>{j.secretarias_com_itens ?? 0}/{j.total_secretarias ?? 0} secretarias</span>
+               <span>{formatNumber(j.total_linhas ?? 0)} itens</span>
+               <span>{formatBRL(Number(j.total_valor ?? 0))}</span>
+             </div>
+             <div className="mt-0.5 text-[11px] text-muted-foreground">
+               {j.created_at ? new Date(j.created_at).toLocaleString("pt-BR") : ""}
+             </div>
+           </button>
+           <AlertDialog>
+             <AlertDialogTrigger asChild>
+               <Button
+                 type="button"
+                 size="icon"
+                 variant="ghost"
+                 className="absolute top-1.5 right-1.5 size-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                 onClick={(e) => e.stopPropagation()}
+                 title="Excluir importação"
+               >
+                 <Trash2 className="size-3.5" />
+               </Button>
+             </AlertDialogTrigger>
+             <AlertDialogContent onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+               <AlertDialogHeader>
+                 <AlertDialogTitle>Excluir importação?</AlertDialogTitle>
+                 <AlertDialogDescription>
+                   "{j.original_filename}" será removida do histórico. Arquivos já gerados nas secretarias não serão afetados.
+                 </AlertDialogDescription>
+               </AlertDialogHeader>
+               <AlertDialogFooter>
+                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                 <AlertDialogAction onClick={() => excluirIrpJob(j.id)}>Excluir</AlertDialogAction>
+               </AlertDialogFooter>
+             </AlertDialogContent>
+           </AlertDialog>
+         </div>
+       ))}
+
+       {irpJobs.length === 0 && (
+         <EmptyState
+           icon={FileSpreadsheet}
+           title="Nenhuma importação ainda"
+           description="Envie uma planilha consolidada para criar o primeiro registro."
+         />
+       )}
+     </div>
+   </CardContent>
+ </Card>
+   </div>
+
+   {/* Principal: resultado */}
+   <div className="min-w-0">
+ {!jobId && !analise && (
+   <Card className="border-dashed border-border/60">
+     <EmptyState
+       icon={Upload}
+       title="Selecione uma importação"
+       description="Escolha um registro recente no histórico ou envie uma nova planilha."
+     />
+   </Card>
+ )}
+
+ {(jobId || analise) && (
+ <Card className="overflow-hidden border-border/60">
  <CardHeader className="flex flex-row items-center justify-between gap-3 pb-3">
  <CardTitle className="flex items-center gap-2">
  <FileSpreadsheet className="size-4 text-primary" />
  {resultadoSalvo
- ?"2. Resultado salvo"
- :"2. Resultado por secretaria"}
+ ?"Resultado salvo"
+ :"Resultado por secretaria"}
  </CardTitle>
  {(analise || resultadoSalvo) && (
  <Button
