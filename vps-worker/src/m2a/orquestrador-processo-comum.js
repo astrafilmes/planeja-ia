@@ -403,61 +403,39 @@ export async function orquestrarCriacaoProcessoComum(
   //    secretaria específica) e reaproveita em TODAS as DFDs. Evita gastar
   //    minutos esperando a IA nativa do M2A para cada DFD individualmente.
   //
-  //    Estratégia:
-  //      a) Tenta a IA nativa do M2A na primeira DFD com janela curta de
-  //         polling (~30s). Se vier, ótimo — usa o texto retornado.
-  //      b) Se falhar/exceder tempo, gera via Gemini com prompt GENÉRICO
-  //         (sem `secretarias`, sem nomes próprios), que cai para o
-  //         fallback textual caso a chave não exista.
-  //      c) Faz POST em /atualizar_justificativa/ para cada DFD em paralelo.
+  //    Estratégia (sem Gemini):
+  //      a) Tenta a MIA! (IA nativa do M2A) na 1ª DFD — chamada síncrona,
+  //         retorna em ~10–20s e já grava o texto. Lê o resultado e usa.
+  //      b) Se a MIA! falhar, usa texto genérico hard-coded (fallback local).
+  //      c) Faz POST /atualizar_justificativa/ em todas as DFDs em paralelo.
   let justificativaGerada = false;
   let justificativasOk = 0;
   let htmlJustificativaGenerica = null;
 
   onProgress({
     etapa: "justificativa",
-    mensagem: `Gerando justificativa genérica (única para todas as DFDs)…`,
+    mensagem: `Gerando justificativa genérica via MIA! (única para todas as DFDs)…`,
     progresso: 95,
     payload: { total: dfdsCriadas.length },
   });
 
-  // (a) tenta IA nativa M2A na primeira DFD, com polling curto
+  // (a) tenta MIA! na primeira DFD
   try {
     htmlJustificativaGenerica = await gerarJustificativaM2A(dfdsCriadas[0].dfdId, {
-      tentativas: 1,
-      pollMaxMs: 30_000,
-      pollMs: 5_000,
-      timeoutMs: 60_000,
+      timeoutMs: 90_000,
       signal,
     });
     console.log(
-      `[comum] justificativa GENÉRICA obtida via IA nativa M2A (${htmlJustificativaGenerica.length} chars)`,
+      `[comum] justificativa GENÉRICA obtida via MIA! (${htmlJustificativaGenerica.length} chars)`,
     );
   } catch (errMia) {
     console.warn(
-      `[comum] IA nativa M2A não retornou a tempo: ${errMia?.message || errMia} — gerando via Gemini (genérica).`,
+      `[comum] MIA! falhou: ${errMia?.message || errMia} — usando fallback genérico local.`,
     );
+    htmlJustificativaGenerica = justificativaFallback(payload.objeto, false);
+    erros.push({ etapa: "justificativa", aviso: `MIA! falhou: ${errMia?.message || errMia} — usado fallback local.` });
   }
 
-  // (b) fallback Gemini — SEM citar secretarias específicas
-  if (!htmlJustificativaGenerica) {
-    try {
-      htmlJustificativaGenerica = await gerarJustificativaGemini({
-        objeto: payload.objeto,
-        eRegistroPreco: false,
-        itens: itens.map((i) => String(i.descricao || "")).filter(Boolean),
-        secretarias: [], // <- genérico, sem nomes
-      });
-      console.log(
-        `[comum] justificativa GENÉRICA obtida via Gemini (${htmlJustificativaGenerica.length} chars)`,
-      );
-    } catch (errGem) {
-      console.error(
-        `[comum] falha total ao gerar justificativa genérica: ${errGem?.message || errGem}`,
-      );
-      erros.push({ etapa: "justificativa", erro: String(errGem?.message || errGem) });
-    }
-  }
 
   // (c) aplica a mesma justificativa em TODAS as DFDs (em paralelo, com limite leve)
   if (htmlJustificativaGenerica) {
