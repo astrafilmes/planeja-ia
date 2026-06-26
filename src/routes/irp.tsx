@@ -1,7 +1,21 @@
-import { createFileRoute } from"@tanstack/react-router";
+import { createFileRoute, useNavigate } from"@tanstack/react-router";
 import { routeHead } from"@/lib/route-head";
 import { useCallback, useEffect, useMemo, useRef, useState } from"react";
-import { useQuery } from"@tanstack/react-query";
+import { useQuery, useQueryClient } from"@tanstack/react-query";
+import { Badge } from"@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from"@/components/ui/alert-dialog";
+import { WorkflowGuide } from"@/components/layout/WorkflowGuide";
+import { Trash2, Loader2, FileText, FileSignature } from"lucide-react";
 import { AppShell, StatusBadge } from"@/components/layout/AppShell";
 import { EmptyState } from"@/components/layout/EmptyState";
 import { useProgress } from"@/contexts/ProgressContext";
