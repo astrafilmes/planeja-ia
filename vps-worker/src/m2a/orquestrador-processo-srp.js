@@ -311,37 +311,26 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
     );
   }
 
-  // 8. Justificativa da Demanda (Gemini → M2A). Best-effort, no fim do fluxo.
+  // 8. Justificativa da Demanda — MIA! (sem Gemini). Best-effort, ao final.
   let justificativaGerada = false;
   try {
     onProgress({
       etapa: "justificativa",
-      mensagem: "Gerando justificativa da demanda via IA…",
+      mensagem: "Gerando justificativa da demanda via MIA!…",
       progresso: 98,
     });
-    const listaItensTxt = itensCriados
-      .map(({ input }) => String(input?.descricao || "").trim())
-      .filter(Boolean);
-    const listaSecretariasTxt = todasSecretarias
-      .map((s) => s.sigla || s.nome)
-      .filter(Boolean);
     let htmlJustificativa = null;
     try {
-      // 1ª: IA nativa do M2A (MIA!) — chamada por DFD.
-      htmlJustificativa = await gerarJustificativaM2A(dfdId);
+      htmlJustificativa = await gerarJustificativaM2A(dfdId, { timeoutMs: 90_000 });
     } catch (errMia) {
       console.warn(
-        `[justificativa] IA M2A falhou (${errMia?.message || errMia}) — tentando Gemini.`,
+        `[justificativa] MIA! falhou (${errMia?.message || errMia}) — usando fallback local.`,
       );
-      htmlJustificativa = await gerarJustificativaGemini({
-        objeto: payload.objeto,
-        eRegistroPreco: true,
-        itens: listaItensTxt,
-        secretarias: listaSecretariasTxt,
-      });
+      htmlJustificativa = justificativaFallback(payload.objeto, true);
     }
     await atualizarJustificativaM2A(dfdId, htmlJustificativa);
     justificativaGerada = true;
+
 
   } catch (err) {
     const msg = String(err?.message ?? err);
