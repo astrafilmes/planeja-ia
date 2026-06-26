@@ -362,6 +362,35 @@ function Page() {
  [jobSecretariaRows],
  );
 
+ const { data: irpJobs = [] } = useQuery({
+   queryKey: ["irp-jobs-list"],
+   queryFn: async () => {
+     const { data } = await supabase
+       .from("irp_jobs")
+       .select("id, original_filename, status, total_secretarias, secretarias_com_itens, total_linhas, total_valor, created_at")
+       .order("created_at", { ascending: false })
+       .limit(50);
+     return data ?? [];
+   },
+ });
+
+ async function excluirIrpJob(id: string) {
+   try {
+     const { error } = await supabase.from("irp_jobs").delete().eq("id", id);
+     if (error) throw error;
+     toast.success("Importação excluída.");
+     if (jobId === id) {
+       setJobId(null);
+       setResultadoSalvo(null);
+       setAnalise(null);
+       navigate({ to: "/irp", search: {} });
+     }
+     qc.invalidateQueries({ queryKey: ["irp-jobs-list"] });
+   } catch (e: any) {
+     toast.error("Falha ao excluir", { description: e?.message });
+   }
+ }
+
  useEffect(() => {
  if (!search.job) {
  setResultadoSalvo(null);
