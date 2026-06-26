@@ -1125,14 +1125,26 @@ function Page() {
  title="Importação IRP"
  subtitle="Carregue a planilha consolidada e gere os arquivos por secretaria"
  >
- <div className="grid gap-4 lg:grid-cols-3">
- <Card className="border-border/60 lg:col-span-1">
- <CardHeader className="pb-3">
- <CardTitle className="flex items-center gap-2">
- <Upload className="size-4 text-primary" />
- 1. Upload
- </CardTitle>
- </CardHeader>
+  <WorkflowGuide
+    title="Fluxo da importação"
+    steps={[
+      { label: "Importar", description: "Planilha consolidada IRP", to: "/irp", icon: Upload, state: "active" },
+      { label: "Processos", description: "Snapshot e geração", to: "/processos", icon: FileText },
+      { label: "Contratos", description: "Gerar em lote", to: "/contratos", icon: FileSignature },
+      { label: "Enviar", description: "Portal e documentos", to: "/contratos", icon: Send },
+    ]}
+  />
+
+  <div className="grid gap-5 xl:grid-cols-[360px_1fr]">
+   {/* Sidebar: upload + histórico */}
+   <div className="flex flex-col gap-4">
+  <Card className="border-border/60">
+   <CardHeader className="pb-3">
+    <CardTitle className="flex items-center gap-2">
+     <Upload className="size-4 text-primary" />
+     Nova importação
+    </CardTitle>
+   </CardHeader>
  <CardContent className="flex flex-col gap-3">
  <div className="flex flex-col gap-1.5">
  <Label htmlFor="f">Arquivo .xlsx</Label>
