@@ -296,7 +296,9 @@ function Page() {
  >({});
   const [processoId, setProcessoId] = useState<string>("");
   const [objetoBatch, setObjetoBatch] = useState("");
-  const [dataBatch] = useState<string>("");
+  const [dataBatch, setDataBatch] = useState<string>(
+    () => new Date().toISOString().slice(0, 10),
+  );
   const [criarProcesso, setCriarProcesso] = useState(true);
   const [contratosDesmarcados, setContratosDesmarcados] = useState<Set<string>>(
     new Set(),
