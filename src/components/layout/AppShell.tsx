@@ -302,13 +302,19 @@ export function AppShell({
   }, []);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !isGestor) return;
     createStartupDatabaseBackup().catch((error) => {
       console.warn("Backup automático do banco não concluído", error);
     });
-  }, [user]);
+  }, [user, isGestor]);
 
   async function handleExportSystem() {
+    if (!isGestor) {
+      toast.error("Exportação restrita", {
+        description: "Apenas gestores e administradores podem exportar o banco completo.",
+      });
+      return;
+    }
     setExportingSystem(true);
     try {
       const result = await exportFullSystem();
