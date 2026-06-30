@@ -1814,9 +1814,10 @@ function Page() {
  </strong>
  </div>
  </div>
- </CardHeader>
+  </CardHeader>
  </button>
  </CollapsibleTrigger>
+ </div>
  <CollapsibleContent>
  <div className="grid gap-2 border-t border-border/60 bg-muted/40 px-3 py-2 text-[13px] text-muted-foreground dark:bg-muted/30 md:grid-cols-4">
  <div>
