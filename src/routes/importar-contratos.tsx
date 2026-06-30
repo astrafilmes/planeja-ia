@@ -545,13 +545,13 @@ function Page() {
  [secretarias],
  );
 
- const contratosComSecretaria = useMemo(
+  const contratosComSecretaria = useMemo(
  () =>
- contratosPreliminares.map((contrato) => ({
+ contratosSelecionados.map((contrato) => ({
  contrato,
  secretaria: resolveSecretariaForContrato(contrato, secretariasM2A),
  })),
- [contratosPreliminares, secretariasM2A],
+ [contratosSelecionados, secretariasM2A],
  );
 
  const contratosSemCadastroM2A = useMemo(
@@ -563,8 +563,8 @@ function Page() {
  );
 
  const contratosSemAtaM2A = useMemo(
- () => contratosPreliminares.filter((contrato) => !contrato.m2aAtaId),
- [contratosPreliminares],
+ () => contratosSelecionados.filter((contrato) => !contrato.m2aAtaId),
+ [contratosSelecionados],
  );
 
  async function handleImportar() {
