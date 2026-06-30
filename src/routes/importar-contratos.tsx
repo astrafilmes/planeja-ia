@@ -2370,9 +2370,9 @@ function Page() {
  <Button
  size="lg"
  className="w-full"
- disabled={
+  disabled={
  busy ||
- contratosPreliminares.length === 0 ||
+ contratosSelecionados.length === 0 ||
  contratosSemCadastroM2A.length > 0 ||
  fornecedoresSemPreposto.length > 0 ||
  contratosSemAtaM2A.length > 0
@@ -2384,7 +2384,7 @@ function Page() {
  ) : (
  <ShieldCheck className="size-4" />
  )}
- Autorizar e gerar {contratosPreliminares.length}{""}
+ Autorizar e gerar {contratosSelecionados.length}{""}
  contratos
  </Button>
  </>
