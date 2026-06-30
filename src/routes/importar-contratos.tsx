@@ -1675,9 +1675,19 @@ function Page() {
  {/* Painel de resumo */}
  <Card className="border-border/60">
  <CardContent className="grid gap-3 p-4 md:grid-cols-4">
- <Metric
- label="Empresa"
- value={jobDetail.job.empresa ??"—"}
+  <Metric
+ label={
+ fornecedoresUnicos.length > 1
+ ? `Fornecedores (${fornecedoresUnicos.length})`
+ : "Fornecedor"
+ }
+ value={
+ fornecedoresUnicos.length === 0
+ ? (jobDetail.job.empresa ?? "—")
+ : fornecedoresUnicos.length === 1
+ ? fornecedoresUnicos[0]
+ : fornecedoresUnicos.join(" · ")
+ }
  />
  <Metric
  label="Itens válidos"
@@ -1688,7 +1698,11 @@ function Page() {
  />
  <Metric
  label="Contratos a gerar"
- value={formatNumber(contratosPreliminares.length)}
+ value={
+ contratosDesmarcados.size > 0
+ ? `${formatNumber(contratosSelecionados.length)} / ${formatNumber(contratosPreliminares.length)}`
+ : formatNumber(contratosPreliminares.length)
+ }
  highlight
  />
  <Metric
