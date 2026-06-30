@@ -1037,11 +1037,12 @@ function Page() {
 
  console.log("Dados validados:", {
  objeto: objetoBatch,
- qtdContratos: contratosPreliminares.length,
+ qtdContratos: contratosSelecionados.length,
+ desmarcados: contratosDesmarcados.size,
  });
 
  startTask("Gerando contratos",
- `Preparando ${contratosPreliminares.length} contrato(s)...`,
+ `Preparando ${contratosSelecionados.length} contrato(s)...`,
  );
  setBusy(true);
  try {
