@@ -304,7 +304,7 @@ Deno.serve(async (req) => {
       return json({ error: "forbidden" }, 403);
     const { data: buckets } = await admin.storage.listBuckets();
     const storage_buckets = (buckets ?? [])
-      .filter((b) => b.name !== BACKUP_BUCKET)
+      .filter((b) => b.name !== BACKUP_BUCKET && !SKIP_BUCKETS.has(b.name))
       .map((b) => b.name);
     return json({
       table_groups: Object.keys(TABLE_GROUPS),
