@@ -1,6 +1,18 @@
-// Ponte entre o sistema Planejamento e a extensão Chrome M2A Integrador.
-// Toda mensagem sai por este módulo para manter validação de origem e formato
-// consistentes entre as telas.
+// Cliente unificado de integração M2A.
+// Toda a lógica do antigo background.js + automation_engine.js + scrapers da
+// extensão Chrome roda agora no VPS worker (Fastify). O navegador fala apenas
+// com a edge function `m2a-proxy`, que assina HMAC e encaminha para a VPS.
+//
+// Para manter compatibilidade com as telas existentes (processos.$id.tsx,
+// contratos.$id.tsx, irp.tsx, numeracao.tsx) mantemos as mesmas funções
+// públicas e o mesmo modelo de eventos via window.postMessage —
+// só que agora os eventos são gerados pelos handlers SSE deste módulo.
+
+import { supabase } from "@/integrations/supabase/client";
+
+// ============================================================
+// Tipos públicos (idênticos à versão anterior)
+// ============================================================
 
 export type M2AEtapa =
   | "validacao"
@@ -51,7 +63,6 @@ export interface M2ADocumentoGerado {
   nome: string;
   contratoId?: string;
   contratoNumero?: string;
-  // ID do contrato no portal M2A (necessário p/ descobrir a URL real do download).
   m2aContratoId?: string;
 }
 
@@ -111,16 +122,12 @@ export function extractM2AProcessoId(
   url: string | null | undefined,
 ): string | null {
   if (!url) return null;
-  // Novo formato: /processo_administrativo/36002/
   const novo = url.match(/\/processo_administrativo\/(\d+)/);
   if (novo) return novo[1];
-  // Formato antigo: /detail/30111/
   const antigo = url.match(/\/detail\/(\d+)/);
   return antigo ? antigo[1] : null;
 }
 
-// Aceita mensagens apenas da própria janela (mesma origem).
-// Evita spoofing de eventos M2A por iframes ou scripts de terceiros.
 function isTrustedM2AEvent(e: MessageEvent): boolean {
   if (e.source !== window) return false;
   if (typeof window === "undefined") return false;
@@ -128,42 +135,198 @@ function isTrustedM2AEvent(e: MessageEvent): boolean {
   return true;
 }
 
-export function isExtensionInstalled(timeoutMs = 600): Promise<boolean> {
-  return new Promise((resolve) => {
-    let done = false;
-    const onMsg = (e: MessageEvent) => {
-      if (!isTrustedM2AEvent(e)) return;
-      if (e.data?.type === "M2A_BRIDGE_PONG") {
-        done = true;
-        window.removeEventListener("message", onMsg);
-        resolve(true);
+// O worker M2A está sempre disponível via edge function. Mantém a função
+// só para compatibilidade — sempre devolve true se há sessão Supabase.
+export async function isExtensionInstalled(_timeoutMs = 600): Promise<boolean> {
+  const { data } = await supabase.auth.getSession();
+  return !!data.session;
+}
+
+function emitWindow(message: Record<string, unknown>) {
+  if (typeof window === "undefined") return;
+  window.postMessage(message, window.location.origin);
+}
+
+// ============================================================
+// Helper interno: chama edge `m2a-proxy` e consome SSE via fetch
+// (o SDK supabase-js bufferiza, então usamos fetch direto na URL da
+// função edge, mantendo o header Authorization da sessão atual).
+// ============================================================
+
+interface SseCallbacks {
+  onProgress?: (evt: Record<string, unknown>) => void;
+  onDone?: (evt: Record<string, unknown>) => void;
+  onError?: (err: string) => void;
+}
+
+async function callProxySse(
+  path: string,
+  body: unknown,
+  cb: SseCallbacks,
+): Promise<void> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData.session?.access_token;
+  if (!token) {
+    cb.onError?.("Sessão expirada. Faça login novamente.");
+    return;
+  }
+  const baseUrl = (import.meta.env.VITE_SUPABASE_URL as string).replace(
+    /\/+$/,
+    "",
+  );
+  const url = `${baseUrl}/functions/v1/m2a-proxy`;
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ path, method: "POST", body }),
+    });
+  } catch (err) {
+    cb.onError?.(err instanceof Error ? err.message : String(err));
+    return;
+  }
+  if (!res.ok || !res.body) {
+    const text = await res.text().catch(() => "");
+    cb.onError?.(text || `HTTP ${res.status}`);
+    return;
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let idx;
+    while ((idx = buffer.indexOf("\n\n")) >= 0) {
+      const raw = buffer.slice(0, idx);
+      buffer = buffer.slice(idx + 2);
+      const lines = raw.split("\n");
+      let event = "message";
+      const dataLines: string[] = [];
+      for (const line of lines) {
+        if (line.startsWith("event:")) event = line.slice(6).trim();
+        else if (line.startsWith("data:")) dataLines.push(line.slice(5).trim());
       }
-    };
-    window.addEventListener("message", onMsg);
-    window.postMessage({ type: "M2A_BRIDGE_PING" }, window.location.origin);
-    setTimeout(() => {
-      if (!done) {
-        window.removeEventListener("message", onMsg);
-        resolve(false);
+      if (!dataLines.length) continue;
+      let parsed: Record<string, unknown> = {};
+      try {
+        parsed = JSON.parse(dataLines.join("\n"));
+      } catch {
+        parsed = { raw: dataLines.join("\n") };
       }
-    }, timeoutMs);
+      if (event === "progress") cb.onProgress?.(parsed);
+      else if (event === "done") cb.onDone?.(parsed);
+      else if (event === "error")
+        cb.onError?.(String(parsed.error ?? "Erro no worker"));
+    }
+  }
+}
+
+async function callProxyJson<T = unknown>(
+  path: string,
+  body?: unknown,
+  method: "GET" | "POST" = "POST",
+): Promise<T> {
+  const { data, error } = await supabase.functions.invoke("m2a-proxy", {
+    body: { path, method, body },
+  });
+  if (error) throw new Error(error.message || "Falha no m2a-proxy");
+  if (
+    data &&
+    typeof data === "object" &&
+    "error" in data &&
+    (data as { error?: string }).error
+  ) {
+    throw new Error(String((data as { error: string }).error));
+  }
+  return data as T;
+}
+
+// ============================================================
+// Envio de contrato (substitui sendToM2A da extensão)
+// ============================================================
+
+export function sendToM2A(payload: M2AAutomationPayload): void {
+  const contratoId = payload.contratoId;
+  emitWindow({
+    type: "M2A_PROGRESS",
+    contratoId,
+    etapa: "validacao",
+    mensagem: "Conectando ao worker M2A…",
+  } satisfies M2AProgressEvent);
+
+  void callProxySse("/contratos/processar", payload, {
+    onProgress: (evt) => {
+      emitWindow({
+        type: "M2A_PROGRESS",
+        contratoId,
+        ...evt,
+      });
+    },
+    onDone: (evt) => {
+      emitWindow({
+        type: "M2A_PROGRESS",
+        contratoId,
+        etapa: "concluido",
+        sucesso: true,
+        mensagem: "Contrato enviado com sucesso ao portal M2A.",
+        m2a_contrato_id: (evt as { m2a_contrato_id?: string }).m2a_contrato_id,
+        documentosM2A: (evt as { documentosM2A?: M2ADocumentoGerado[] })
+          .documentosM2A,
+      } satisfies M2AProgressEvent);
+    },
+    onError: (err) => {
+      emitWindow({
+        type: "M2A_PROGRESS",
+        contratoId,
+        etapa: "erro",
+        sucesso: false,
+        mensagem: err,
+      } satisfies M2AProgressEvent);
+    },
   });
 }
 
-function postM2AEvent(type: string, payload?: unknown) {
-  window.postMessage(
-    payload === undefined ? { type } : { type, payload },
-    window.location.origin,
-  );
+export function diagnoseM2A(payload: M2AAutomationPayload): void {
+  const contratoId = payload.contratoId;
+  emitWindow({
+    type: "M2A_PROGRESS",
+    contratoId,
+    etapa: "diagnostico",
+    mensagem: "Executando diagnóstico no worker M2A…",
+  } satisfies M2AProgressEvent);
+
+  callProxyJson("/contratos/diagnosticar", payload)
+    .then((result) => {
+      emitWindow({
+        type: "M2A_PROGRESS",
+        contratoId,
+        etapa: "diagnostico",
+        sucesso: true,
+        mensagem: "Diagnóstico concluído sem gravação.",
+        response: result,
+      } satisfies M2AProgressEvent);
+    })
+    .catch((err: Error) => {
+      emitWindow({
+        type: "M2A_PROGRESS",
+        contratoId,
+        etapa: "erro",
+        sucesso: false,
+        mensagem: err.message,
+      } satisfies M2AProgressEvent);
+    });
 }
 
-export function sendToM2A(payload: M2AAutomationPayload) {
-  postM2AEvent("M2A_START_AUTOMATION", payload);
-}
-
-export function diagnoseM2A(payload: M2AAutomationPayload) {
-  postM2AEvent("M2A_DIAGNOSTIC_AUTOMATION", payload);
-}
+// ============================================================
+// Criação de processo SRP (substitui requestM2AProcessCreation)
+// ============================================================
 
 export function requestM2AProcessCreation(
   payload: M2AProcessCreationPayload,
@@ -171,13 +334,54 @@ export function requestM2AProcessCreation(
   const requestId =
     payload.requestId ??
     `processo_srp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-  postM2AEvent("M2A_START_PROCESS_CREATION", {
-    ...payload,
+  const enrichedPayload = { ...payload, requestId, tipo: "processo_srp" };
+
+  emitWindow({
+    type: "M2A_PROGRESS",
+    contratoId: requestId,
     requestId,
-    tipo: "processo_srp",
+    etapa: "validacao",
+    mensagem: "Conectando ao worker M2A para criar processo…",
+  } satisfies M2AProgressEvent);
+
+  void callProxySse("/processos/srp/criar", enrichedPayload, {
+    onProgress: (evt) => {
+      emitWindow({
+        type: "M2A_PROGRESS",
+        contratoId: requestId,
+        requestId,
+        ...evt,
+      });
+    },
+    onDone: (evt) => {
+      emitWindow({
+        type: "M2A_PROGRESS",
+        contratoId: requestId,
+        requestId,
+        etapa: "concluido",
+        sucesso: true,
+        mensagem: "Processo SRP criado no portal M2A.",
+        ...(evt as Record<string, unknown>),
+      } as M2AProgressEvent);
+    },
+    onError: (err) => {
+      emitWindow({
+        type: "M2A_PROGRESS",
+        contratoId: requestId,
+        requestId,
+        etapa: "erro",
+        sucesso: false,
+        mensagem: err,
+      } satisfies M2AProgressEvent);
+    },
   });
+
   return requestId;
 }
+
+// ============================================================
+// Listeners (inalterados — só escutam window.postMessage)
+// ============================================================
 
 export function listenM2AProgress(
   contratoId: string,
@@ -314,13 +518,48 @@ export function requestNumeracaoSync(
   ano: number = new Date().getFullYear(),
 ): string {
   const requestId = `sync_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-  window.postMessage(
-    {
-      type: "M2A_SYNC_NUMERACAO",
-      payload: { requestId, secretarias, ano },
-    },
-    window.location.origin,
-  );
+  const sigsParam = secretarias
+    .map((s) => s.sigla)
+    .filter(Boolean)
+    .join(",");
+  const numByPath = new Map(secretarias.map((s) => [s.sigla, s.num]));
+
+  callProxyJson<{
+    ano: number;
+    itens: Array<{ sigla: string; ano: number; ultimo_numero: number | null; erro?: string }>;
+  }>(`/numeracao?ano=${ano}&secretarias=${encodeURIComponent(sigsParam)}`, undefined, "GET")
+    .then((result) => {
+      const itens: M2ASyncItemResult[] = (result.itens ?? []).map((it) => ({
+        sigla: it.sigla,
+        num: numByPath.get(it.sigla) ?? 0,
+        ultimo_numero: it.ultimo_numero,
+        ano: it.ano,
+        erro: it.erro,
+      }));
+      // Emite progresso individual para compatibilidade com listener atual
+      for (const item of itens) {
+        emitWindow({
+          type: "M2A_SYNC_PROGRESS",
+          requestId,
+          sigla: item.sigla,
+          resultado: item,
+        });
+      }
+      emitWindow({
+        type: "M2A_SYNC_RESULT",
+        requestId,
+        itens,
+      });
+    })
+    .catch((err: Error) => {
+      emitWindow({
+        type: "M2A_SYNC_RESULT",
+        requestId,
+        itens: [],
+        erro: err.message,
+      });
+    });
+
   return requestId;
 }
 
