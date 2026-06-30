@@ -500,16 +500,28 @@ export function AppShell({
         </div>
         <footer className="shrink-0 border-t border-border/60 bg-background/80 px-5 py-2 text-[11px] text-muted-foreground">
           <div className="flex items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={handleExportSystem}
-              disabled={exportingSystem}
-              className="inline-flex h-6 items-center gap-1.5 rounded-md px-1.5 text-[10.5px] font-medium opacity-70 transition-opacity hover:bg-muted hover:text-foreground hover:opacity-100 disabled:pointer-events-none disabled:opacity-45"
-              title="Exportar projeto, migrações, relatório e backup do banco"
-            >
-              <Download className="size-3" aria-hidden="true" />
-              <span>{exportingSystem ? "Exportando..." : "Exportar sistema"}</span>
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={handleExportSystem}
+                disabled={exportingSystem}
+                className="inline-flex h-6 items-center gap-1.5 rounded-md px-1.5 text-[10.5px] font-medium opacity-70 transition-opacity hover:bg-muted hover:text-foreground hover:opacity-100 disabled:pointer-events-none disabled:opacity-45"
+                title="Exportar projeto, migrações, relatório e backup do banco"
+              >
+                <Download className="size-3" aria-hidden="true" />
+                <span>{exportingSystem ? "Exportando..." : "Exportar sistema"}</span>
+              </button>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={handleSetupDailyBackup}
+                  className="inline-flex h-6 items-center rounded-md px-1.5 text-[10.5px] font-medium opacity-60 transition-opacity hover:bg-muted hover:text-foreground hover:opacity-100"
+                  title="Agendar backup automático diário (23:55 UTC) — substitui o arquivo anterior no bucket system-backups"
+                >
+                  Agendar backup diário
+                </button>
+              )}
+            </div>
             <div className="flex items-center justify-end gap-3 font-mono">
             <span>SITE {siteVersion}</span>
             <span>EXTENSÃO {extensionVersion}</span>
