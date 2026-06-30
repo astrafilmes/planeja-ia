@@ -294,10 +294,13 @@ function Page() {
  const [prepostosByFornecedor, setPrepostosByFornecedor] = useState<
  Record<string, string>
  >({});
- const [processoId, setProcessoId] = useState<string>("");
- const [objetoBatch, setObjetoBatch] = useState("");
- const [dataBatch] = useState<string>("");
- const [criarProcesso, setCriarProcesso] = useState(true);
+  const [processoId, setProcessoId] = useState<string>("");
+  const [objetoBatch, setObjetoBatch] = useState("");
+  const [dataBatch] = useState<string>("");
+  const [criarProcesso, setCriarProcesso] = useState(true);
+  const [contratosDesmarcados, setContratosDesmarcados] = useState<Set<string>>(
+    new Set(),
+  );
 
  const { data: processos } = useQuery({
  queryKey: ["processos-min"],
