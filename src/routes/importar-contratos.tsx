@@ -2208,12 +2208,17 @@ function Page() {
  disabled={!!processoId}
  />
  </div>
- <div className="flex flex-col gap-1.5">
- <Label>Data dos contratos *</Label>
- <div className="py-2 text-[13px] italic text-muted-foreground">
- Será preenchida no envio pela extensão
- </div>
- </div>
+                            <div className="flex flex-col gap-1.5">
+                              <Label>Data dos contratos *</Label>
+                              <Input
+                                type="date"
+                                value={dataBatch}
+                                onChange={(e) => setDataBatch(e.target.value)}
+                              />
+                              <p className="text-[12px] text-muted-foreground">
+                                Será gravada em todos os contratos e usada no envio ao portal M2A.
+                              </p>
+                            </div>
  </div>
  <div className="flex flex-col gap-1.5">
  <Label>Objeto *</Label>
