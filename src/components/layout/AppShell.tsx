@@ -323,6 +323,19 @@ export function AppShell({
     }
   }
 
+  async function handleSetupDailyBackup() {
+    try {
+      await setupDailyBackup();
+      toast.success("Backup diário agendado", {
+        description: "Será executado todos os dias às 23:55 (UTC).",
+      });
+    } catch (error) {
+      toast.error("Falha ao agendar backup diário", {
+        description: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
   if (loading || !user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
