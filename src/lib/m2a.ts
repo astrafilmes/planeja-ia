@@ -362,7 +362,7 @@ export function requestM2AProcessCreation(
         sucesso: true,
         mensagem: "Processo SRP criado no portal M2A.",
         ...(evt as Record<string, unknown>),
-      } as M2AProgressEvent);
+      });
     },
     onError: (err) => {
       emitWindow({
