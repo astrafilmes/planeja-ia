@@ -42,10 +42,7 @@ import {
 } from "@/components/ui/sheet";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { CommandPalette } from "@/components/layout/CommandPalette";
-import {
-  createStartupDatabaseBackup,
-  exportFullSystem,
-} from "@/lib/system-export";
+import { exportFullSystem, setupDailyBackup } from "@/lib/system-export";
 
 import { PageHeader } from "@/components/layout/PageHeader";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
@@ -277,7 +274,7 @@ export function AppShell({
   actions?: ReactNode;
   onBack?: () => void;
 }) {
-  const { user, loading, signOut, isGestor, roles } = useAuth();
+  const { user, loading, signOut, isGestor, isAdmin, roles } = useAuth();
   const navigate = useNavigate();
   const router = useRouterState();
   const pathname = router.location.pathname;
@@ -301,12 +298,8 @@ export function AppShell({
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  useEffect(() => {
-    if (!user || !isGestor) return;
-    createStartupDatabaseBackup().catch((error) => {
-      console.warn("Backup automático do banco não concluído", error);
-    });
-  }, [user, isGestor]);
+  // Backup automático no startup foi removido: agora roda apenas via botão
+  // de exportar ou via agendamento diário (cron) no backend.
 
   async function handleExportSystem() {
     if (!isGestor) {
@@ -327,6 +320,19 @@ export function AppShell({
       });
     } finally {
       setExportingSystem(false);
+    }
+  }
+
+  async function handleSetupDailyBackup() {
+    try {
+      await setupDailyBackup();
+      toast.success("Backup diário agendado", {
+        description: "Será executado todos os dias às 23:55 (UTC).",
+      });
+    } catch (error) {
+      toast.error("Falha ao agendar backup diário", {
+        description: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
@@ -494,16 +500,28 @@ export function AppShell({
         </div>
         <footer className="shrink-0 border-t border-border/60 bg-background/80 px-5 py-2 text-[11px] text-muted-foreground">
           <div className="flex items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={handleExportSystem}
-              disabled={exportingSystem}
-              className="inline-flex h-6 items-center gap-1.5 rounded-md px-1.5 text-[10.5px] font-medium opacity-70 transition-opacity hover:bg-muted hover:text-foreground hover:opacity-100 disabled:pointer-events-none disabled:opacity-45"
-              title="Exportar projeto, migrações, relatório e backup do banco"
-            >
-              <Download className="size-3" aria-hidden="true" />
-              <span>{exportingSystem ? "Exportando..." : "Exportar sistema"}</span>
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={handleExportSystem}
+                disabled={exportingSystem}
+                className="inline-flex h-6 items-center gap-1.5 rounded-md px-1.5 text-[10.5px] font-medium opacity-70 transition-opacity hover:bg-muted hover:text-foreground hover:opacity-100 disabled:pointer-events-none disabled:opacity-45"
+                title="Exportar projeto, migrações, relatório e backup do banco"
+              >
+                <Download className="size-3" aria-hidden="true" />
+                <span>{exportingSystem ? "Exportando..." : "Exportar sistema"}</span>
+              </button>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={handleSetupDailyBackup}
+                  className="inline-flex h-6 items-center rounded-md px-1.5 text-[10.5px] font-medium opacity-60 transition-opacity hover:bg-muted hover:text-foreground hover:opacity-100"
+                  title="Agendar backup automático diário (23:55 UTC) — substitui o arquivo anterior no bucket system-backups"
+                >
+                  Agendar backup diário
+                </button>
+              )}
+            </div>
             <div className="flex items-center justify-end gap-3 font-mono">
             <span>SITE {siteVersion}</span>
             <span>EXTENSÃO {extensionVersion}</span>

@@ -24,16 +24,7 @@ type DatabaseExport = {
   warnings?: string[];
 };
 
-type BackupRecord = {
-  id: string;
-  createdAt: string;
-  database: DatabaseExport;
-};
-
 const PROJECT_FILES = __PROJECT_FILE_MANIFEST__ as ProjectFileManifestEntry[];
-const BACKUP_DB_NAME = "planeja-ia-system-backups";
-const BACKUP_STORE = "databaseBackups";
-const BACKUP_VERSION = 1;
 
 function nowIso() {
   return new Date().toISOString();
@@ -43,70 +34,6 @@ function safeFilenameTimestamp(date = new Date()) {
   return date.toISOString().replace(/[:.]/g, "-");
 }
 
-async function requestPersistentStorage() {
-  try {
-    await navigator.storage?.persist?.();
-  } catch {
-    /* O navegador pode negar silenciosamente; IndexedDB continua disponível. */
-  }
-}
-
-function openBackupDb(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(BACKUP_DB_NAME, BACKUP_VERSION);
-    request.onupgradeneeded = () => {
-      const db = request.result;
-      if (!db.objectStoreNames.contains(BACKUP_STORE)) {
-        db.createObjectStore(BACKUP_STORE, { keyPath: "id" });
-      }
-    };
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve(request.result);
-  });
-}
-
-function runStoreOperation<T>(
-  db: IDBDatabase,
-  mode: IDBTransactionMode,
-  operation: (store: IDBObjectStore) => IDBRequest<T>,
-): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(BACKUP_STORE, mode);
-    const request = operation(tx.objectStore(BACKUP_STORE));
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve(request.result);
-    tx.onerror = () => reject(tx.error);
-  });
-}
-
-async function putDatabaseBackup(database: DatabaseExport) {
-  if (typeof indexedDB === "undefined") return;
-  await requestPersistentStorage();
-  const db = await openBackupDb();
-  try {
-    const createdAt = nowIso();
-    const record: BackupRecord = {
-      id: `backup-${createdAt}`,
-      createdAt,
-      database,
-    };
-    await runStoreOperation(db, "readwrite", (store) => store.put(record));
-    localStorage.setItem("planeja-ia:last-database-backup", createdAt);
-
-    const keys = (await runStoreOperation(db, "readonly", (store) =>
-      store.getAllKeys(),
-    )) as IDBValidKey[];
-    const oldKeys = keys.map(String).sort().reverse().slice(5);
-    await Promise.all(
-      oldKeys.map((key) =>
-        runStoreOperation(db, "readwrite", (store) => store.delete(key)),
-      ),
-    );
-  } finally {
-    db.close();
-  }
-}
-
 async function fetchDatabaseExport(): Promise<DatabaseExport> {
   const { data, error } = await supabase.functions.invoke<DatabaseExport>(
     "system-export",
@@ -114,6 +41,27 @@ async function fetchDatabaseExport(): Promise<DatabaseExport> {
   );
   if (error) throw new Error(error.message);
   if (!data) throw new Error("Backup do banco retornou vazio.");
+  return data;
+}
+
+export async function setupDailyBackup() {
+  const { data, error } = await supabase.functions.invoke<{
+    ok?: boolean;
+    error?: string;
+    scheduled_at?: string;
+  }>("system-export", { body: { action: "setup-daily-backup" } });
+  if (error) throw new Error(error.message);
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
+export async function getLatestBackupInfo() {
+  const { data, error } = await supabase.functions.invoke<{
+    available: boolean;
+    updated_at?: string;
+    size_bytes?: number;
+  }>("system-export", { body: { action: "latest-backup-info" } });
+  if (error) throw new Error(error.message);
   return data;
 }
 
@@ -133,7 +81,6 @@ const backendKey = process.env.BACKEND_SERVICE_KEY || process.env.SUPABASE_SERVI
 
 if (!backendUrl || !backendKey) {
   console.log("Backup lido com sucesso, mas BACKEND_URL/BACKEND_SERVICE_KEY não foram definidos.");
-  console.log("Defina as variáveis do backend do ambiente de destino para sincronizar os dados.");
   process.exit(0);
 }
 
@@ -146,10 +93,7 @@ const order = backup.restore_order || Object.keys(tables);
 
 for (const table of order) {
   const rows = tables[table]?.rows || [];
-  if (!rows.length) {
-    console.log(\`- \${table}: vazio\`);
-    continue;
-  }
+  if (!rows.length) { console.log(\`- \${table}: vazio\`); continue; }
   for (let i = 0; i < rows.length; i += 500) {
     const chunk = rows.slice(i, i + 500);
     const { error } = await client.from(table).upsert(chunk);
@@ -166,19 +110,13 @@ function createReadme() {
   return `PLANEJA-IA — execução em outra IDE
 
 1. Extraia este pacote em uma pasta limpa.
-2. Abra a pasta no VS Code ou IDE equivalente.
-3. Instale as dependências com: bun install
-4. Configure as variáveis de ambiente do backend do ambiente de destino.
-5. Rode o sistema com: bun run dev
+2. Abra a pasta no VS Code.
+3. Instale dependências: bun install
+4. Configure variáveis de ambiente do backend.
+5. Rode: bun run dev
 
-Backup e sincronização de dados:
-- O arquivo database/database-backup.json contém as tabelas exportadas.
-- Para sincronizar em outro ambiente, configure BACKEND_URL e BACKEND_SERVICE_KEY e rode:
+Sincronizar dados:
   node tools/sync-database-from-backup.mjs database/database-backup.json
-
-Observação de segurança:
-- Arquivos locais de segredo (.env), node_modules, dist e .git não são empacotados.
-- Recrie dependências com bun install e configure segredos diretamente no ambiente de destino.
 `;
 }
 
@@ -196,41 +134,11 @@ function createReport(database: DatabaseExport | null, databaseError?: string) {
 Gerado em: ${nowIso()}
 Versão do sistema: ${__APP_VERSION__}
 Arquivos do projeto: ${PROJECT_FILES.length}
-Tamanho dos arquivos do projeto: ${totalBytes} bytes
-
-Conteúdo incluído:
-- Código-fonte do frontend
-- Funções de backend versionadas no projeto
-- Migrações do banco de dados
-- Scripts auxiliares e worker VPS
-- Arquivos públicos e configurações versionadas
-- Backup JSON das tabelas do banco ${database ? "incluído" : "não incluído"}
+Tamanho: ${totalBytes} bytes
 
 Banco de dados:
-${databaseError ? `Falha ao exportar banco: ${databaseError}` : tableLines.join("\n") || "Sem tabelas retornadas."}
-
-Como executar em outra IDE:
-1. Extraia o ZIP.
-2. Execute bun install.
-3. Configure as variáveis do backend no ambiente de destino.
-4. Execute bun run dev.
-
-Como sincronizar dados:
-1. Configure BACKEND_URL e BACKEND_SERVICE_KEY no terminal do ambiente de destino.
-2. Execute: node tools/sync-database-from-backup.mjs database/database-backup.json
-
-Itens intencionalmente não empacotados por segurança ou por serem recriados:
-- .env e arquivos locais de segredo
-- node_modules
-- dist/build gerado
-- .git
+${databaseError ? `Falha: ${databaseError}` : tableLines.join("\n") || "Sem tabelas."}
 `;
-}
-
-export async function createStartupDatabaseBackup() {
-  const database = await fetchDatabaseExport();
-  await putDatabaseBackup(database);
-  return database;
 }
 
 export async function exportFullSystem() {
@@ -242,7 +150,7 @@ export async function exportFullSystem() {
   let database: DatabaseExport | null = null;
   let databaseError: string | undefined;
   try {
-    database = await createStartupDatabaseBackup();
+    database = await fetchDatabaseExport();
     zip.file("database/database-backup.json", JSON.stringify(database, null, 2));
   } catch (error) {
     databaseError = error instanceof Error ? error.message : String(error);

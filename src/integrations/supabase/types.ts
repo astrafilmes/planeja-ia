@@ -1767,6 +1767,10 @@ export type Database = {
         Args: { p_processo_id: string }
         Returns: undefined
       }
+      setup_daily_backup_cron: {
+        Args: { p_function_url: string; p_secret: string }
+        Returns: string
+      }
       sync_m2a_atas_fornecedor_from_snapshot: {
         Args: { p_processo_id?: string }
         Returns: number
