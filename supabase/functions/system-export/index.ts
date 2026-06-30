@@ -246,10 +246,35 @@ async function uploadBackup(payload: unknown) {
   return meta;
 }
 
+// Schedule diário (18h Brasília = 21:00 UTC). Faz auto-bootstrap na primeira
+// vez que a função roda, sem exigir clique do admin.
+const DAILY_SCHEDULE = "0 21 * * *";
+let cronBootstrapped = false;
+async function ensureDailyCron() {
+  if (cronBootstrapped) return;
+  if (!CRON_SECRET) return;
+  try {
+    const functionUrl = `${SUPABASE_URL}/functions/v1/system-export`;
+    const { error } = await admin.rpc("ensure_daily_backup_cron", {
+      p_secret: CRON_SECRET,
+      p_function_url: functionUrl,
+      p_schedule: DAILY_SCHEDULE,
+    });
+    if (!error) cronBootstrapped = true;
+    else console.warn("ensure_daily_backup_cron:", error.message);
+  } catch (e) {
+    console.warn("ensure_daily_backup_cron failed", e);
+  }
+}
+ensureDailyCron();
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS")
     return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "method not allowed" }, 405);
+
+  // Garante que o cron diário esteja agendado (idempotente).
+  await ensureDailyCron();
 
   let body: { action?: string } = {};
   try {

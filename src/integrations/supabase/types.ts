@@ -1631,6 +1631,10 @@ export type Database = {
         Returns: string
       }
       dedupe_m2a_itens: { Args: { p_processo_id: string }; Returns: number }
+      ensure_daily_backup_cron: {
+        Args: { p_function_url: string; p_schedule?: string; p_secret: string }
+        Returns: string
+      }
       get_contract_report_data: {
         Args: { p_contract_id: string }
         Returns: {
@@ -1767,10 +1771,19 @@ export type Database = {
         Args: { p_processo_id: string }
         Returns: undefined
       }
-      setup_daily_backup_cron: {
-        Args: { p_function_url: string; p_secret: string }
-        Returns: string
-      }
+      setup_daily_backup_cron:
+        | {
+            Args: { p_function_url: string; p_secret: string }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_function_url: string
+              p_schedule?: string
+              p_secret: string
+            }
+            Returns: string
+          }
       sync_m2a_atas_fornecedor_from_snapshot: {
         Args: { p_processo_id?: string }
         Returns: number
