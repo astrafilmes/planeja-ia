@@ -376,7 +376,7 @@ function Page() {
  ultimo_erro_m2a: null,
  })
  .eq("id", id);
- toast.success("Contrato enviado pela extensão");
+ toast.success("Contrato enviado ao portal M2A");
  finishTask("Contrato enviado ao portal com sucesso.");
  setEnviando(false);
  refetch();
@@ -652,7 +652,7 @@ function Page() {
  description:
  statusM2A ==="sucesso" || statusM2A ==="enviado"
  ?"Documentos prontos"
- :"Executar extensão",
+ :"Enviar ao M2A",
  to:"/contratos",
  icon: Send,
  state:
@@ -801,7 +801,7 @@ function Page() {
  {/* Painel de envio */}
  <FormSection
  id="envio-extensao"
- title="Envio pela extensão"
+ title="Envio ao portal M2A"
  description="Acompanhamento da automação no portal."
  icon={<Send className="size-4" />}
  className="mb-3"

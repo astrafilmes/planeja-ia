@@ -1043,7 +1043,7 @@ function Page() {
 
  setSending(false);
  toast.success(
- `${config.ids.length} comando(s) de envio despachado(s) para a extensão.`,
+ `${config.ids.length} envio(s) iniciado(s) no worker M2A.`,
  );
  qc.invalidateQueries({ queryKey: ["processo-detail", id] });
  }
@@ -1748,7 +1748,7 @@ function Page() {
  <Dialog open={m2aDialogOpen} onOpenChange={setM2aDialogOpen}>
  <DialogContent className="max-w-2xl">
  <DialogHeader>
- <DialogTitle>Configurar envio pela extensão</DialogTitle>
+ <DialogTitle>Configurar envio ao portal M2A</DialogTitle>
  </DialogHeader>
  <div className="grid gap-4 py-2 md:grid-cols-[1fr_240px]">
  <div className="flex flex-col gap-4">
@@ -1849,7 +1849,7 @@ function Page() {
  onClick={handleDiagnoseM2A}
  disabled={sending || !connected}
  >
- Testar extensão
+ Diagnosticar M2A
  </Button>
  <Button
  onClick={handleSendSelectedToM2A}
