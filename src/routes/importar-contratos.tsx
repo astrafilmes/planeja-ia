@@ -2296,11 +2296,15 @@ function Page() {
  <div className="font-medium text-slate-800 ">
  Pré-checagem
  </div>
- <div className="mt-1">
- {contratosPreliminares.length -
+  <div className="mt-1">
+ {contratosSelecionados.length -
  contratosSemCadastroM2A.length}{""}
- de {contratosPreliminares.length} contrato(s)
- com cadastro completo.
+ de {contratosSelecionados.length} contrato(s)
+ com cadastro completo
+ {contratosDesmarcados.size > 0
+ ? ` (${contratosDesmarcados.size} desmarcado(s))`
+ : ""}
+ .
  </div>
  <div className="mt-1">
  {fornecedoresPrepostoTargets.length -
