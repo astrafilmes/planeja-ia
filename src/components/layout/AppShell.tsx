@@ -42,7 +42,7 @@ import {
 } from "@/components/ui/sheet";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { CommandPalette } from "@/components/layout/CommandPalette";
-import { exportFullSystem } from "@/lib/system-export";
+import { exportFullSystem, setupDailyBackup } from "@/lib/system-export";
 
 import { PageHeader } from "@/components/layout/PageHeader";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
