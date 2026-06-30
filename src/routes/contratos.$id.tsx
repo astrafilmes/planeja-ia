@@ -431,19 +431,19 @@ function Page() {
  toast.error("Informe o número do contrato.");
  return;
  }
- if (!isNumericM2AId(editAtaId)) {
+ if (editAtaId && !isNumericM2AId(editAtaId)) {
  toast.error("Selecione uma ata válida.");
  return;
  }
- const ataSelecionada = contrato.m2aAtas.find(
- (ata: any) => ata.m2a_ata_id === editAtaId,
- );
+ const ataSelecionada = editAtaId
+   ? contrato.m2aAtas.find((ata: any) => ata.m2a_ata_id === editAtaId)
+   : null;
  setSalvandoM2AConfig(true);
  const { error } = await supabase
  .from("contratos")
   .update({
    numero_contrato: numero,
-   m2a_ata_id: editAtaId,
+   m2a_ata_id: editAtaId || null,
    m2a_ata_numero: ataSelecionada?.numero_ata ?? null,
    fornecedor_nome: ataSelecionada?.fornecedor_nome ?? null,
    data: editData ? editData : undefined,
