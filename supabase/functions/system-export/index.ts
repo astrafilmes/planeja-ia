@@ -7,69 +7,56 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const TABLES = [
-  "profiles",
-  "user_roles",
-  "secretarias",
-  "secretaria_contatos",
-  "fornecedores_prepostos",
-  "processos",
-  "contratos",
-  "contrato_itens",
-  "contrato_item_dotacoes",
-  "contrato_atores",
-  "contrato_documentos",
-  "contrato_import_jobs",
-  "contrato_import_itens",
-  "contrato_import_dotacoes",
-  "irp_jobs",
-  "irp_job_secretarias",
-  "irp_unidades_processamento",
-  "m2a_atas",
-  "m2a_itens",
-  "m2a_contratos_snapshot",
-  "m2a_envio_logs",
-  "m2a_envio_preferencias",
-  "m2a_unidades_gestoras",
-  "m2a_servidores",
-  "m2a_servidor_unidade",
-  "numeracao",
-  "app_files",
-  "audit_logs",
-  "trusted_devices",
-] as const;
+// Grupos por prioridade — pequenos o suficiente para caber em uma execução
+// (evita 504). O cliente chama um grupo por vez e monta o ZIP localmente.
+const TABLE_GROUPS: Record<string, string[]> = {
+  base: [
+    "profiles",
+    "user_roles",
+    "secretarias",
+    "secretaria_contatos",
+    "fornecedores_prepostos",
+    "numeracao",
+    "m2a_unidades_gestoras",
+    "m2a_servidores",
+    "m2a_servidor_unidade",
+  ],
+  processos: [
+    "processos",
+    "irp_jobs",
+    "irp_job_secretarias",
+    "irp_unidades_processamento",
+  ],
+  contratos: [
+    "contratos",
+    "contrato_itens",
+    "contrato_item_dotacoes",
+    "contrato_atores",
+    "contrato_documentos",
+  ],
+  importacao: [
+    "contrato_import_jobs",
+    "contrato_import_itens",
+    "contrato_import_dotacoes",
+  ],
+  m2a: [
+    "m2a_atas",
+    "m2a_itens",
+    "m2a_contratos_snapshot",
+    "m2a_envio_preferencias",
+    "m2a_envio_logs",
+  ],
+  logs: ["app_files", "audit_logs", "trusted_devices"],
+};
 
 const RESTORE_ORDER = [
-  "profiles",
-  "user_roles",
-  "secretarias",
-  "secretaria_contatos",
-  "fornecedores_prepostos",
-  "processos",
-  "contratos",
-  "contrato_itens",
-  "contrato_item_dotacoes",
-  "contrato_atores",
-  "contrato_documentos",
-  "contrato_import_jobs",
-  "contrato_import_itens",
-  "contrato_import_dotacoes",
-  "irp_jobs",
-  "irp_job_secretarias",
-  "irp_unidades_processamento",
-  "m2a_atas",
-  "m2a_itens",
-  "m2a_contratos_snapshot",
-  "m2a_envio_preferencias",
-  "m2a_unidades_gestoras",
-  "m2a_servidores",
-  "m2a_servidor_unidade",
-  "numeracao",
-  "app_files",
-  "audit_logs",
-  "m2a_envio_logs",
-  "trusted_devices",
-] as const;
+  ...TABLE_GROUPS.base,
+  ...TABLE_GROUPS.processos,
+  ...TABLE_GROUPS.contratos,
+  ...TABLE_GROUPS.importacao,
+  ...TABLE_GROUPS.m2a,
+  ...TABLE_GROUPS.logs,
+];
 
 const BACKUP_BUCKET = "system-backups";
 const BACKUP_OBJECT_PATH = "latest/backup.json";
@@ -133,46 +120,12 @@ async function fetchAllRows(table: string) {
   return rows;
 }
 
-async function listBucketFiles(bucket: string, prefix = ""): Promise<unknown[]> {
-  const { data, error } = await admin.storage.from(bucket).list(prefix, {
-    limit: 1000,
-    offset: 0,
-    sortBy: { column: "name", order: "asc" },
-  });
-  if (error) throw error;
-  const out: unknown[] = [];
-  for (const item of data ?? []) {
-    const path = prefix ? `${prefix}/${item.name}` : item.name;
-    const maybeFolder = !item.id && !item.metadata;
-    if (maybeFolder) {
-      out.push(...(await listBucketFiles(bucket, path)));
-      continue;
-    }
-    const { data: blob, error: dErr } = await admin.storage
-      .from(bucket)
-      .download(path);
-    if (dErr) {
-      out.push({ ...item, path, download_error: dErr.message });
-      continue;
-    }
-    const buffer = await blob.arrayBuffer();
-    const bytes = new Uint8Array(buffer);
-    let binary = "";
-    for (const byte of bytes) binary += String.fromCharCode(byte);
-    out.push({
-      ...item,
-      path,
-      size: bytes.byteLength,
-      content_base64: btoa(binary),
-    });
-  }
-  return out;
-}
-
-async function buildDatabaseExport(opts: { includeStorage: boolean }) {
+async function exportTableGroup(group: string) {
+  const names = TABLE_GROUPS[group];
+  if (!names) throw new Error(`grupo desconhecido: ${group}`);
   const tables: Record<string, unknown> = {};
   const warnings: string[] = [];
-  for (const table of TABLES) {
+  for (const table of names) {
     try {
       const rows = await fetchAllRows(table);
       tables[table] = { count: rows.length, rows };
@@ -182,29 +135,88 @@ async function buildDatabaseExport(opts: { includeStorage: boolean }) {
       tables[table] = { count: 0, rows: [], error: message };
     }
   }
+  return { group, generated_at: new Date().toISOString(), tables, warnings };
+}
 
-  const storage: Record<string, unknown> = {};
-  if (opts.includeStorage) {
-    try {
-      const { data: buckets, error } = await admin.storage.listBuckets();
-      if (error) throw error;
-      for (const bucket of buckets ?? []) {
-        if (bucket.name === BACKUP_BUCKET) continue;
-        try {
-          storage[bucket.name] = await listBucketFiles(bucket.name);
-        } catch (bErr) {
-          const message = bErr instanceof Error ? bErr.message : String(bErr);
-          warnings.push(`storage/${bucket.name}: ${message}`);
-          storage[bucket.name] = { error: message };
-        }
-      }
-    } catch (error) {
-      warnings.push(
-        `storage: ${error instanceof Error ? error.message : String(error)}`,
+async function listBucketEntries(bucket: string, prefix = ""): Promise<
+  { path: string; size: number }[]
+> {
+  const out: { path: string; size: number }[] = [];
+  const { data, error } = await admin.storage.from(bucket).list(prefix, {
+    limit: 1000,
+    offset: 0,
+    sortBy: { column: "name", order: "asc" },
+  });
+  if (error) throw error;
+  for (const item of data ?? []) {
+    const path = prefix ? `${prefix}/${item.name}` : item.name;
+    const isFolder = !item.id && !item.metadata;
+    if (isFolder) {
+      out.push(...(await listBucketEntries(bucket, path)));
+    } else {
+      const size = Number(
+        (item.metadata as { size?: number } | null)?.size ?? 0,
       );
+      out.push({ path, size });
     }
   }
+  return out;
+}
 
+async function downloadStorageBatch(
+  bucket: string,
+  paths: string[],
+): Promise<unknown[]> {
+  const results: unknown[] = [];
+  for (const path of paths) {
+    const { data, error } = await admin.storage.from(bucket).download(path);
+    if (error) {
+      results.push({ path, error: error.message });
+      continue;
+    }
+    const buf = new Uint8Array(await data.arrayBuffer());
+    let binary = "";
+    for (const b of buf) binary += String.fromCharCode(b);
+    results.push({
+      path,
+      size: buf.byteLength,
+      content_base64: btoa(binary),
+    });
+  }
+  return results;
+}
+
+async function buildFullDatabaseExport() {
+  const tables: Record<string, unknown> = {};
+  const warnings: string[] = [];
+  for (const name of RESTORE_ORDER) {
+    try {
+      const rows = await fetchAllRows(name);
+      tables[name] = { count: rows.length, rows };
+    } catch (e) {
+      const m = e instanceof Error ? e.message : String(e);
+      warnings.push(`${name}: ${m}`);
+      tables[name] = { count: 0, rows: [], error: m };
+    }
+  }
+  // Storage limit-light: lista apenas, sem conteúdo, para o backup agendado
+  // não explodir. Para conteúdo completo, o cliente puxa por bucket via chunk.
+  const storage: Record<string, unknown> = {};
+  try {
+    const { data: buckets } = await admin.storage.listBuckets();
+    for (const b of buckets ?? []) {
+      if (b.name === BACKUP_BUCKET) continue;
+      try {
+        storage[b.name] = await listBucketEntries(b.name);
+      } catch (e) {
+        storage[b.name] = {
+          error: e instanceof Error ? e.message : String(e),
+        };
+      }
+    }
+  } catch (e) {
+    warnings.push(`storage: ${e instanceof Error ? e.message : String(e)}`);
+  }
   return {
     generated_at: new Date().toISOString(),
     tables,
@@ -231,7 +243,6 @@ async function uploadBackup(payload: unknown) {
       upsert: true,
     });
   if (error) throw error;
-
   const meta = {
     updated_at: new Date().toISOString(),
     size_bytes: body.byteLength,
@@ -246,13 +257,10 @@ async function uploadBackup(payload: unknown) {
   return meta;
 }
 
-// Schedule diário (18h Brasília = 21:00 UTC). Faz auto-bootstrap na primeira
-// vez que a função roda, sem exigir clique do admin.
 const DAILY_SCHEDULE = "0 21 * * *";
 let cronBootstrapped = false;
 async function ensureDailyCron() {
-  if (cronBootstrapped) return;
-  if (!CRON_SECRET) return;
+  if (cronBootstrapped || !CRON_SECRET) return;
   try {
     const functionUrl = `${SUPABASE_URL}/functions/v1/system-export`;
     const { error } = await admin.rpc("ensure_daily_backup_cron", {
@@ -261,9 +269,8 @@ async function ensureDailyCron() {
       p_schedule: DAILY_SCHEDULE,
     });
     if (!error) cronBootstrapped = true;
-    else console.warn("ensure_daily_backup_cron:", error.message);
-  } catch (e) {
-    console.warn("ensure_daily_backup_cron failed", e);
+  } catch (_) {
+    /* ignore */
   }
 }
 ensureDailyCron();
@@ -273,48 +280,104 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "method not allowed" }, 405);
 
-  // Garante que o cron diário esteja agendado (idempotente).
   await ensureDailyCron();
 
-  let body: { action?: string } = {};
+  let body: Record<string, unknown> = {};
   try {
     body = await req.json();
   } catch {
     return json({ error: "invalid json" }, 400);
   }
+  const action = String(body.action ?? "");
 
-  // Daily cron entrypoint — autenticado por header compartilhado.
-  if (body.action === "store-backup") {
+  // Cron — autenticado por segredo compartilhado
+  if (action === "store-backup") {
     const provided = req.headers.get("x-cron-secret") ?? "";
-    if (!CRON_SECRET || provided !== CRON_SECRET) {
+    if (!CRON_SECRET || provided !== CRON_SECRET)
       return json({ error: "forbidden" }, 403);
-    }
     try {
-      const payload = await buildDatabaseExport({ includeStorage: true });
+      const payload = await buildFullDatabaseExport();
       const meta = await uploadBackup(payload);
       return json({ ok: true, ...meta });
     } catch (e) {
-      return json(
-        { error: e instanceof Error ? e.message : String(e) },
-        500,
-      );
+      return json({ error: e instanceof Error ? e.message : String(e) }, 500);
     }
   }
 
-  // Demais ações exigem usuário autenticado.
   const user = await getAuthUser(req);
   if (!user) return json({ error: "unauthenticated" }, 401);
 
-  if (body.action === "database-export") {
-    if (!(await canExportDatabase(user.id))) {
-      return json({ error: "Acesso negado para exportação completa." }, 403);
-    }
-    const payload = await buildDatabaseExport({ includeStorage: true });
-    return json(payload);
+  // Lista metadados (grupos disponíveis e buckets) — chamada inicial leve
+  if (action === "export-manifest") {
+    if (!(await canExportDatabase(user.id)))
+      return json({ error: "forbidden" }, 403);
+    const { data: buckets } = await admin.storage.listBuckets();
+    const storage_buckets = (buckets ?? [])
+      .filter((b) => b.name !== BACKUP_BUCKET)
+      .map((b) => b.name);
+    return json({
+      table_groups: Object.keys(TABLE_GROUPS),
+      table_groups_detail: TABLE_GROUPS,
+      restore_order: RESTORE_ORDER,
+      storage_buckets,
+    });
   }
 
-  if (body.action === "latest-backup-info") {
-    if (!(await canExportDatabase(user.id))) return json({ error: "forbidden" }, 403);
+  // Exporta UM grupo de tabelas por chamada (rápido, sem timeout)
+  if (action === "export-table-group") {
+    if (!(await canExportDatabase(user.id)))
+      return json({ error: "forbidden" }, 403);
+    const group = String(body.group ?? "");
+    try {
+      return json(await exportTableGroup(group));
+    } catch (e) {
+      return json({ error: e instanceof Error ? e.message : String(e) }, 400);
+    }
+  }
+
+  // Lista arquivos de um bucket (apenas paths + tamanhos)
+  if (action === "list-storage-bucket") {
+    if (!(await canExportDatabase(user.id)))
+      return json({ error: "forbidden" }, 403);
+    const bucket = String(body.bucket ?? "");
+    if (!bucket) return json({ error: "bucket obrigatório" }, 400);
+    try {
+      const entries = await listBucketEntries(bucket);
+      return json({ bucket, entries });
+    } catch (e) {
+      return json({ error: e instanceof Error ? e.message : String(e) }, 400);
+    }
+  }
+
+  // Baixa um lote de arquivos (cliente fatia a lista para evitar timeout)
+  if (action === "download-storage-batch") {
+    if (!(await canExportDatabase(user.id)))
+      return json({ error: "forbidden" }, 403);
+    const bucket = String(body.bucket ?? "");
+    const paths = Array.isArray(body.paths) ? (body.paths as string[]) : [];
+    if (!bucket || paths.length === 0)
+      return json({ error: "bucket e paths obrigatórios" }, 400);
+    if (paths.length > 25)
+      return json({ error: "máximo 25 arquivos por lote" }, 400);
+    try {
+      const files = await downloadStorageBatch(bucket, paths);
+      return json({ bucket, files });
+    } catch (e) {
+      return json({ error: e instanceof Error ? e.message : String(e) }, 500);
+    }
+  }
+
+  // Compat: exportação completa em uma chamada (pode estourar timeout em
+  // bases grandes — preferir os chunks acima).
+  if (action === "database-export") {
+    if (!(await canExportDatabase(user.id)))
+      return json({ error: "forbidden" }, 403);
+    return json(await buildFullDatabaseExport());
+  }
+
+  if (action === "latest-backup-info") {
+    if (!(await canExportDatabase(user.id)))
+      return json({ error: "forbidden" }, 403);
     const { data, error } = await admin.storage
       .from(BACKUP_BUCKET)
       .download(BACKUP_META_PATH);
@@ -323,13 +386,11 @@ Deno.serve(async (req) => {
     return json({ available: true, ...JSON.parse(text) });
   }
 
-  if (body.action === "setup-daily-backup") {
-    if (!(await isAdmin(user.id))) {
-      return json({ error: "Apenas administradores podem configurar." }, 403);
-    }
-    if (!CRON_SECRET) {
+  if (action === "setup-daily-backup") {
+    if (!(await isAdmin(user.id)))
+      return json({ error: "forbidden" }, 403);
+    if (!CRON_SECRET)
       return json({ error: "BACKUP_CRON_SECRET não configurado." }, 500);
-    }
     await ensureBackupBucket();
     const functionUrl = `${SUPABASE_URL}/functions/v1/system-export`;
     const { error } = await admin.rpc("setup_daily_backup_cron", {
@@ -337,7 +398,7 @@ Deno.serve(async (req) => {
       p_function_url: functionUrl,
     });
     if (error) return json({ error: error.message }, 500);
-    return json({ ok: true, scheduled_at: "23:55 UTC" });
+    return json({ ok: true, scheduled_at: "21:00 UTC (18h Brasília)" });
   }
 
   return json({ error: "unknown action" }, 400);
