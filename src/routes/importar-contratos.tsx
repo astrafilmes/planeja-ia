@@ -1748,35 +1748,64 @@ function Page() {
  prepostosByFornecedor[
  resolveFornecedorKey(c)
  ]?.trim() ??"";
+  const desmarcado = contratosDesmarcados.has(c.key);
  return (
  <Collapsible key={c.key} defaultOpen={false}>
- <Card className="overflow-hidden border-border/60">
+ <Card
+ className={`overflow-hidden border-border/60 transition-opacity ${desmarcado ? "opacity-60" : ""}`}
+ >
+ <div className="flex items-stretch">
+ <div
+ className="flex items-center justify-center px-3 border-r border-border/60 bg-muted/30"
+ onClick={(e) => e.stopPropagation()}
+ >
+ <Checkbox
+ checked={!desmarcado}
+ disabled={isAutorizado}
+ onCheckedChange={() =>
+ toggleContratoDesmarcado(c.key)
+ }
+ aria-label={
+ desmarcado
+ ? "Incluir este contrato no lote"
+ : "Excluir este contrato do lote"
+ }
+ />
+ </div>
  <CollapsibleTrigger asChild>
  <button
  type="button"
- className="w-full text-left transition-colors hover:bg-muted/50"
+ className="flex-1 text-left transition-colors hover:bg-muted/50"
  >
  <CardHeader className="pb-3 pt-3">
  <div className="flex flex-wrap items-center justify-between gap-2">
  <div className="flex items-center gap-2 min-w-0">
  <ChevronDown className="size-4 text-muted-foreground transition-transform data-[state=closed]:-rotate-90 group-data-[state=closed]:-rotate-90" />
  <Building2 className="size-4 text-muted-foreground shrink-0" />
- <span className="font-semibold text-sm truncate">
+ <span className={`font-semibold text-sm truncate ${desmarcado ? "line-through" : ""}`}>
  {nomeSec}
  </span>
  <span className="text-xs text-muted-foreground truncate">
- · {c.empresa}
+ · {resolveFornecedorNome(c)}
  </span>
  <Badge
  variant={
  c.m2aAtaId
- ?"secondary"
- :"destructive"
+ ? "secondary"
+ : "destructive"
  }
  className="text-[10px]"
  >
- {c.m2aAtaNumero ??"Sem ata"}
+ {c.m2aAtaNumero ?? "Sem ata"}
  </Badge>
+ {desmarcado && (
+ <Badge
+ variant="outline"
+ className="text-[10px]"
+ >
+ não será gerado
+ </Badge>
+ )}
  </div>
  <div className="text-xs text-muted-foreground shrink-0">
  {c.totalItens} item(ns) ·{""}
