@@ -255,7 +255,7 @@ function Login() {
 
           <ul className="mt-2 grid gap-2 text-[13px] text-white/75">
             {[
-              "Integração com o portal M2A via extensão Chrome",
+              "Integração automática com o portal M2A",
               "Numeração transacional por secretaria e ano",
               "Trilha de auditoria em todas as operações",
             ].map((t) => (

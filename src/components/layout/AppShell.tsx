@@ -538,7 +538,7 @@ export function AppShell({
             </div>
             <div className="flex items-center justify-end gap-3 font-mono">
             <span>SITE {siteVersion}</span>
-            <span>EXTENSÃO {extensionVersion}</span>
+            <span>WORKER {extensionVersion}</span>
             </div>
           </div>
         </footer>
