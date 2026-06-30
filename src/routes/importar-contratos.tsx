@@ -482,7 +482,7 @@ function Page() {
  FornecedorPrepostoTarget[]
  >(() => {
  const map = new Map<string, FornecedorPrepostoTarget>();
- for (const contrato of contratosPreliminares) {
+  for (const contrato of contratosSelecionados) {
  const key = resolveFornecedorKey(contrato);
  const fornecedorNome = resolveFornecedorNome(contrato);
  const current = map.get(key);
@@ -497,7 +497,7 @@ function Page() {
  numeric: true,
  }),
  );
- }, [contratosPreliminares]);
+ }, [contratosSelecionados]);
 
  const fornecedorMapFromDb = useMemo(() => {
  return new Map(
