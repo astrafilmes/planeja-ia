@@ -1,79 +1,147 @@
-# Fluxo de Processo Comum (não-SRP) na importação de DFDs
+## Verificação dos arquivos enviados
 
-Hoje a importação de planilhas no `/irp` sempre dispara o fluxo SRP (DFD da gerenciadora + intenções/IRPs + consolidação). Vou adicionar um **caminho alternativo** ativado por um checkbox na tela de "informações do processo".
+Sim, são exatamente os 7 arquivos da extensão antiga:
 
-## 1. UI — tela de cadastro de informações (`src/routes/irp.tsx` + `IrpConfirmacaoProcessoModal`)
+| Arquivo | Função na extensão | Status do port para o VPS |
+|---|---|---|
+| `app_bridge.js` | Content script no app (postMessage ↔ chrome.runtime) | **Não precisa portar** — eliminado (front fala direto com edge `m2a-proxy`) |
+| `lovable_bridge.js` | Idem app_bridge para preview Lovable | **Não precisa portar** |
+| `m2a_bridge.js` | Content script no portal M2A | **Não precisa portar** |
+| `background.js` | Service worker: orquestra, abre abas, faz bulk download e injeta engines | **Substituído pelo worker Fastify** (`vps-worker/src/server.js`) |
+| `automation_engine.js` (1758 linhas) | Cria contrato, vincula atores, itens, dotação, documentos | ✅ **Já portado** em `vps-worker/src/m2a/contrato.js` + `orquestrador-contrato.js` |
+| `processo_scraper.js` (737 linhas) | Lista atas, itens e contratos de um processo | ✅ **Já portado** em `vps-worker/src/routes/processos.js` |
+| `numeracao_scraper.js` (122 linhas) | Maior número de contrato por secretaria/ano | ✅ **Já portado** em `vps-worker/src/routes/numeracao.js` |
 
-- Novo campo no formulário do cabeçalho: **checkbox "É Registro de Preços?"**, ligado por padrão (preserva comportamento atual).
-- Quando **desmarcado**:
-  - Esconder o campo "Data de consolidação" (não é exigido).
-  - Texto do botão muda para "Confirmar e criar processo comum".
-  - Modal de confirmação exibe um badge "Processo comum (sem SRP)" e omite a linha de data de consolidação.
-- O estado `eRegistroPreco: boolean` viaja no payload enviado ao worker.
+**Conclusão:** o backend (worker) já contém **toda a lógica funcional** da extensão. O que falta é eliminar as últimas referências `window.postMessage` no front e trocá-las por chamadas à edge `m2a-proxy`, além de criar duas rotas auxiliares no worker para os fluxos que ainda não têm endpoint próprio.
 
-## 2. Worker — novo orquestrador (`vps-worker/src/m2a/orquestrador-processo-comum.js`)
+---
 
-Para cada planilha (uma por secretaria), nesta ordem:
+## Plano de execução
+
+### Fase 1 — Worker (completar lacunas do background.js)
+
+Já existe orquestrador de contrato, processos SRP/comum, numeração e processos. Faltam dois fluxos que o `background.js` cobria diretamente:
+
+1. **`POST /documentos/download`** (`vps-worker/src/routes/documentos.js` — já existe parcialmente, validar)
+   - Recebe `{ documentos: [{id_m2a, nome}], archive: boolean, filename }`
+   - Reproduz `fetchDocumentoM2APdf` + `handleBulkDownload` do background.js:1-496
+   - Se `archive=true`: empacota em ZIP com `archiver` (substitui JSZip) e devolve `application/zip`
+   - Se `archive=false` e único doc: devolve `application/pdf`
+   - Se múltiplos sem ZIP: força ZIP (não dá pra fazer N downloads via HTTP único)
+
+2. **`POST /contratos/diagnosticar`** já existe — confirmar paridade com `automation_engine.diagnosticarContrato` (linhas 702-758)
+
+### Fase 2 — Edge function (sem mudança)
+
+`supabase/functions/m2a-proxy/index.ts` já faz HMAC + repasse para a VPS, incluindo binário (PDF/ZIP) e SSE. Nada a alterar.
+
+### Fase 3 — Cliente do front (`src/lib/`)
+
+1. **`src/lib/m2a-worker.ts`** — adicionar helpers:
+   ```ts
+   processarContratoStream(payload, onProgress) // SSE de /contratos/processar
+   processarContratoJson(payload)               // POST /contratos/processar/json
+   diagnosticarContratoWorker(payload)          // POST /contratos/diagnosticar
+   criarProcessoSrpWorker(payload, onProgress)  // SSE de /processos-srp/criar
+   sincronizarNumeracaoWorker(secretarias, ano) // GET /numeracao
+   downloadDocumentosWorker(documentos, opts)   // POST /documentos/download → blob
+   ```
+   Para SSE: usa `fetch` direto na edge function (em vez de `supabase.functions.invoke`) para conseguir ler o stream `text/event-stream`, mantendo o header `Authorization`.
+
+2. **`src/lib/m2a.ts`** — **deletar arquivo inteiro**. Todas as funções `sendToM2A`, `diagnoseM2A`, `requestM2AProcessCreation`, `requestNumeracaoSync`, `listenM2AProgress`, `isExtensionInstalled` deixam de existir. Tipos compartilhados (`M2AProgressEvent`, `M2AEtapa`, `ETAPA_LABEL`, `M2ADocumentoGerado`, `extractM2AProcessoId`) movem para `src/lib/m2a-types.ts`.
+
+### Fase 4 — Páginas que ainda chamam `window.postMessage`
+
+1. **`src/routes/processos.$id.tsx`**
+   - Linha 983: `diagnoseM2A(payload)` → `await diagnosticarContratoWorker(payload)` + toast com resultado
+   - Linha 1040-1046: loop `sendToM2A(payload)` → `await processarContratoStream(payload, onProgress)` em série, atualizando progresso por etapa via callback (não mais via listener global)
+   - Linha 344 / 590: `listenM2AProgress` removido — agora o `onProgress` da chamada SSE alimenta o mesmo state
+   - Linha 1751 / 1852: textos "Configurar envio pela extensão" → "Configurar envio M2A"; "Testar extensão" → "Diagnosticar contrato"
+
+2. **`src/routes/contratos.$id.tsx`** — análogo: `sendToM2A` → `processarContratoStream`, listener removido, textos atualizados (linhas 379, 535, 655, 804)
+
+3. **`src/routes/irp.tsx`** — `requestM2AProcessCreation` → `criarProcessoSrpWorker(payload, onProgress)` em SSE; `listenM2AProcessCreationProgress` removido
+
+4. **`src/routes/numeracao.tsx`** — `requestNumeracaoSync` → `await sincronizarNumeracaoWorker(secretarias, ano)`, sem requestId (resposta síncrona via GET)
+
+5. **`src/routes/login.tsx`** linha 258: texto "Integração com o portal M2A via extensão Chrome" → "Integração automática com o portal M2A"
+
+6. **`src/components/contratos/DocumentosEditor.tsx`** / **`src/routes/contratos.tsx`** / **`src/routes/processos.$id.tsx`** linha 299/590 — comentários já dizem "sem extensão", verificar se ainda há call-sites de `requestM2ABulkDownload` (não há, foi removido). Confirmar.
+
+7. **`src/contexts/M2AConnectionProvider.tsx`** — já é stub; remover `ensureConnected` se ninguém mais usa, ou manter no-op por compatibilidade. Provider some.
+
+### Fase 5 — Progresso ao vivo unificado
+
+Hoje o front escuta `M2A_PROGRESS` via window. Novo modelo:
 
 ```text
-Gerenciadora (primeira) ─┐
-Participante 2 ──────────┤── cria 1 DFD por secretaria (sem is_registro_de_preco)
-Participante N ──────────┘     + adiciona itens + cadastra Solicitação de Despesa (dotação)
-                                  ↓
-                          Pega DFD da gerenciadora
-                                  ↓
-              POST /formalizacao_demanda/gerar_processo/{dfdGerId}/
-                                  ↓
-              GET  /formalizacao_demanda/{dfdGerId}/  → parseia
-                   <a href="/processo_administrativo/{processoId}/">  e o número
-                                  ↓
-              POST /processo_administrativo/atualizar/{processoId}/
-                                  ↓
-              POST /processo_administrativo/adicionar_solicitacoes/{processoId}/
-                   itens = "dfdId1,dfdId2,..."
-                                  ↓
-              GET  /processo_administrativo/item/tabela/{processoId}/
-                   Para cada item fora de ordem →
-                   POST /processo_administrativo/item/alterar_sequencial/{itemId}/
-                                  ↓
-              Justificativa Gemini → atualizar_justificativa/{dfdGerId}/
+                    ┌───────────────────────────────────────┐
+                    │ ProgressContext (já existe)           │
+                    └───────────────▲───────────────────────┘
+                                    │ pushProgress(event)
+   processarContratoStream(payload, (ev) => pushProgress(ev))
+                                    │
+                                    ▼ SSE
+        m2a-proxy ────▶ vps-worker /contratos/processar
+                                    │
+                                    └─ orquestrador-contrato.onProgress
 ```
 
-Etapas reportadas por `onProgress` em SSE (mesma assinatura do SRP):
-`criar_dfd_secretaria`, `incluir_itens`, `cadastrar_dotacao`, `gerar_processo`, `descobrir_processo`, `atualizar_processo`, `vincular_dfds`, `reordenar_itens`, `justificativa`, `concluido`.
+O componente que disparou o envio recebe o callback direto; nada de listener global. O `ProgressContext` continua sendo a fonte do toast/painel.
 
-## 3. Worker — funções novas em `vps-worker/src/m2a/processo-comum.js`
+### Fase 6 — Limpeza
 
-- `criarDFDComum(payload)` — mesma chamada de `criarDFD` **sem** o campo `is_registro_de_preco`.
-- `cadastrarDotacao(dfdId, { unidade_orcamentaria, despesa_projeto_atividade })` — POST `/gestao_compras/solicitacao_despesa_atividade/incluir/{dfdId}/`.
-- `gerarProcessoFromDFD(dfdId)` — POST `/formalizacao_demanda/gerar_processo/{dfdId}/` com `text=true`.
-- `descobrirProcessoDaDFD(dfdId)` — GET `/formalizacao_demanda/{dfdId}/?` e extrai `processoId` e `numero` a partir do bloco `kt-widget12__item m2a-widget12__item` (link `/processo_administrativo/{id}/` + texto).
-- `vincularDFDsAoProcesso(processoId, dfdIds[])` — POST `/processo_administrativo/adicionar_solicitacoes/{processoId}/` com `itens=dfd1,dfd2,...`.
-- `reordenarItensProcesso(processoId, ordemDesejada[])` — GET `/processo_administrativo/item/tabela/{processoId}/?page_size=1000`, parseia `tr_<itemId>` + descrição + sequencial atual; para cada item fora da posição esperada, POST `/processo_administrativo/item/alterar_sequencial/{itemId}/` com `novo_sequencial=N`.
+- Apagar `src/lib/m2a.ts`
+- Apagar `src/contexts/M2AConnectionProvider.tsx` + import em `src/routes/__root.tsx`
+- Apagar `M2AConnectionIndicator` no `AppShell.tsx`
+- Remover textos "extensão" residuais (grep final)
 
-Reaproveita `atualizarProcesso` existente (ajustando overrides — sem `permitir_adesao_registro_preco`, sem campos de período de vigência específicos de SRP) ou cria um `atualizarProcessoComum` paralelo se os defaults forem incompatíveis.
+---
 
-## 4. Rota HTTP — `vps-worker/src/routes/processos-comum.js`
+## Mapeamento 1:1 das funções da extensão → worker
 
-`POST /processos/comum/criar` com SSE, espelhando `processos-srp.js`. Recebe o mesmo payload + `eRegistroPreco=false` (na verdade só é chamado quando false).
+| Função original (extension) | Local atual no worker | OK? |
+|---|---|---|
+| `criarCabecalhoContrato` | `m2a/contrato.js` | ✅ |
+| `buscarIdContratoPorNumero` / `discoverContratoTableUrls` | `m2a/contrato.js` | ✅ |
+| `vincularFiscal/Gestor/Preposto` (autocomplete incluso) | `m2a/contrato.js` | ✅ |
+| `adicionarItensAoContrato` (scrape + match + post) | `m2a/contrato.js` | ✅ |
+| `atualizarQuantidadesItens` | `m2a/contrato.js` | ✅ |
+| `incluirDotacao` | `m2a/contrato.js` | ✅ |
+| `obterDocumentosContrato`/`excluirDocumentos`/`gerarDocumentosEntidade`/`atualizarDatasDocumentos`/`configurarDocumentos` | `m2a/contrato.js` | ✅ |
+| `processarContratoCompleto` (orquestrador) | `m2a/orquestrador-contrato.js` + route `/contratos/processar` (SSE) | ✅ |
+| `diagnosticarContrato` | `m2a/contrato.js` + `/contratos/diagnosticar` | ✅ verificar |
+| `extractAtasFromDoc`/`fetchItensDaAta`/`fetchContratosDaAta`/`runCascata` | `routes/processos.js` /processos/sync | ✅ |
+| `numeracao_scraper` | `routes/numeracao.js` /numeracao | ✅ |
+| `handleBulkDownload` (ZIP de PDFs) | `routes/documentos.js` — **validar paridade** | ⚠️ |
+| `requestM2AProcessCreation` (SRP) | `routes/processos-srp.js` + `orquestrador-processo-srp.js` | ✅ |
 
-## 5. Cliente — `src/lib/m2a-comum.ts` + roteamento em `src/lib/m2a.ts`
+---
 
-- Função `criarProcessoComumM2A(payload)` análoga a `criarProcessoSrpM2A`.
-- Em `requestM2AProcessCreation`, decidir endpoint pelo flag `eRegistroPreco`.
+## Entregáveis técnicos
 
-## 6. Persistência local (`processos`)
+1. `vps-worker/src/routes/documentos.js` — auditar e completar bulk download (ZIP via archiver, fallback PDF único)
+2. `vps-worker/src/m2a/contrato.js` — confirmar export de `diagnosticarContrato`
+3. `src/lib/m2a-types.ts` (novo) — tipos extraídos de `m2a.ts`
+4. `src/lib/m2a-worker.ts` — adicionar 6 helpers (SSE + JSON + GET + blob)
+5. Edição de 5 rotas do front: `processos.$id.tsx`, `contratos.$id.tsx`, `irp.tsx`, `numeracao.tsx`, `login.tsx`
+6. Remoção de `src/lib/m2a.ts`, `src/contexts/M2AConnectionProvider.tsx` e import correspondente em `__root.tsx` / `AppShell.tsx`
+7. Atualização de textos UI ("extensão" → "worker M2A" / "integração M2A")
 
-Após o orquestrador comum concluir, mantém a mesma criação automática de registro em `processos` que já existe para SRP, com `modalidade: "comum"` em vez de `"SRP"`.
+---
 
-## 7. Testes
+## Não vou tocar (fora do escopo)
 
-Adicionar `vps-worker/scripts/test-processo-comum.js` (clone do `test-irp-srp.js`) apontando para `/processos/comum/criar`, com mesmo logging por etapa.
+- Edge function `m2a-proxy` (já genérica)
+- Tabelas Supabase
+- Lógica de RLS / numeração / snapshot
+- UI de importação de contratos (já corrigida em mensagens anteriores)
 
-## Pontos abertos
+---
 
-1. **Dotação por DFD**: o exemplo do usuário mostra apenas `unidade_orcamentaria` e `despesa_projeto_atividade`. Vou ler esses dois campos do payload da secretaria (já temos `m2a_uo_id`); a fonte do `despesa_projeto_atividade` por secretaria precisa ser confirmada — proponho buscar do cadastro de secretarias (ou pedir ao usuário cadastrar um `m2a_despesa_projeto_id` por secretaria). Se vazio, pulamos a dotação com warning.
-2. **Comissão de planejamento / responsável_dfd** para participantes: vou reutilizar os mesmos do formulário principal (gerenciadora) salvo se houver override por secretaria no cadastro.
-3. **Defaults do `atualizarProcesso` comum**: confirmar se mantemos `modalidade=7` ou se há outra (ex.: pregão eletrônico sem SRP). Default proposto: mantém os mesmos, só remove os flags exclusivos de SRP.
+## Riscos e observações
 
-Posso ajustar 1–3 antes de implementar — confirme se a fonte do `despesa_projeto_atividade` por secretaria já existe em algum lugar (ou se devo adicionar campo no cadastro de Secretarias).
+- **SSE via `supabase.functions.invoke` não funciona** — vou usar `fetch` direto no endpoint `${SUPABASE_URL}/functions/v1/m2a-proxy` com `Authorization: Bearer <session.access_token>` para conseguir ler o stream linha-a-linha. A edge já tem o passthrough de `text/event-stream`.
+- **Bulk download** precisa de `archiver` no worker (`npm i archiver` em `vps-worker/`). Verifico antes de criar a rota.
+- **Sessão M2A**: o worker usa cookies persistidos do login automatizado (`vps-worker/src/auth.js`). Não muda.
+- Após aprovado, executo tudo em uma única passada de edições paralelas. Não precisa de migration de DB.
