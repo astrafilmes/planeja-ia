@@ -273,6 +273,9 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "method not allowed" }, 405);
 
+  // Garante que o cron diário esteja agendado (idempotente).
+  await ensureDailyCron();
+
   let body: { action?: string } = {};
   try {
     body = await req.json();
