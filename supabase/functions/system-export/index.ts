@@ -196,7 +196,7 @@ async function buildFullDatabaseExport() {
   try {
     const { data: buckets } = await admin.storage.listBuckets();
     for (const b of buckets ?? []) {
-      if (b.name === BACKUP_BUCKET) continue;
+      if (b.name === BACKUP_BUCKET || SKIP_BUCKETS.has(b.name)) continue;
       try {
         storage[b.name] = await listBucketEntries(b.name);
       } catch (e) {
