@@ -169,6 +169,10 @@ function Page() {
  const [enviando, setEnviando] = useState(false);
  const [editNumeroContrato, setEditNumeroContrato] = useState("");
  const [editAtaId, setEditAtaId] = useState("");
+ const [editData, setEditData] = useState("");
+ const [editObjeto, setEditObjeto] = useState("");
+ const [editPreposto, setEditPreposto] = useState("");
+ const [editFiscal, setEditFiscal] = useState("");
  const [salvandoM2AConfig, setSalvandoM2AConfig] = useState(false);
  const [warnPending, setWarnPending] = useState<null | { kind: "edit" | "delete"; item: any }>(null);
  const [warnDontShow, setWarnDontShow] = useState(false);
