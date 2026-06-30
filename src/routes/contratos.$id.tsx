@@ -755,57 +755,75 @@ function Page() {
  icon={<FileSignature className="size-4" />}
  className="mb-3"
  >
- <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-x-4 gap-y-3 text-xs md:grid-cols-[repeat(4,minmax(0,1fr))] lg:grid-cols-[repeat(6,minmax(0,1fr))]">
-          <Field label="Nº contrato" mono>
-           {c.numero_contrato}
-          </Field>
-          <Field label="Início vigência">{contratoDataLabel}</Field>
-          <Field label="Preposto">{c.preposto}</Field>
-          <Field label="Fiscal">{c.fiscal}</Field>
-          <Field label="Ata" mono>
-           {c.m2a_ata_numero ?? c.m2a_ata_id ??"—"}
-          </Field>
-          <div className="col-span-2 min-w-0 rounded-xl border border-border/60 bg-muted/40 p-3 dark:bg-muted/30 md:col-span-4 lg:col-span-6">
-            <div className="grid gap-3 md:grid-cols-[minmax(260px,1fr)_auto] md:items-end">
-              <div className="flex min-w-0 flex-col gap-1.5">
-                <Label>Ata correta para este contrato</Label>
-                <Select value={editAtaId} onValueChange={setEditAtaId}>
-                  <SelectTrigger className="min-w-0">
-                    <SelectValue placeholder="Selecione a ata" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {contrato.m2aAtas.map((ata: any) => (
-                      <SelectItem key={ata.m2a_ata_id} value={ata.m2a_ata_id}>
-                        {ata.numero_ata ?? `Ata ${ata.m2a_ata_id}`}
-                        {ata.fornecedor_nome ? ` · ${ata.fornecedor_nome}` : ""}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button
-                size="sm"
-                className="w-full md:w-auto"
-                onClick={handleSalvarContratoM2AConfig}
-                disabled={salvandoM2AConfig || contrato.m2aAtas.length === 0}
-              >
-                {salvandoM2AConfig ? (
-                  <Loader2 className="size-3.5 animate-spin" />
-                ) : (
-                  <Save className="size-3.5" />
-                )}
-               Salvar ajuste
-              </Button>
-            </div>
-          </div>
- <div className="col-span-2 md:col-span-4 lg:col-span-6">
- <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
- Objeto
- </p>
- <p className="mt-0.5 line-clamp-3 text-sm leading-snug">
- {c.objeto}
- </p>
- </div>
+ <div className="grid grid-cols-1 gap-3 text-xs md:grid-cols-2 lg:grid-cols-3">
+   <div className="flex flex-col gap-1.5">
+     <Label>Nº contrato</Label>
+     <Input
+       value={editNumeroContrato}
+       onChange={(e) => setEditNumeroContrato(e.target.value)}
+       className="font-mono"
+     />
+   </div>
+   <div className="flex flex-col gap-1.5">
+     <Label>Início vigência</Label>
+     <Input
+       type="date"
+       value={editData}
+       onChange={(e) => setEditData(e.target.value)}
+     />
+   </div>
+   <div className="flex flex-col gap-1.5">
+     <Label>Ata</Label>
+     <Select value={editAtaId} onValueChange={setEditAtaId}>
+       <SelectTrigger className="min-w-0">
+         <SelectValue placeholder="Selecione a ata" />
+       </SelectTrigger>
+       <SelectContent>
+         {contrato.m2aAtas.map((ata: any) => (
+           <SelectItem key={ata.m2a_ata_id} value={ata.m2a_ata_id}>
+             {ata.numero_ata ?? `Ata ${ata.m2a_ata_id}`}
+             {ata.fornecedor_nome ? ` · ${ata.fornecedor_nome}` : ""}
+           </SelectItem>
+         ))}
+       </SelectContent>
+     </Select>
+   </div>
+   <div className="flex flex-col gap-1.5">
+     <Label>Preposto</Label>
+     <Input
+       value={editPreposto}
+       onChange={(e) => setEditPreposto(e.target.value)}
+     />
+   </div>
+   <div className="flex flex-col gap-1.5">
+     <Label>Fiscal</Label>
+     <Input
+       value={editFiscal}
+       onChange={(e) => setEditFiscal(e.target.value)}
+     />
+   </div>
+   <div className="flex flex-col gap-1.5 md:col-span-2 lg:col-span-3">
+     <Label>Objeto</Label>
+     <Textarea
+       value={editObjeto}
+       onChange={(e) => setEditObjeto(e.target.value)}
+       rows={3}
+     />
+   </div>
+   <div className="md:col-span-2 lg:col-span-3 flex justify-end">
+     <Button
+       size="sm"
+       onClick={handleSalvarContratoM2AConfig}
+       disabled={salvandoM2AConfig}
+     >
+       {salvandoM2AConfig ? (
+         <Loader2 className="size-3.5 animate-spin" />
+       ) : (
+         <Save className="size-3.5" />
+       )}
+       Salvar alterações
+     </Button>
+   </div>
  </div>
  </FormSection>
 
