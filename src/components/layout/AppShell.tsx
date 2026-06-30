@@ -301,12 +301,8 @@ export function AppShell({
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  useEffect(() => {
-    if (!user || !isGestor) return;
-    createStartupDatabaseBackup().catch((error) => {
-      console.warn("Backup automático do banco não concluído", error);
-    });
-  }, [user, isGestor]);
+  // Backup automático no startup foi removido: agora roda apenas via botão
+  // de exportar ou via agendamento diário (cron) no backend.
 
   async function handleExportSystem() {
     if (!isGestor) {
