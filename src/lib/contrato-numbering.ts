@@ -50,7 +50,7 @@ export async function getNextContratoNumbers(
       .is("deleted_at", null),
     supabase
       .from("m2a_contratos_snapshot")
-      .select("numero_contrato, sigla_secretaria, ano, sequencia")
+      .select("numero_contrato, secretaria_sigla, ano, sequencia")
       .ilike("numero_contrato", `${numeroBase}%`),
   ]);
 
