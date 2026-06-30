@@ -72,7 +72,7 @@ export async function getNextContratoNumbers(
     0,
     ...(snapshotResult.data ?? [])
       .filter((row: any) => {
-        const rowSigla = cleanNumber(row.sigla_secretaria).replace(
+        const rowSigla = cleanNumber(row.secretaria_sigla).replace(
           /[^A-Z0-9]/g,
           "",
         );
