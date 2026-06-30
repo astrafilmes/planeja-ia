@@ -400,8 +400,13 @@ function Page() {
 
  useEffect(() => {
  if (!contrato?.contrato) return;
- setEditNumeroContrato(contrato.contrato.numero_contrato ??"");
- setEditAtaId(contrato.contrato.m2a_ata_id ??"");
+ const cc = contrato.contrato;
+ setEditNumeroContrato(cc.numero_contrato ??"");
+ setEditAtaId(cc.m2a_ata_id ??"");
+ setEditData(cc.data ? String(cc.data).slice(0, 10) : "");
+ setEditObjeto(cc.objeto ?? "");
+ setEditPreposto(cc.preposto ?? "");
+ setEditFiscal(cc.fiscal ?? "");
  }, [contrato?.contrato]);
 
  const itens = useMemo(() => contrato?.itens ?? [], [contrato?.itens]);
