@@ -21,12 +21,7 @@ const TABLE_GROUPS: Record<string, string[]> = {
     "m2a_servidores",
     "m2a_servidor_unidade",
   ],
-  processos: [
-    "processos",
-    "irp_jobs",
-    "irp_job_secretarias",
-    "irp_unidades_processamento",
-  ],
+  processos: ["processos"],
   contratos: [
     "contratos",
     "contrato_itens",
@@ -34,29 +29,25 @@ const TABLE_GROUPS: Record<string, string[]> = {
     "contrato_atores",
     "contrato_documentos",
   ],
-  importacao: [
-    "contrato_import_jobs",
-    "contrato_import_itens",
-    "contrato_import_dotacoes",
-  ],
   m2a: [
     "m2a_atas",
     "m2a_itens",
     "m2a_contratos_snapshot",
     "m2a_envio_preferencias",
-    "m2a_envio_logs",
   ],
-  logs: ["app_files", "audit_logs", "trusted_devices"],
 };
 
 const RESTORE_ORDER = [
   ...TABLE_GROUPS.base,
   ...TABLE_GROUPS.processos,
   ...TABLE_GROUPS.contratos,
-  ...TABLE_GROUPS.importacao,
   ...TABLE_GROUPS.m2a,
-  ...TABLE_GROUPS.logs,
 ];
+
+// Buckets ignorados na exportação (histórico/anexos pesados que não precisam
+// vir no pacote do sistema).
+const SKIP_BUCKETS = new Set(["irp-files"]);
+
 
 const BACKUP_BUCKET = "system-backups";
 const BACKUP_OBJECT_PATH = "latest/backup.json";
@@ -205,7 +196,7 @@ async function buildFullDatabaseExport() {
   try {
     const { data: buckets } = await admin.storage.listBuckets();
     for (const b of buckets ?? []) {
-      if (b.name === BACKUP_BUCKET) continue;
+      if (b.name === BACKUP_BUCKET || SKIP_BUCKETS.has(b.name)) continue;
       try {
         storage[b.name] = await listBucketEntries(b.name);
       } catch (e) {
@@ -313,7 +304,7 @@ Deno.serve(async (req) => {
       return json({ error: "forbidden" }, 403);
     const { data: buckets } = await admin.storage.listBuckets();
     const storage_buckets = (buckets ?? [])
-      .filter((b) => b.name !== BACKUP_BUCKET)
+      .filter((b) => b.name !== BACKUP_BUCKET && !SKIP_BUCKETS.has(b.name))
       .map((b) => b.name);
     return json({
       table_groups: Object.keys(TABLE_GROUPS),
