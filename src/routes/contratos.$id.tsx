@@ -763,9 +763,8 @@ function Page() {
                   <SelectContent>
                     {contrato.m2aAtas.map((ata: any) => (
                       <SelectItem key={ata.m2a_ata_id} value={ata.m2a_ata_id}>
-                        {ata.numero_ata ?? `Ata ${ata.m2a_ata_id}`} ·{""}
-                        {ata.fornecedor_nome ??"Fornecedor sem nome"} · #
-                        {ata.m2a_ata_id}
+                        {ata.numero_ata ?? `Ata ${ata.m2a_ata_id}`}
+                        {ata.fornecedor_nome ? ` · ${ata.fornecedor_nome}` : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
