@@ -144,18 +144,20 @@ function normalizeFornecedorKey(value: string | null | undefined) {
 }
 
 function resolveFornecedorNome(
- contrato: Pick<ContratoPreliminar,"fornecedorNome" |"empresa">,
+  contrato: Pick<ContratoPreliminar, "fornecedorNome" | "empresa">,
 ) {
- const fornecedor = String(
- contrato.fornecedorNome ?? contrato.empresa ??"",
- ).trim();
- return fornecedor || UNKNOWN_SUPPLIER_LABEL;
+  const fornecedor = String(
+    (contrato.fornecedorNome && String(contrato.fornecedorNome).trim()) ||
+      (contrato.empresa && String(contrato.empresa).trim()) ||
+      "",
+  ).trim();
+  return fornecedor || UNKNOWN_SUPPLIER_LABEL;
 }
 
 function resolveFornecedorKey(
- contrato: Pick<ContratoPreliminar,"fornecedorNome" |"empresa">,
+  contrato: Pick<ContratoPreliminar, "fornecedorNome" | "empresa">,
 ) {
- return normalizeFornecedorKey(resolveFornecedorNome(contrato));
+  return normalizeFornecedorKey(resolveFornecedorNome(contrato));
 }
 
 function resolveSecretariaForContrato(
