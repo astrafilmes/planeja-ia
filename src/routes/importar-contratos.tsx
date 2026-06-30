@@ -1001,8 +1001,8 @@ function Page() {
  }
  if (!objetoBatch.trim())
  return toast.error("Informe o objeto desta geração de contratos");
- if (contratosPreliminares.length === 0)
- return toast.error("Nenhum contrato a gerar");
+ if (contratosSelecionados.length === 0)
+ return toast.error("Nenhum contrato a gerar (todos desmarcados).");
  if (contratosSemAtaM2A.length > 0) {
  console.table(
  contratosSemAtaM2A.map((contrato) => ({
