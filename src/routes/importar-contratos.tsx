@@ -144,18 +144,20 @@ function normalizeFornecedorKey(value: string | null | undefined) {
 }
 
 function resolveFornecedorNome(
- contrato: Pick<ContratoPreliminar,"fornecedorNome" |"empresa">,
+  contrato: Pick<ContratoPreliminar, "fornecedorNome" | "empresa">,
 ) {
- const fornecedor = String(
- contrato.fornecedorNome ?? contrato.empresa ??"",
- ).trim();
- return fornecedor || UNKNOWN_SUPPLIER_LABEL;
+  const fornecedor = String(
+    (contrato.fornecedorNome && String(contrato.fornecedorNome).trim()) ||
+      (contrato.empresa && String(contrato.empresa).trim()) ||
+      "",
+  ).trim();
+  return fornecedor || UNKNOWN_SUPPLIER_LABEL;
 }
 
 function resolveFornecedorKey(
- contrato: Pick<ContratoPreliminar,"fornecedorNome" |"empresa">,
+  contrato: Pick<ContratoPreliminar, "fornecedorNome" | "empresa">,
 ) {
- return normalizeFornecedorKey(resolveFornecedorNome(contrato));
+  return normalizeFornecedorKey(resolveFornecedorNome(contrato));
 }
 
 function resolveSecretariaForContrato(
@@ -292,10 +294,13 @@ function Page() {
  const [prepostosByFornecedor, setPrepostosByFornecedor] = useState<
  Record<string, string>
  >({});
- const [processoId, setProcessoId] = useState<string>("");
- const [objetoBatch, setObjetoBatch] = useState("");
- const [dataBatch] = useState<string>("");
- const [criarProcesso, setCriarProcesso] = useState(true);
+  const [processoId, setProcessoId] = useState<string>("");
+  const [objetoBatch, setObjetoBatch] = useState("");
+  const [dataBatch] = useState<string>("");
+  const [criarProcesso, setCriarProcesso] = useState(true);
+  const [contratosDesmarcados, setContratosDesmarcados] = useState<Set<string>>(
+    new Set(),
+  );
 
  const { data: processos } = useQuery({
  queryKey: ["processos-min"],
@@ -437,16 +442,47 @@ function Page() {
  },
  });
 
- const contratosPreliminares: ContratoPreliminar[] = useMemo(() => {
- if (!jobDetail) return [];
- return agruparContratos(jobDetail.itens as any, jobDetail.dotacoes as any);
- }, [jobDetail]);
+  const contratosPreliminares: ContratoPreliminar[] = useMemo(() => {
+    if (!jobDetail) return [];
+    return agruparContratos(jobDetail.itens as any, jobDetail.dotacoes as any);
+  }, [jobDetail]);
+
+  // Reset desmarcações ao trocar de job
+  useEffect(() => {
+    setContratosDesmarcados(new Set());
+  }, [activeJobId]);
+
+  // Limpa chaves desmarcadas que não existem mais (após edição)
+  useEffect(() => {
+    setContratosDesmarcados((current) => {
+      if (current.size === 0) return current;
+      const validKeys = new Set(contratosPreliminares.map((c) => c.key));
+      const next = new Set<string>();
+      for (const key of current) if (validKeys.has(key)) next.add(key);
+      return next.size === current.size ? current : next;
+    });
+  }, [contratosPreliminares]);
+
+  const contratosSelecionados = useMemo(
+    () =>
+      contratosPreliminares.filter((c) => !contratosDesmarcados.has(c.key)),
+    [contratosPreliminares, contratosDesmarcados],
+  );
+
+  function toggleContratoDesmarcado(key: string) {
+    setContratosDesmarcados((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
 
  const fornecedoresPrepostoTargets = useMemo<
  FornecedorPrepostoTarget[]
  >(() => {
  const map = new Map<string, FornecedorPrepostoTarget>();
- for (const contrato of contratosPreliminares) {
+  for (const contrato of contratosSelecionados) {
  const key = resolveFornecedorKey(contrato);
  const fornecedorNome = resolveFornecedorNome(contrato);
  const current = map.get(key);
@@ -461,7 +497,7 @@ function Page() {
  numeric: true,
  }),
  );
- }, [contratosPreliminares]);
+ }, [contratosSelecionados]);
 
  const fornecedorMapFromDb = useMemo(() => {
  return new Map(
@@ -509,13 +545,13 @@ function Page() {
  [secretarias],
  );
 
- const contratosComSecretaria = useMemo(
+  const contratosComSecretaria = useMemo(
  () =>
- contratosPreliminares.map((contrato) => ({
+ contratosSelecionados.map((contrato) => ({
  contrato,
  secretaria: resolveSecretariaForContrato(contrato, secretariasM2A),
  })),
- [contratosPreliminares, secretariasM2A],
+ [contratosSelecionados, secretariasM2A],
  );
 
  const contratosSemCadastroM2A = useMemo(
@@ -527,8 +563,8 @@ function Page() {
  );
 
  const contratosSemAtaM2A = useMemo(
- () => contratosPreliminares.filter((contrato) => !contrato.m2aAtaId),
- [contratosPreliminares],
+ () => contratosSelecionados.filter((contrato) => !contrato.m2aAtaId),
+ [contratosSelecionados],
  );
 
  async function handleImportar() {
@@ -965,8 +1001,8 @@ function Page() {
  }
  if (!objetoBatch.trim())
  return toast.error("Informe o objeto desta geração de contratos");
- if (contratosPreliminares.length === 0)
- return toast.error("Nenhum contrato a gerar");
+ if (contratosSelecionados.length === 0)
+ return toast.error("Nenhum contrato a gerar (todos desmarcados).");
  if (contratosSemAtaM2A.length > 0) {
  console.table(
  contratosSemAtaM2A.map((contrato) => ({
@@ -1001,11 +1037,12 @@ function Page() {
 
  console.log("Dados validados:", {
  objeto: objetoBatch,
- qtdContratos: contratosPreliminares.length,
+ qtdContratos: contratosSelecionados.length,
+ desmarcados: contratosDesmarcados.size,
  });
 
  startTask("Gerando contratos",
- `Preparando ${contratosPreliminares.length} contrato(s)...`,
+ `Preparando ${contratosSelecionados.length} contrato(s)...`,
  );
  setBusy(true);
  try {
@@ -1067,7 +1104,7 @@ function Page() {
  // Para cada contrato preliminar, alocar nº na secretaria de forma ATÔMICA via RPC em lote.
  console.log("Passo 3: Reservando numeração sequencial automática...");
  updateProgress(18,"Reservando numeração automática...");
- const preliminaresResolvidos = contratosPreliminares.map((contrato) => ({
+ const preliminaresResolvidos = contratosSelecionados.map((contrato) => ({
  contrato,
  secretaria: resolveSecretariaForContrato(contrato, secretariasM2A),
  }));
@@ -1413,14 +1450,19 @@ function Page() {
  }
  }
 
- const totalValor = contratosPreliminares.reduce(
+ const totalValor = contratosSelecionados.reduce(
  (s, c) => s + c.totalValor,
  0,
  );
- const totalItens = contratosPreliminares.reduce(
+ const totalItens = contratosSelecionados.reduce(
  (s, c) => s + c.totalItens,
  0,
  );
+ const fornecedoresUnicos = useMemo(() => {
+ const set = new Set<string>();
+ for (const c of contratosSelecionados) set.add(resolveFornecedorNome(c));
+ return [...set];
+ }, [contratosSelecionados]);
  const itensSemValor = (jobDetail?.itens ?? []).filter(
  (i: any) => !i.excluido && (!i.valor_unitario || i.valor_unitario <= 0),
  ).length;
@@ -1633,9 +1675,19 @@ function Page() {
  {/* Painel de resumo */}
  <Card className="border-border/60">
  <CardContent className="grid gap-3 p-4 md:grid-cols-4">
- <Metric
- label="Empresa"
- value={jobDetail.job.empresa ??"—"}
+  <Metric
+ label={
+ fornecedoresUnicos.length > 1
+ ? `Fornecedores (${fornecedoresUnicos.length})`
+ : "Fornecedor"
+ }
+ value={
+ fornecedoresUnicos.length === 0
+ ? (jobDetail.job.empresa ?? "—")
+ : fornecedoresUnicos.length === 1
+ ? fornecedoresUnicos[0]
+ : fornecedoresUnicos.join(" · ")
+ }
  />
  <Metric
  label="Itens válidos"
@@ -1646,7 +1698,11 @@ function Page() {
  />
  <Metric
  label="Contratos a gerar"
- value={formatNumber(contratosPreliminares.length)}
+ value={
+ contratosDesmarcados.size > 0
+ ? `${formatNumber(contratosSelecionados.length)} / ${formatNumber(contratosPreliminares.length)}`
+ : formatNumber(contratosPreliminares.length)
+ }
  highlight
  />
  <Metric
@@ -1692,35 +1748,64 @@ function Page() {
  prepostosByFornecedor[
  resolveFornecedorKey(c)
  ]?.trim() ??"";
+  const desmarcado = contratosDesmarcados.has(c.key);
  return (
  <Collapsible key={c.key} defaultOpen={false}>
- <Card className="overflow-hidden border-border/60">
+ <Card
+ className={`overflow-hidden border-border/60 transition-opacity ${desmarcado ? "opacity-60" : ""}`}
+ >
+ <div className="flex items-stretch">
+ <div
+ className="flex items-center justify-center px-3 border-r border-border/60 bg-muted/30"
+ onClick={(e) => e.stopPropagation()}
+ >
+ <Checkbox
+ checked={!desmarcado}
+ disabled={isAutorizado}
+ onCheckedChange={() =>
+ toggleContratoDesmarcado(c.key)
+ }
+ aria-label={
+ desmarcado
+ ? "Incluir este contrato no lote"
+ : "Excluir este contrato do lote"
+ }
+ />
+ </div>
  <CollapsibleTrigger asChild>
  <button
  type="button"
- className="w-full text-left transition-colors hover:bg-muted/50"
+ className="flex-1 text-left transition-colors hover:bg-muted/50"
  >
  <CardHeader className="pb-3 pt-3">
  <div className="flex flex-wrap items-center justify-between gap-2">
  <div className="flex items-center gap-2 min-w-0">
  <ChevronDown className="size-4 text-muted-foreground transition-transform data-[state=closed]:-rotate-90 group-data-[state=closed]:-rotate-90" />
  <Building2 className="size-4 text-muted-foreground shrink-0" />
- <span className="font-semibold text-sm truncate">
+ <span className={`font-semibold text-sm truncate ${desmarcado ? "line-through" : ""}`}>
  {nomeSec}
  </span>
  <span className="text-xs text-muted-foreground truncate">
- · {c.empresa}
+ · {resolveFornecedorNome(c)}
  </span>
  <Badge
  variant={
  c.m2aAtaId
- ?"secondary"
- :"destructive"
+ ? "secondary"
+ : "destructive"
  }
  className="text-[10px]"
  >
- {c.m2aAtaNumero ??"Sem ata"}
+ {c.m2aAtaNumero ?? "Sem ata"}
  </Badge>
+ {desmarcado && (
+ <Badge
+ variant="outline"
+ className="text-[10px]"
+ >
+ não será gerado
+ </Badge>
+ )}
  </div>
  <div className="text-xs text-muted-foreground shrink-0">
  {c.totalItens} item(ns) ·{""}
@@ -1729,9 +1814,10 @@ function Page() {
  </strong>
  </div>
  </div>
- </CardHeader>
+  </CardHeader>
  </button>
  </CollapsibleTrigger>
+ </div>
  <CollapsibleContent>
  <div className="grid gap-2 border-t border-border/60 bg-muted/40 px-3 py-2 text-[13px] text-muted-foreground dark:bg-muted/30 md:grid-cols-4">
  <div>
@@ -1762,7 +1848,7 @@ function Page() {
  <span className="font-medium text-foreground">
  Fornecedor:
  </span>{""}
- {c.fornecedorNome ?? c.empresa ??"—"}
+ {resolveFornecedorNome(c)}
  </div>
  <div>
  <span className="font-medium text-foreground">
@@ -2210,11 +2296,15 @@ function Page() {
  <div className="font-medium text-slate-800 ">
  Pré-checagem
  </div>
- <div className="mt-1">
- {contratosPreliminares.length -
+  <div className="mt-1">
+ {contratosSelecionados.length -
  contratosSemCadastroM2A.length}{""}
- de {contratosPreliminares.length} contrato(s)
- com cadastro completo.
+ de {contratosSelecionados.length} contrato(s)
+ com cadastro completo
+ {contratosDesmarcados.size > 0
+ ? ` (${contratosDesmarcados.size} desmarcado(s))`
+ : ""}
+ .
  </div>
  <div className="mt-1">
  {fornecedoresPrepostoTargets.length -
@@ -2248,11 +2338,15 @@ function Page() {
  <Separator />
 
  <div className="flex flex-col gap-1 rounded-xl bg-muted/40 p-3 text-[13px] text-muted-foreground dark:bg-muted/30 ">
- <div>
+  <div>
  Serão criados{""}
- <strong>{contratosPreliminares.length}</strong>{""}
+ <strong>{contratosSelecionados.length}</strong>{""}
  contratos, somando <strong>{totalItens}</strong>{""}
- itens e <strong>{formatBRL(totalValor)}</strong>.
+ itens e <strong>{formatBRL(totalValor)}</strong>
+ {contratosDesmarcados.size > 0
+ ? ` · ${contratosDesmarcados.size} desmarcado(s) não será(ão) gerado(s)`
+ : ""}
+ .
  </div>
  <div>
  Cada contrato consome 1 número da numeração
@@ -2276,9 +2370,9 @@ function Page() {
  <Button
  size="lg"
  className="w-full"
- disabled={
+  disabled={
  busy ||
- contratosPreliminares.length === 0 ||
+ contratosSelecionados.length === 0 ||
  contratosSemCadastroM2A.length > 0 ||
  fornecedoresSemPreposto.length > 0 ||
  contratosSemAtaM2A.length > 0
@@ -2290,7 +2384,7 @@ function Page() {
  ) : (
  <ShieldCheck className="size-4" />
  )}
- Autorizar e gerar {contratosPreliminares.length}{""}
+ Autorizar e gerar {contratosSelecionados.length}{""}
  contratos
  </Button>
  </>
