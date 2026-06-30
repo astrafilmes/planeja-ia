@@ -349,7 +349,7 @@ export function agruparContratos(
     if (d.ignorado || d.quantidade <= 0) continue;
     const item = itemById.get(d.item_id);
     if (!item || item.excluido) continue;
-    const empresa = item.empresa ?? "";
+    const empresa = (item.empresa ?? "").trim();
     const m2aAtaId = item.m2a_ata_id ?? null;
     const key = `${empresa}|${d.secretaria_sigla}|${d.dotacao}|${m2aAtaId ?? "sem-ata"}`;
     if (!map.has(key)) {
@@ -358,7 +358,10 @@ export function agruparContratos(
         empresa,
         m2aAtaId,
         m2aAtaNumero: item.m2a_ata_numero ?? null,
-        fornecedorNome: item.m2a_fornecedor_nome ?? empresa,
+        fornecedorNome:
+          (item.m2a_fornecedor_nome && item.m2a_fornecedor_nome.trim()) ||
+          empresa ||
+          null,
         secretariaSigla: d.secretaria_sigla,
         dotacao: d.dotacao,
         refColuna: d.ref_coluna,
