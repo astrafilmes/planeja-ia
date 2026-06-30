@@ -1001,10 +1001,12 @@ function Page() {
  description:"Preencha o nome do preposto para cada fornecedor listado na aba Autorizar geração.",
  });
  }
- if (!objetoBatch.trim())
- return toast.error("Informe o objeto desta geração de contratos");
- if (contratosSelecionados.length === 0)
- return toast.error("Nenhum contrato a gerar (todos desmarcados).");
+    if (!objetoBatch.trim())
+      return toast.error("Informe o objeto desta geração de contratos");
+    if (!dataBatch || !/^\d{4}-\d{2}-\d{2}$/.test(dataBatch))
+      return toast.error("Informe a data dos contratos.");
+    if (contratosSelecionados.length === 0)
+      return toast.error("Nenhum contrato a gerar (todos desmarcados).");
  if (contratosSemAtaM2A.length > 0) {
  console.table(
  contratosSemAtaM2A.map((contrato) => ({
