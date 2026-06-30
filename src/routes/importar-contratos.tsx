@@ -1104,7 +1104,7 @@ function Page() {
  // Para cada contrato preliminar, alocar nº na secretaria de forma ATÔMICA via RPC em lote.
  console.log("Passo 3: Reservando numeração sequencial automática...");
  updateProgress(18,"Reservando numeração automática...");
- const preliminaresResolvidos = contratosPreliminares.map((contrato) => ({
+ const preliminaresResolvidos = contratosSelecionados.map((contrato) => ({
  contrato,
  secretaria: resolveSecretariaForContrato(contrato, secretariasM2A),
  }));
