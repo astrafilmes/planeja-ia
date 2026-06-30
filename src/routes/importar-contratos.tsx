@@ -1848,7 +1848,7 @@ function Page() {
  <span className="font-medium text-foreground">
  Fornecedor:
  </span>{""}
- {c.fornecedorNome ?? c.empresa ??"—"}
+ {resolveFornecedorNome(c)}
  </div>
  <div>
  <span className="font-medium text-foreground">
