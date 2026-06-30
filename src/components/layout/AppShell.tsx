@@ -310,17 +310,30 @@ export function AppShell({
       return;
     }
     setExportingSystem(true);
+    setExportStep("Iniciando...");
+    const toastId = toast.loading("Exportando sistema...", {
+      description: "Coletando dados em prioridade (base → processos → contratos → m2a → logs)",
+    });
     try {
-      const result = await exportFullSystem();
+      const result = await exportFullSystem((step, current, total) => {
+        setExportStep(`${step} (${current}/${total})`);
+        toast.loading(`Exportando sistema (${current}/${total})`, {
+          id: toastId,
+          description: step,
+        });
+      });
       toast.success("Exportação concluída", {
-        description: `${result.files} arquivos incluídos${result.databaseIncluded ? " com backup do banco" : ""}.`,
+        id: toastId,
+        description: `${result.files} arquivos${result.databaseIncluded ? " + banco" : ""}${result.warnings.length ? ` (${result.warnings.length} aviso(s))` : ""}.`,
       });
     } catch (error) {
       toast.error("Falha ao exportar sistema", {
+        id: toastId,
         description: error instanceof Error ? error.message : String(error),
       });
     } finally {
       setExportingSystem(false);
+      setExportStep(null);
     }
   }
 
