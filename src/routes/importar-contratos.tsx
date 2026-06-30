@@ -442,10 +442,41 @@ function Page() {
  },
  });
 
- const contratosPreliminares: ContratoPreliminar[] = useMemo(() => {
- if (!jobDetail) return [];
- return agruparContratos(jobDetail.itens as any, jobDetail.dotacoes as any);
- }, [jobDetail]);
+  const contratosPreliminares: ContratoPreliminar[] = useMemo(() => {
+    if (!jobDetail) return [];
+    return agruparContratos(jobDetail.itens as any, jobDetail.dotacoes as any);
+  }, [jobDetail]);
+
+  // Reset desmarcações ao trocar de job
+  useEffect(() => {
+    setContratosDesmarcados(new Set());
+  }, [activeJobId]);
+
+  // Limpa chaves desmarcadas que não existem mais (após edição)
+  useEffect(() => {
+    setContratosDesmarcados((current) => {
+      if (current.size === 0) return current;
+      const validKeys = new Set(contratosPreliminares.map((c) => c.key));
+      const next = new Set<string>();
+      for (const key of current) if (validKeys.has(key)) next.add(key);
+      return next.size === current.size ? current : next;
+    });
+  }, [contratosPreliminares]);
+
+  const contratosSelecionados = useMemo(
+    () =>
+      contratosPreliminares.filter((c) => !contratosDesmarcados.has(c.key)),
+    [contratosPreliminares, contratosDesmarcados],
+  );
+
+  function toggleContratoDesmarcado(key: string) {
+    setContratosDesmarcados((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
 
  const fornecedoresPrepostoTargets = useMemo<
  FornecedorPrepostoTarget[]
