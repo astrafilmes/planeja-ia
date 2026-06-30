@@ -21,12 +21,7 @@ const TABLE_GROUPS: Record<string, string[]> = {
     "m2a_servidores",
     "m2a_servidor_unidade",
   ],
-  processos: [
-    "processos",
-    "irp_jobs",
-    "irp_job_secretarias",
-    "irp_unidades_processamento",
-  ],
+  processos: ["processos"],
   contratos: [
     "contratos",
     "contrato_itens",
@@ -34,29 +29,25 @@ const TABLE_GROUPS: Record<string, string[]> = {
     "contrato_atores",
     "contrato_documentos",
   ],
-  importacao: [
-    "contrato_import_jobs",
-    "contrato_import_itens",
-    "contrato_import_dotacoes",
-  ],
   m2a: [
     "m2a_atas",
     "m2a_itens",
     "m2a_contratos_snapshot",
     "m2a_envio_preferencias",
-    "m2a_envio_logs",
   ],
-  logs: ["app_files", "audit_logs", "trusted_devices"],
 };
 
 const RESTORE_ORDER = [
   ...TABLE_GROUPS.base,
   ...TABLE_GROUPS.processos,
   ...TABLE_GROUPS.contratos,
-  ...TABLE_GROUPS.importacao,
   ...TABLE_GROUPS.m2a,
-  ...TABLE_GROUPS.logs,
 ];
+
+// Buckets ignorados na exportação (histórico/anexos pesados que não precisam
+// vir no pacote do sistema).
+const SKIP_BUCKETS = new Set(["irp-files"]);
+
 
 const BACKUP_BUCKET = "system-backups";
 const BACKUP_OBJECT_PATH = "latest/backup.json";
