@@ -296,7 +296,9 @@ function Page() {
  >({});
   const [processoId, setProcessoId] = useState<string>("");
   const [objetoBatch, setObjetoBatch] = useState("");
-  const [dataBatch] = useState<string>("");
+  const [dataBatch, setDataBatch] = useState<string>(
+    () => new Date().toISOString().slice(0, 10),
+  );
   const [criarProcesso, setCriarProcesso] = useState(true);
   const [contratosDesmarcados, setContratosDesmarcados] = useState<Set<string>>(
     new Set(),
@@ -999,10 +1001,12 @@ function Page() {
  description:"Preencha o nome do preposto para cada fornecedor listado na aba Autorizar geração.",
  });
  }
- if (!objetoBatch.trim())
- return toast.error("Informe o objeto desta geração de contratos");
- if (contratosSelecionados.length === 0)
- return toast.error("Nenhum contrato a gerar (todos desmarcados).");
+    if (!objetoBatch.trim())
+      return toast.error("Informe o objeto desta geração de contratos");
+    if (!dataBatch || !/^\d{4}-\d{2}-\d{2}$/.test(dataBatch))
+      return toast.error("Informe a data dos contratos.");
+    if (contratosSelecionados.length === 0)
+      return toast.error("Nenhum contrato a gerar (todos desmarcados).");
  if (contratosSemAtaM2A.length > 0) {
  console.table(
  contratosSemAtaM2A.map((contrato) => ({
@@ -1249,6 +1253,7 @@ function Page() {
  preposto: prepostoContrato,
  fiscal: sec.m2a_fiscal_nome ??"",
  objeto: objetoBatch,
+ data: dataBatch,
  link_contrato: jobDetail.job.original_filename,
  status:"ativo",
  import_job_id: jobDetail.job.id,
@@ -2206,12 +2211,17 @@ function Page() {
  disabled={!!processoId}
  />
  </div>
- <div className="flex flex-col gap-1.5">
- <Label>Data dos contratos *</Label>
- <div className="py-2 text-[13px] italic text-muted-foreground">
- Será preenchida no envio pela extensão
- </div>
- </div>
+                            <div className="flex flex-col gap-1.5">
+                              <Label>Data dos contratos *</Label>
+                              <Input
+                                type="date"
+                                value={dataBatch}
+                                onChange={(e) => setDataBatch(e.target.value)}
+                              />
+                              <p className="text-[12px] text-muted-foreground">
+                                Será gravada em todos os contratos e usada no envio ao portal M2A.
+                              </p>
+                            </div>
  </div>
  <div className="flex flex-col gap-1.5">
  <Label>Objeto *</Label>
