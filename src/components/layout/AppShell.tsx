@@ -282,6 +282,7 @@ export function AppShell({
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [exportingSystem, setExportingSystem] = useState(false);
+  const [exportStep, setExportStep] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/login" });
