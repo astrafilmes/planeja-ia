@@ -523,7 +523,7 @@ export function AppShell({
                 title="Exportar projeto, migrações, relatório e backup do banco"
               >
                 <Download className="size-3" aria-hidden="true" />
-                <span>{exportingSystem ? "Exportando..." : "Exportar sistema"}</span>
+                <span>{exportingSystem ? (exportStep ?? "Exportando...") : "Exportar sistema"}</span>
               </button>
               {isAdmin && (
                 <button
