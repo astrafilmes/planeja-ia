@@ -10,59 +10,61 @@ type ProjectFileManifestEntry = {
   size: number;
 };
 
-type DatabaseTableBackup = {
-  rows?: unknown[];
-  count?: number;
-  error?: string;
+type TableBackup = { rows?: unknown[]; count?: number; error?: string };
+
+type ExportManifest = {
+  table_groups: string[];
+  table_groups_detail: Record<string, string[]>;
+  restore_order: string[];
+  storage_buckets: string[];
 };
 
-type DatabaseExport = {
-  generated_at?: string;
-  tables?: Record<string, DatabaseTableBackup>;
-  storage?: Record<string, unknown>;
-  restore_order?: string[];
-  warnings?: string[];
+type TableGroupResponse = {
+  group: string;
+  tables: Record<string, TableBackup>;
+  warnings: string[];
 };
+
+type StorageEntry = { path: string; size: number };
 
 const PROJECT_FILES = __PROJECT_FILE_MANIFEST__ as ProjectFileManifestEntry[];
 
-function nowIso() {
-  return new Date().toISOString();
-}
+// Ordem de prioridade — primeiro o que importa (cadastros base), depois
+// processos, contratos, importações, M2A e por último logs/arquivos pesados.
+const PRIORITY_ORDER = [
+  "base",
+  "processos",
+  "contratos",
+  "importacao",
+  "m2a",
+  "logs",
+] as const;
+
+const STORAGE_BATCH_SIZE = 10;
 
 function safeFilenameTimestamp(date = new Date()) {
   return date.toISOString().replace(/[:.]/g, "-");
 }
 
-async function fetchDatabaseExport(): Promise<DatabaseExport> {
-  const { data, error } = await supabase.functions.invoke<DatabaseExport>(
-    "system-export",
-    { body: { action: "database-export" } },
-  );
+async function invoke<T>(body: Record<string, unknown>): Promise<T> {
+  const { data, error } = await supabase.functions.invoke<T>("system-export", {
+    body,
+  });
   if (error) throw new Error(error.message);
-  if (!data) throw new Error("Backup do banco retornou vazio.");
+  if (!data) throw new Error("resposta vazia da função");
   return data;
 }
 
 export async function setupDailyBackup() {
-  const { data, error } = await supabase.functions.invoke<{
-    ok?: boolean;
-    error?: string;
-    scheduled_at?: string;
-  }>("system-export", { body: { action: "setup-daily-backup" } });
-  if (error) throw new Error(error.message);
-  if (data?.error) throw new Error(data.error);
-  return data;
+  return invoke<{ ok?: boolean; scheduled_at?: string }>({
+    action: "setup-daily-backup",
+  });
 }
 
 export async function getLatestBackupInfo() {
-  const { data, error } = await supabase.functions.invoke<{
-    available: boolean;
-    updated_at?: string;
-    size_bytes?: number;
-  }>("system-export", { body: { action: "latest-backup-info" } });
-  if (error) throw new Error(error.message);
-  return data;
+  return invoke<{ available: boolean; updated_at?: string; size_bytes?: number }>(
+    { action: "latest-backup-info" },
+  );
 }
 
 function createRestoreScript() {
@@ -120,62 +122,186 @@ Sincronizar dados:
 `;
 }
 
-function createReport(database: DatabaseExport | null, databaseError?: string) {
+function createReport(
+  database: {
+    tables: Record<string, TableBackup>;
+    warnings: string[];
+  },
+  storageStats: { bucket: string; files: number; bytes: number; errors: number }[],
+) {
   const totalBytes = PROJECT_FILES.reduce((sum, file) => sum + file.size, 0);
-  const tableLines = database?.tables
-    ? Object.entries(database.tables).map(([name, table]) => {
-        if (table.error) return `- ${name}: erro (${table.error})`;
-        return `- ${name}: ${table.count ?? table.rows?.length ?? 0} linha(s)`;
-      })
-    : [];
+  const tableLines = Object.entries(database.tables).map(([name, table]) => {
+    if (table.error) return `- ${name}: erro (${table.error})`;
+    return `- ${name}: ${table.count ?? table.rows?.length ?? 0} linha(s)`;
+  });
+  const storageLines = storageStats.map(
+    (s) =>
+      `- ${s.bucket}: ${s.files} arquivo(s), ${s.bytes} bytes${s.errors ? `, ${s.errors} erro(s)` : ""}`,
+  );
 
   return `RELATÓRIO DE EXPORTAÇÃO DO SISTEMA
 
-Gerado em: ${nowIso()}
-Versão do sistema: ${__APP_VERSION__}
-Arquivos do projeto: ${PROJECT_FILES.length}
-Tamanho: ${totalBytes} bytes
+Gerado em: ${new Date().toISOString()}
+Versão: ${__APP_VERSION__}
+Arquivos do projeto: ${PROJECT_FILES.length} (${totalBytes} bytes)
 
-Banco de dados:
-${databaseError ? `Falha: ${databaseError}` : tableLines.join("\n") || "Sem tabelas."}
+Banco de dados (por prioridade):
+${tableLines.join("\n") || "Sem tabelas."}
+
+Storage:
+${storageLines.join("\n") || "Sem buckets."}
+
+Avisos:
+${database.warnings.length ? database.warnings.map((w) => `- ${w}`).join("\n") : "Nenhum."}
 `;
 }
 
-export async function exportFullSystem() {
+export type ExportProgress = (step: string, current: number, total: number) => void;
+
+export async function exportFullSystem(onProgress?: ExportProgress) {
   const zip = new JSZip();
   for (const file of PROJECT_FILES) {
     zip.file(file.path, file.content, { base64: true });
   }
 
-  let database: DatabaseExport | null = null;
-  let databaseError: string | undefined;
-  try {
-    database = await fetchDatabaseExport();
-    zip.file("database/database-backup.json", JSON.stringify(database, null, 2));
-  } catch (error) {
-    databaseError = error instanceof Error ? error.message : String(error);
-    zip.file("database/ERRO_BACKUP.txt", databaseError);
+  // 1) Manifesto leve — descobre grupos e buckets.
+  onProgress?.("Preparando manifesto", 0, 1);
+  const manifest = await invoke<ExportManifest>({ action: "export-manifest" });
+
+  const orderedGroups = PRIORITY_ORDER.filter((g) =>
+    manifest.table_groups.includes(g),
+  );
+  const extraGroups = manifest.table_groups.filter(
+    (g) => !PRIORITY_ORDER.includes(g as (typeof PRIORITY_ORDER)[number]),
+  );
+  const allGroups = [...orderedGroups, ...extraGroups];
+
+  // 2) Exporta cada grupo de tabelas separadamente.
+  const tables: Record<string, TableBackup> = {};
+  const warnings: string[] = [];
+  let stepIndex = 0;
+  const totalSteps = allGroups.length + manifest.storage_buckets.length + 1;
+
+  for (const group of allGroups) {
+    stepIndex += 1;
+    onProgress?.(`Exportando tabelas: ${group}`, stepIndex, totalSteps);
+    try {
+      const res = await invoke<TableGroupResponse>({
+        action: "export-table-group",
+        group,
+      });
+      Object.assign(tables, res.tables);
+      warnings.push(...(res.warnings ?? []));
+      zip.file(
+        `database/groups/${group}.json`,
+        JSON.stringify(res, null, 2),
+      );
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      warnings.push(`grupo ${group}: ${msg}`);
+      zip.file(`database/groups/${group}.ERROR.txt`, msg);
+    }
   }
 
-  zip.file("RELATORIO_EXPORTACAO.txt", createReport(database, databaseError));
+  const databaseBackup = {
+    generated_at: new Date().toISOString(),
+    tables,
+    restore_order: manifest.restore_order,
+    warnings,
+  };
+  zip.file("database/database-backup.json", JSON.stringify(databaseBackup, null, 2));
+
+  // 3) Storage por bucket, em lotes pequenos.
+  const storageStats: {
+    bucket: string;
+    files: number;
+    bytes: number;
+    errors: number;
+  }[] = [];
+  for (const bucket of manifest.storage_buckets) {
+    stepIndex += 1;
+    onProgress?.(`Exportando storage: ${bucket}`, stepIndex, totalSteps);
+    let files = 0;
+    let bytes = 0;
+    let errors = 0;
+    try {
+      const { entries } = await invoke<{ entries: StorageEntry[] }>({
+        action: "list-storage-bucket",
+        bucket,
+      });
+      const all = entries ?? [];
+      for (let i = 0; i < all.length; i += STORAGE_BATCH_SIZE) {
+        const slice = all.slice(i, i + STORAGE_BATCH_SIZE);
+        onProgress?.(
+          `Storage ${bucket}: ${Math.min(i + STORAGE_BATCH_SIZE, all.length)}/${all.length}`,
+          stepIndex,
+          totalSteps,
+        );
+        const { files: batch } = await invoke<{
+          files: Array<
+            | { path: string; size: number; content_base64: string }
+            | { path: string; error: string }
+          >;
+        }>({
+          action: "download-storage-batch",
+          bucket,
+          paths: slice.map((s) => s.path),
+        });
+        for (const file of batch) {
+          if ("error" in file) {
+            errors += 1;
+            zip.file(
+              `storage/${bucket}/${file.path}.ERROR.txt`,
+              file.error,
+            );
+            continue;
+          }
+          zip.file(`storage/${bucket}/${file.path}`, file.content_base64, {
+            base64: true,
+          });
+          files += 1;
+          bytes += file.size;
+        }
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      warnings.push(`storage/${bucket}: ${msg}`);
+      zip.file(`storage/${bucket}.ERROR.txt`, msg);
+      errors += 1;
+    }
+    storageStats.push({ bucket, files, bytes, errors });
+  }
+
+  // 4) Relatório, README e script de restauração.
+  stepIndex += 1;
+  onProgress?.("Montando ZIP", stepIndex, totalSteps);
+  zip.file(
+    "RELATORIO_EXPORTACAO.txt",
+    createReport({ tables, warnings }, storageStats),
+  );
   zip.file("README-EXECUTAR-EM-IDE.txt", createReadme());
   zip.file("tools/sync-database-from-backup.mjs", createRestoreScript());
 
   const blob = await zip.generateAsync({ type: "blob" });
   const filename = `planeja-ia-export-${safeFilenameTimestamp()}.zip`;
   saveAs(blob, filename);
+
   await logAudit({
     action: "system_full_export",
     entityType: "system",
     payload: {
       files: PROJECT_FILES.length,
-      database_included: Boolean(database),
-      database_error: databaseError ?? null,
+      table_groups: allGroups,
+      storage_stats: storageStats,
+      warnings: warnings.length,
     },
   });
+
   return {
     filename,
     files: PROJECT_FILES.length,
-    databaseIncluded: Boolean(database),
+    databaseIncluded: Object.keys(tables).length > 0,
+    storageStats,
+    warnings,
   };
 }
