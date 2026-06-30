@@ -441,18 +441,22 @@ function Page() {
  setSalvandoM2AConfig(true);
  const { error } = await supabase
  .from("contratos")
- .update({
- numero_contrato: numero,
- m2a_ata_id: editAtaId,
- m2a_ata_numero: ataSelecionada?.numero_ata ?? null,
- fornecedor_nome: ataSelecionada?.fornecedor_nome ?? null,
- updated_at: new Date().toISOString(),
- })
- .eq("id", id);
+  .update({
+   numero_contrato: numero,
+   m2a_ata_id: editAtaId,
+   m2a_ata_numero: ataSelecionada?.numero_ata ?? null,
+   fornecedor_nome: ataSelecionada?.fornecedor_nome ?? null,
+   data: editData ? editData : null,
+   objeto: editObjeto.trim() || null,
+   preposto: editPreposto.trim() || null,
+   fiscal: editFiscal.trim() || null,
+   updated_at: new Date().toISOString(),
+  })
+  .eq("id", id);
  setSalvandoM2AConfig(false);
  if (error) {
- toast.error(error.message);
- return;
+  toast.error(error.message);
+  return;
  }
  toast.success("Contrato atualizado para envio.");
  await Promise.all([
