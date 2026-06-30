@@ -274,7 +274,7 @@ export function AppShell({
   actions?: ReactNode;
   onBack?: () => void;
 }) {
-  const { user, loading, signOut, isGestor, roles } = useAuth();
+  const { user, loading, signOut, isGestor, isAdmin, roles } = useAuth();
   const navigate = useNavigate();
   const router = useRouterState();
   const pathname = router.location.pathname;
