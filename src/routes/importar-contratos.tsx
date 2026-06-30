@@ -2338,11 +2338,15 @@ function Page() {
  <Separator />
 
  <div className="flex flex-col gap-1 rounded-xl bg-muted/40 p-3 text-[13px] text-muted-foreground dark:bg-muted/30 ">
- <div>
+  <div>
  Serão criados{""}
- <strong>{contratosPreliminares.length}</strong>{""}
+ <strong>{contratosSelecionados.length}</strong>{""}
  contratos, somando <strong>{totalItens}</strong>{""}
- itens e <strong>{formatBRL(totalValor)}</strong>.
+ itens e <strong>{formatBRL(totalValor)}</strong>
+ {contratosDesmarcados.size > 0
+ ? ` · ${contratosDesmarcados.size} desmarcado(s) não será(ão) gerado(s)`
+ : ""}
+ .
  </div>
  <div>
  Cada contrato consome 1 número da numeração
