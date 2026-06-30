@@ -443,9 +443,9 @@ function Page() {
  .from("contratos")
   .update({
    numero_contrato: numero,
-   m2a_ata_id: editAtaId || null,
-   m2a_ata_numero: ataSelecionada?.numero_ata ?? null,
-   fornecedor_nome: ataSelecionada?.fornecedor_nome ?? null,
+   m2a_ata_id: editAtaId || undefined,
+   m2a_ata_numero: ataSelecionada?.numero_ata ?? undefined,
+   fornecedor_nome: ataSelecionada?.fornecedor_nome ?? undefined,
    data: editData ? editData : undefined,
    objeto: editObjeto.trim() || undefined,
    preposto: editPreposto.trim() || undefined,
