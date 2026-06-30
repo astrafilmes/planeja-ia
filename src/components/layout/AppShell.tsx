@@ -19,9 +19,11 @@ import {
   UserCheck,
   HandCoins,
   ClipboardList,
+  Download,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
+import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -40,6 +42,10 @@ import {
 } from "@/components/ui/sheet";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { CommandPalette } from "@/components/layout/CommandPalette";
+import {
+  createStartupDatabaseBackup,
+  exportFullSystem,
+} from "@/lib/system-export";
 
 import { PageHeader } from "@/components/layout/PageHeader";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
@@ -278,6 +284,7 @@ export function AppShell({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [exportingSystem, setExportingSystem] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/login" });
@@ -293,6 +300,29 @@ export function AppShell({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    createStartupDatabaseBackup().catch((error) => {
+      console.warn("Backup automático do banco não concluído", error);
+    });
+  }, [user]);
+
+  async function handleExportSystem() {
+    setExportingSystem(true);
+    try {
+      const result = await exportFullSystem();
+      toast.success("Exportação concluída", {
+        description: `${result.files} arquivos incluídos${result.databaseIncluded ? " com backup do banco" : ""}.`,
+      });
+    } catch (error) {
+      toast.error("Falha ao exportar sistema", {
+        description: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      setExportingSystem(false);
+    }
+  }
 
   if (loading || !user) {
     return (
@@ -457,9 +487,21 @@ export function AppShell({
           {children}
         </div>
         <footer className="shrink-0 border-t border-border/60 bg-background/80 px-5 py-2 text-[11px] text-muted-foreground">
-          <div className="flex items-center justify-end gap-3 font-mono">
+          <div className="flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={handleExportSystem}
+              disabled={exportingSystem}
+              className="inline-flex h-6 items-center gap-1.5 rounded-md px-1.5 text-[10.5px] font-medium opacity-70 transition-opacity hover:bg-muted hover:text-foreground hover:opacity-100 disabled:pointer-events-none disabled:opacity-45"
+              title="Exportar projeto, migrações, relatório e backup do banco"
+            >
+              <Download className="size-3" aria-hidden="true" />
+              <span>{exportingSystem ? "Exportando..." : "Exportar sistema"}</span>
+            </button>
+            <div className="flex items-center justify-end gap-3 font-mono">
             <span>SITE {siteVersion}</span>
             <span>EXTENSÃO {extensionVersion}</span>
+            </div>
           </div>
         </footer>
       </main>
