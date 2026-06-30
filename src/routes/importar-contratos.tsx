@@ -1450,14 +1450,19 @@ function Page() {
  }
  }
 
- const totalValor = contratosPreliminares.reduce(
+ const totalValor = contratosSelecionados.reduce(
  (s, c) => s + c.totalValor,
  0,
  );
- const totalItens = contratosPreliminares.reduce(
+ const totalItens = contratosSelecionados.reduce(
  (s, c) => s + c.totalItens,
  0,
  );
+ const fornecedoresUnicos = useMemo(() => {
+ const set = new Set<string>();
+ for (const c of contratosSelecionados) set.add(resolveFornecedorNome(c));
+ return [...set];
+ }, [contratosSelecionados]);
  const itensSemValor = (jobDetail?.itens ?? []).filter(
  (i: any) => !i.excluido && (!i.valor_unitario || i.valor_unitario <= 0),
  ).length;
