@@ -446,10 +446,10 @@ function Page() {
    m2a_ata_id: editAtaId,
    m2a_ata_numero: ataSelecionada?.numero_ata ?? null,
    fornecedor_nome: ataSelecionada?.fornecedor_nome ?? null,
-   data: editData ? editData : null,
-   objeto: editObjeto.trim() || null,
-   preposto: editPreposto.trim() || null,
-   fiscal: editFiscal.trim() || null,
+   data: editData ? editData : undefined,
+   objeto: editObjeto.trim() || undefined,
+   preposto: editPreposto.trim() || undefined,
+   fiscal: editFiscal.trim() || undefined,
    updated_at: new Date().toISOString(),
   })
   .eq("id", id);
