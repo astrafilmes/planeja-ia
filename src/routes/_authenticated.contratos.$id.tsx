@@ -30,7 +30,7 @@ import {
   documentosM2ACount as calcDocumentosM2ACount,
 } from "@/features/contrato-detalhe/lib";
 
-export const Route = createFileRoute("/contratos/$id")({
+export const Route = createFileRoute("/_authenticated/contratos/$id")({
   component: Page,
   head: ({ params }) =>
     routeHead({

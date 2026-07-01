@@ -97,7 +97,7 @@ import { downloadM2ADocuments } from"@/lib/m2a";
 import { ContractReportGenerator } from"@/components/contratos/ContractReportGenerator";
 import { PautaConsolidadaExporter } from"@/components/contratos/PautaConsolidadaExporter";
 
-export const Route = createFileRoute("/contratos")({
+export const Route = createFileRoute("/_authenticated/contratos")({
  component: Page,
  head: () =>
  routeHead({
