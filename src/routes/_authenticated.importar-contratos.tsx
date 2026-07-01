@@ -165,6 +165,19 @@ function Page() {
     });
   }, []);
 
+  const setContratosDesmarcadosBulk = useCallback(
+    (keys: string[], desmarcar: boolean) => {
+      setContratosDesmarcados((current) => {
+        const next = new Set(current);
+        if (desmarcar) keys.forEach((k) => next.add(k));
+        else keys.forEach((k) => next.delete(k));
+        return next;
+      });
+    },
+    [],
+  );
+
+
   const onSubmitImport = useCallback(() => {
     if (!file) return;
     const payload: ImportSubmitPayload =
@@ -300,6 +313,8 @@ function Page() {
                     contratosDesmarcados={contratosDesmarcados}
                     isAutorizado={isAutorizado}
                     onToggleContrato={toggleContratoDesmarcado}
+                    onToggleMany={setContratosDesmarcadosBulk}
+
                   />
                 </TabsContent>
 
