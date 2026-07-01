@@ -190,7 +190,7 @@ function Login() {
   return (
     <div className="relative grid min-h-screen overflow-hidden bg-background text-foreground lg:grid-cols-[1.05fr_1fr]">
       {/* ───── Brand panel ───── */}
-      <aside className="relative hidden flex-col justify-between overflow-hidden p-12 text-slate-100 lg:flex" style={{ background: "#0c1020" }}>
+      <aside className="relative hidden flex-col justify-between overflow-hidden bg-brand-panel p-12 text-brand-panel-foreground lg:flex">
         {/* layered ambient gradients */}
         <div
           aria-hidden
@@ -205,7 +205,7 @@ function Login() {
           className="pointer-events-none absolute inset-0 opacity-[0.05]"
           style={{
             backgroundImage:
-              "linear-gradient(to right, white 1px, transparent 1px), linear-gradient(to bottom, white 1px, transparent 1px)",
+              "linear-gradient(to right, currentColor 1px, transparent 1px), linear-gradient(to bottom, currentColor 1px, transparent 1px)",
             backgroundSize: "44px 44px",
           }}
         />
