@@ -313,6 +313,8 @@ function Page() {
                     contratosDesmarcados={contratosDesmarcados}
                     isAutorizado={isAutorizado}
                     onToggleContrato={toggleContratoDesmarcado}
+                    onToggleMany={setContratosDesmarcadosBulk}
+
                   />
                 </TabsContent>
 
