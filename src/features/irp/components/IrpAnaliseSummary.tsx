@@ -16,7 +16,7 @@ export interface IrpAnaliseSummaryProps {
 function Metric({ label, value }: IrpMetricItem) {
   return (
     <div className="rounded-lg border border-border/60 bg-muted/40 p-3 dark:bg-muted/30">
-      <div className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <div className="text-[12px] font-medium uppercase tracking-wider text-muted-foreground">
         {label}
       </div>
       <div className="mt-0.5 text-lg font-semibold tracking-tight text-foreground">

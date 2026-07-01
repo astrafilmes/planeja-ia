@@ -610,7 +610,7 @@ function Page() {
  <div className="flex flex-col gap-5 overflow-y-auto p-5">
  {/* Identificação */}
  <section className="flex flex-col gap-3">
- <h3 className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
+ <h3 className="text-[12px] font-medium uppercase tracking-wider text-muted-foreground">
  Identificação
  </h3>
  <div className="grid grid-cols-1 gap-3 md:grid-cols-6">
@@ -683,7 +683,7 @@ function Page() {
 
  {/* Pessoas e link */}
  <section className="flex flex-col gap-3">
- <h3 className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
+ <h3 className="text-[12px] font-medium uppercase tracking-wider text-muted-foreground">
  Pessoas e referência
  </h3>
  <div className="grid grid-cols-1 gap-3 md:grid-cols-6">

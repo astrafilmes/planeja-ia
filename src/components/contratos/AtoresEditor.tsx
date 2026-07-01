@@ -144,7 +144,7 @@ export function AtoresEditor({
  {/* Servidores padrão (automáticos) */}
  {defaults.length > 0 && (
  <div className="flex flex-col gap-2">
- <div className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
+ <div className="text-[12px] font-medium uppercase tracking-wider text-muted-foreground">
  Servidores padrão
  </div>
  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -186,7 +186,7 @@ export function AtoresEditor({
     {/* Servidores adicionais */}
  <div className="flex flex-col gap-2">
  <div className="flex items-center justify-between">
- <div className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
+ <div className="text-[12px] font-medium uppercase tracking-wider text-muted-foreground">
  Servidores ({defaults.length + atores.length})
  </div>
  {!showForm && !locked && (

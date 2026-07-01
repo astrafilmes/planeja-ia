@@ -257,7 +257,7 @@ function Login() {
                 >
                   {s.n}
                 </div>
-                <div className="mt-0.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-brand-panel-foreground/45">
+                <div className="mt-0.5 text-[10.5px] font-medium uppercase tracking-[0.14em] text-brand-panel-foreground/45">
                   {s.l}
                 </div>
               </div>

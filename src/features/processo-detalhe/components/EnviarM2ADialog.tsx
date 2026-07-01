@@ -122,7 +122,7 @@ export function EnviarM2ADialog({
             </div>
           </div>
           <div className="rounded-lg border border-border/60 bg-card p-3">
-            <div className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <div className="text-[12px] font-medium uppercase tracking-wider text-muted-foreground">
               Seleção
             </div>
             <div className="mt-2 flex max-h-48 flex-col gap-1 overflow-auto pr-1">

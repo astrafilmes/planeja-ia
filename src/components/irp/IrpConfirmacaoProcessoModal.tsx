@@ -93,12 +93,12 @@ export function IrpConfirmacaoProcessoModal({
         <div className="grid max-h-[60vh] gap-4 overflow-auto pr-1">
           {/* Cabeçalho */}
           <section className="rounded-lg border border-border/60 bg-muted/30 p-4">
-            <div className="mb-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <div className="mb-3 flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
               <Tag className="size-3.5" /> Cabeçalho do DFD
             </div>
             <div className="grid gap-3 text-sm md:grid-cols-2">
               <div className="md:col-span-2">
-                <div className="text-[11px] font-semibold uppercase text-muted-foreground">
+                <div className="text-[11px] font-medium uppercase text-muted-foreground">
                   Objeto
                 </div>
                 <div className="font-medium">{form.objeto || "—"}</div>
@@ -145,7 +145,7 @@ export function IrpConfirmacaoProcessoModal({
 
           {/* Tabela de planilhas */}
           <section className="rounded-lg border border-border/60">
-            <div className="flex items-center gap-2 border-b border-border/60 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <div className="flex items-center gap-2 border-b border-border/60 px-3 py-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
               <FileSpreadsheet className="size-3.5" />
               Ordem de importação ({rows.length})
             </div>
@@ -230,7 +230,7 @@ function Field({
 }) {
   return (
     <div>
-      <div className="flex items-center gap-1 text-[11px] font-semibold uppercase text-muted-foreground">
+      <div className="flex items-center gap-1 text-[11px] font-medium uppercase text-muted-foreground">
         {icon}
         {label}
       </div>
@@ -244,7 +244,7 @@ function Field({
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg border border-border/60 bg-card p-3">
-      <div className="text-[11px] font-semibold uppercase text-muted-foreground">
+      <div className="text-[11px] font-medium uppercase text-muted-foreground">
         {label}
       </div>
       <div className="text-lg font-semibold tabular-nums">{value}</div>

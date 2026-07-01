@@ -93,7 +93,7 @@ export function ProcessoVisaoGeralTab({
         >
           <div className="flex flex-col gap-4 text-sm">
             <div className="flex flex-col gap-1">
-              <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <p className="text-[12px] font-medium uppercase tracking-wider text-muted-foreground">
                 Última sincronização
               </p>
               <p className="text-xs">
@@ -103,13 +103,13 @@ export function ProcessoVisaoGeralTab({
               </p>
             </div>
             <div className="flex flex-col gap-1">
-              <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <p className="text-[12px] font-medium uppercase tracking-wider text-muted-foreground">
                 Contratos
               </p>
               <p className="font-medium">{contratosCount}</p>
             </div>
             <div className="flex flex-col gap-1">
-              <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <p className="text-[12px] font-medium uppercase tracking-wider text-muted-foreground">
                 Valor total
               </p>
               <p className="font-medium">{BRL.format(totalValor)}</p>
