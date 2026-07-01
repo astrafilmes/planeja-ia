@@ -181,6 +181,23 @@ export function supplierMatches(
   return empresa.includes(fornecedor) || fornecedor.includes(empresa);
 }
 
+export interface ResolveM2AItemDebug {
+  numeroCandidates: string[];
+  numberMatchesCount: number;
+  descMatchesCount: number;
+  poolSize: number;
+  supplierFilterApplied: boolean;
+  topScored: Array<{
+    m2aItemId: string;
+    ataId: string;
+    ataFornecedor?: string | null;
+    numero_item: string | null;
+    descricaoPortal: string;
+    score: number;
+    reasons: string[];
+  }>;
+}
+
 export function resolveM2AItemMatch(
   item: {
     empresa?: string | null;
@@ -191,12 +208,12 @@ export function resolveM2AItemMatch(
     lote?: string | null;
   },
   syncedItems: SyncedAtaItem[],
+  onDebug?: (debug: ResolveM2AItemDebug) => void,
 ) {
-  // A planilha oscila entre usar a coluna "Nº" (às vezes degenerada — todos
-  // "1") e a coluna "ITEM" (ordem sequencial 1..N). Tratamos ambos como
-  // candidatos válidos para casar contra `numero_item` da tabela mestra do
-  // portal — caso contrário, itens de lotes inteiros ficam órfãos quando o
-  // "Nº" da planilha não corresponde à numeração real da ata.
+  // Estratégia: coletar candidatos por MÚLTIPLOS sinais (número, descrição,
+  // fornecedor) e ranquear. A planilha frequentemente tem "Nº" degenerado
+  // (todos "1") — nesses casos a descrição é o sinal mais confiável.
+
   const numeroCandidates = Array.from(
     new Set(
       [compactNumber(item.numeroItem), compactNumber(item.ordemItem)].filter(
@@ -205,61 +222,86 @@ export function resolveM2AItemMatch(
     ),
   );
 
-  // Fase 1 — match por qualquer candidato de número.
-  let pool: SyncedAtaItem[] = [];
-  if (numeroCandidates.length > 0) {
-    const numberMatches = syncedItems.filter((candidate) =>
-      numeroCandidates.includes(compactNumber(candidate.numero_item)),
+  const numberMatches = numeroCandidates.length
+    ? syncedItems.filter((candidate) =>
+        numeroCandidates.includes(compactNumber(candidate.numero_item)),
+      )
+    : [];
+
+  const descNorm = normalizeText(item.descricao ?? "");
+  const descPrefix = descNorm.slice(0, 40);
+  const descMatches =
+    descPrefix.length >= 12
+      ? syncedItems.filter((candidate) => {
+          const cand = normalizeText(candidate.descricao);
+          if (!cand) return false;
+          return (
+            cand.startsWith(descPrefix) ||
+            descNorm.startsWith(cand.slice(0, 40)) ||
+            cand.includes(descPrefix)
+          );
+        })
+      : [];
+
+  // Pool combinado: união de número + descrição.
+  const poolMap = new Map<string, SyncedAtaItem>();
+  for (const c of numberMatches) poolMap.set(c.id_item, c);
+  for (const c of descMatches) poolMap.set(c.id_item, c);
+  let pool = [...poolMap.values()];
+
+  // Se o fornecedor da planilha bate com alguma ata do pool, priorizamos.
+  let supplierFilterApplied = false;
+  if (pool.length > 1) {
+    const supplierPool = pool.filter((candidate) =>
+      supplierMatches(item.empresa, candidate.ata?.fornecedor?.nome),
     );
-    if (numberMatches.length > 0) {
-      const supplierMatchesList = numberMatches.filter((candidate) =>
-        supplierMatches(item.empresa, candidate.ata?.fornecedor?.nome),
-      );
-      pool =
-        supplierMatchesList.length > 0 ? supplierMatchesList : numberMatches;
+    if (supplierPool.length > 0) {
+      pool = supplierPool;
+      supplierFilterApplied = true;
     }
   }
 
-  // Fase 2 — fallback por descrição/lote quando o número não bate.
-  // Evita que itens de um lote completo fiquem órfãos apenas porque o
-  // portal e a planilha usam numerações divergentes.
-  if (pool.length === 0 && item.descricao) {
-    const alvoDesc = normalizeText(item.descricao).slice(0, 32);
-    if (alvoDesc.length >= 8) {
-      const descMatches = syncedItems.filter((candidate) => {
-        const desc = normalizeText(candidate.descricao);
-        return desc.includes(alvoDesc) || alvoDesc.includes(desc.slice(0, 32));
-      });
-      if (descMatches.length > 0) {
-        const supplierMatchesList = descMatches.filter((candidate) =>
-          supplierMatches(item.empresa, candidate.ata?.fornecedor?.nome),
-        );
-        pool = supplierMatchesList.length > 0 ? supplierMatchesList : descMatches;
-      }
-    }
+  if (pool.length === 0) {
+    onDebug?.({
+      numeroCandidates,
+      numberMatchesCount: numberMatches.length,
+      descMatchesCount: descMatches.length,
+      poolSize: 0,
+      supplierFilterApplied: false,
+      topScored: [],
+    });
+    return null;
   }
-
-  if (pool.length === 0) return null;
 
   const scored = pool
     .map((candidate) => {
-      let score = 40;
+      const reasons: string[] = [];
+      let score = 0;
       const candidateNumero = compactNumber(candidate.numero_item);
       if (numeroCandidates.includes(candidateNumero)) {
-        score += 20;
-        // Bônus quando bate com a ordem sequencial exata: sinal muito
-        // confiável quando o "Nº" da planilha é degenerado (todos "1").
-        if (candidateNumero === compactNumber(item.ordemItem)) score += 10;
+        score += 25;
+        reasons.push("numero");
+        if (candidateNumero === compactNumber(item.ordemItem)) {
+          score += 15;
+          reasons.push("ordem-exata");
+        }
       }
-      if (supplierMatches(item.empresa, candidate.ata?.fornecedor?.nome))
-        score += 40;
-      if (
-        item.descricao &&
-        normalizeText(candidate.descricao).includes(
-          normalizeText(item.descricao).slice(0, 24),
-        )
-      ) {
-        score += 10;
+      const candDesc = normalizeText(candidate.descricao);
+      if (descPrefix.length >= 12 && candDesc) {
+        if (candDesc.startsWith(descPrefix)) {
+          score += 45;
+          reasons.push("desc-prefix");
+        } else if (
+          candDesc.includes(descPrefix) ||
+          descNorm.startsWith(candDesc.slice(0, 40))
+        ) {
+          score += 30;
+          reasons.push("desc-contain");
+        }
+      }
+      if (supplierMatches(item.empresa, candidate.ata?.fornecedor?.nome)) {
+        score += 35;
+        reasons.push("fornecedor");
       }
       if (
         item.valorUnitario &&
@@ -267,20 +309,39 @@ export function resolveM2AItemMatch(
           Number(candidate.valor_unitario ?? 0) - Number(item.valorUnitario),
         ) < 0.01
       ) {
-        score += 5;
+        score += 10;
+        reasons.push("valor");
       }
-      return { candidate, score };
+      return { candidate, score, reasons };
     })
     .sort((a, b) => b.score - a.score);
 
   const best = scored[0];
-  if (!best) return null;
+
+  onDebug?.({
+    numeroCandidates,
+    numberMatchesCount: numberMatches.length,
+    descMatchesCount: descMatches.length,
+    poolSize: pool.length,
+    supplierFilterApplied,
+    topScored: scored.slice(0, 3).map((s) => ({
+      m2aItemId: s.candidate.id_item,
+      ataId: s.candidate.id_ata,
+      ataFornecedor: s.candidate.ata?.fornecedor?.nome,
+      numero_item: s.candidate.numero_item ?? null,
+      descricaoPortal: (s.candidate.descricao ?? "").slice(0, 60),
+      score: s.score,
+      reasons: s.reasons,
+    })),
+  });
+
+  if (!best || best.score < 25) return null;
   const tied = scored.filter((entry) => entry.score === best.score);
   return {
     item: best.candidate,
     score: best.score,
     status:
-      tied.length > 1 && best.score < 90 ? ("ambigua" as const) : ("auto" as const),
+      tied.length > 1 && best.score < 70 ? ("ambigua" as const) : ("auto" as const),
   };
 }
 
