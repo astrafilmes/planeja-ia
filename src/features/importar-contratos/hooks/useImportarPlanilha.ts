@@ -220,7 +220,10 @@ export function useImportarPlanilha(options: {
         >();
         updateProgress(66, "Relacionando itens com a base do portal...");
         for (const item of parsed.itens) {
-          const match = resolveM2AItemMatch(item, syncedItems);
+          const match = resolveM2AItemMatch(
+            { ...item, lote: item.lote },
+            syncedItems,
+          );
           itemMatches.set(item.sourceRow, match);
           assignments.set(
             item.sourceRow,
