@@ -9,48 +9,29 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SecretariasRouteImport } from './routes/secretarias'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as ProcessosRouteImport } from './routes/processos'
-import { Route as NumeracaoRouteImport } from './routes/numeracao'
-import { Route as LogsRouteImport } from './routes/logs'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as IrpColunasRouteImport } from './routes/irp-colunas'
-import { Route as IrpRouteImport } from './routes/irp'
-import { Route as ImportarContratosRouteImport } from './routes/importar-contratos'
-import { Route as HistoricoRouteImport } from './routes/historico'
-import { Route as GestoresRouteImport } from './routes/gestores'
-import { Route as FornecedoresRouteImport } from './routes/fornecedores'
-import { Route as FiscaisRouteImport } from './routes/fiscais'
-import { Route as DashboardRouteImport } from './routes/dashboard'
-import { Route as ContratosRouteImport } from './routes/contratos'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ProcessosIdRouteImport } from './routes/processos.$id'
-import { Route as ContratosIdRouteImport } from './routes/contratos.$id'
+import { Route as AuthenticatedSecretariasRouteImport } from './routes/_authenticated.secretarias'
+import { Route as AuthenticatedProcessosRouteImport } from './routes/_authenticated.processos'
+import { Route as AuthenticatedNumeracaoRouteImport } from './routes/_authenticated.numeracao'
+import { Route as AuthenticatedLogsRouteImport } from './routes/_authenticated.logs'
+import { Route as AuthenticatedIrpColunasRouteImport } from './routes/_authenticated.irp-colunas'
+import { Route as AuthenticatedIrpRouteImport } from './routes/_authenticated.irp'
+import { Route as AuthenticatedImportarContratosRouteImport } from './routes/_authenticated.importar-contratos'
+import { Route as AuthenticatedHistoricoRouteImport } from './routes/_authenticated.historico'
+import { Route as AuthenticatedGestoresRouteImport } from './routes/_authenticated.gestores'
+import { Route as AuthenticatedFornecedoresRouteImport } from './routes/_authenticated.fornecedores'
+import { Route as AuthenticatedFiscaisRouteImport } from './routes/_authenticated.fiscais'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated.dashboard'
+import { Route as AuthenticatedContratosRouteImport } from './routes/_authenticated.contratos'
+import { Route as AuthenticatedProcessosIdRouteImport } from './routes/_authenticated.processos.$id'
+import { Route as AuthenticatedContratosIdRouteImport } from './routes/_authenticated.contratos.$id'
 
-const SecretariasRoute = SecretariasRouteImport.update({
-  id: '/secretarias',
-  path: '/secretarias',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProcessosRoute = ProcessosRouteImport.update({
-  id: '/processos',
-  path: '/processos',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const NumeracaoRoute = NumeracaoRouteImport.update({
-  id: '/numeracao',
-  path: '/numeracao',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LogsRoute = LogsRouteImport.update({
-  id: '/logs',
-  path: '/logs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -58,49 +39,8 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IrpColunasRoute = IrpColunasRouteImport.update({
-  id: '/irp-colunas',
-  path: '/irp-colunas',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const IrpRoute = IrpRouteImport.update({
-  id: '/irp',
-  path: '/irp',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ImportarContratosRoute = ImportarContratosRouteImport.update({
-  id: '/importar-contratos',
-  path: '/importar-contratos',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HistoricoRoute = HistoricoRouteImport.update({
-  id: '/historico',
-  path: '/historico',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const GestoresRoute = GestoresRouteImport.update({
-  id: '/gestores',
-  path: '/gestores',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FornecedoresRoute = FornecedoresRouteImport.update({
-  id: '/fornecedores',
-  path: '/fornecedores',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FiscaisRoute = FiscaisRouteImport.update({
-  id: '/fiscais',
-  path: '/fiscais',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DashboardRoute = DashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ContratosRoute = ContratosRouteImport.update({
-  id: '/contratos',
-  path: '/contratos',
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -108,82 +48,155 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ProcessosIdRoute = ProcessosIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => ProcessosRoute,
+const AuthenticatedSecretariasRoute =
+  AuthenticatedSecretariasRouteImport.update({
+    id: '/secretarias',
+    path: '/secretarias',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedProcessosRoute = AuthenticatedProcessosRouteImport.update({
+  id: '/processos',
+  path: '/processos',
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
-const ContratosIdRoute = ContratosIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => ContratosRoute,
+const AuthenticatedNumeracaoRoute = AuthenticatedNumeracaoRouteImport.update({
+  id: '/numeracao',
+  path: '/numeracao',
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedLogsRoute = AuthenticatedLogsRouteImport.update({
+  id: '/logs',
+  path: '/logs',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedIrpColunasRoute = AuthenticatedIrpColunasRouteImport.update({
+  id: '/irp-colunas',
+  path: '/irp-colunas',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedIrpRoute = AuthenticatedIrpRouteImport.update({
+  id: '/irp',
+  path: '/irp',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedImportarContratosRoute =
+  AuthenticatedImportarContratosRouteImport.update({
+    id: '/importar-contratos',
+    path: '/importar-contratos',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedHistoricoRoute = AuthenticatedHistoricoRouteImport.update({
+  id: '/historico',
+  path: '/historico',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedGestoresRoute = AuthenticatedGestoresRouteImport.update({
+  id: '/gestores',
+  path: '/gestores',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedFornecedoresRoute =
+  AuthenticatedFornecedoresRouteImport.update({
+    id: '/fornecedores',
+    path: '/fornecedores',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedFiscaisRoute = AuthenticatedFiscaisRouteImport.update({
+  id: '/fiscais',
+  path: '/fiscais',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedContratosRoute = AuthenticatedContratosRouteImport.update({
+  id: '/contratos',
+  path: '/contratos',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedProcessosIdRoute =
+  AuthenticatedProcessosIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedProcessosRoute,
+  } as any)
+const AuthenticatedContratosIdRoute =
+  AuthenticatedContratosIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedContratosRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/contratos': typeof ContratosRouteWithChildren
-  '/dashboard': typeof DashboardRoute
-  '/fiscais': typeof FiscaisRoute
-  '/fornecedores': typeof FornecedoresRoute
-  '/gestores': typeof GestoresRoute
-  '/historico': typeof HistoricoRoute
-  '/importar-contratos': typeof ImportarContratosRoute
-  '/irp': typeof IrpRoute
-  '/irp-colunas': typeof IrpColunasRoute
   '/login': typeof LoginRoute
-  '/logs': typeof LogsRoute
-  '/numeracao': typeof NumeracaoRoute
-  '/processos': typeof ProcessosRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
-  '/secretarias': typeof SecretariasRoute
-  '/contratos/$id': typeof ContratosIdRoute
-  '/processos/$id': typeof ProcessosIdRoute
+  '/contratos': typeof AuthenticatedContratosRouteWithChildren
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/fiscais': typeof AuthenticatedFiscaisRoute
+  '/fornecedores': typeof AuthenticatedFornecedoresRoute
+  '/gestores': typeof AuthenticatedGestoresRoute
+  '/historico': typeof AuthenticatedHistoricoRoute
+  '/importar-contratos': typeof AuthenticatedImportarContratosRoute
+  '/irp': typeof AuthenticatedIrpRoute
+  '/irp-colunas': typeof AuthenticatedIrpColunasRoute
+  '/logs': typeof AuthenticatedLogsRoute
+  '/numeracao': typeof AuthenticatedNumeracaoRoute
+  '/processos': typeof AuthenticatedProcessosRouteWithChildren
+  '/secretarias': typeof AuthenticatedSecretariasRoute
+  '/contratos/$id': typeof AuthenticatedContratosIdRoute
+  '/processos/$id': typeof AuthenticatedProcessosIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/contratos': typeof ContratosRouteWithChildren
-  '/dashboard': typeof DashboardRoute
-  '/fiscais': typeof FiscaisRoute
-  '/fornecedores': typeof FornecedoresRoute
-  '/gestores': typeof GestoresRoute
-  '/historico': typeof HistoricoRoute
-  '/importar-contratos': typeof ImportarContratosRoute
-  '/irp': typeof IrpRoute
-  '/irp-colunas': typeof IrpColunasRoute
   '/login': typeof LoginRoute
-  '/logs': typeof LogsRoute
-  '/numeracao': typeof NumeracaoRoute
-  '/processos': typeof ProcessosRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
-  '/secretarias': typeof SecretariasRoute
-  '/contratos/$id': typeof ContratosIdRoute
-  '/processos/$id': typeof ProcessosIdRoute
+  '/contratos': typeof AuthenticatedContratosRouteWithChildren
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/fiscais': typeof AuthenticatedFiscaisRoute
+  '/fornecedores': typeof AuthenticatedFornecedoresRoute
+  '/gestores': typeof AuthenticatedGestoresRoute
+  '/historico': typeof AuthenticatedHistoricoRoute
+  '/importar-contratos': typeof AuthenticatedImportarContratosRoute
+  '/irp': typeof AuthenticatedIrpRoute
+  '/irp-colunas': typeof AuthenticatedIrpColunasRoute
+  '/logs': typeof AuthenticatedLogsRoute
+  '/numeracao': typeof AuthenticatedNumeracaoRoute
+  '/processos': typeof AuthenticatedProcessosRouteWithChildren
+  '/secretarias': typeof AuthenticatedSecretariasRoute
+  '/contratos/$id': typeof AuthenticatedContratosIdRoute
+  '/processos/$id': typeof AuthenticatedProcessosIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/contratos': typeof ContratosRouteWithChildren
-  '/dashboard': typeof DashboardRoute
-  '/fiscais': typeof FiscaisRoute
-  '/fornecedores': typeof FornecedoresRoute
-  '/gestores': typeof GestoresRoute
-  '/historico': typeof HistoricoRoute
-  '/importar-contratos': typeof ImportarContratosRoute
-  '/irp': typeof IrpRoute
-  '/irp-colunas': typeof IrpColunasRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
-  '/logs': typeof LogsRoute
-  '/numeracao': typeof NumeracaoRoute
-  '/processos': typeof ProcessosRouteWithChildren
   '/reset-password': typeof ResetPasswordRoute
-  '/secretarias': typeof SecretariasRoute
-  '/contratos/$id': typeof ContratosIdRoute
-  '/processos/$id': typeof ProcessosIdRoute
+  '/_authenticated/contratos': typeof AuthenticatedContratosRouteWithChildren
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/fiscais': typeof AuthenticatedFiscaisRoute
+  '/_authenticated/fornecedores': typeof AuthenticatedFornecedoresRoute
+  '/_authenticated/gestores': typeof AuthenticatedGestoresRoute
+  '/_authenticated/historico': typeof AuthenticatedHistoricoRoute
+  '/_authenticated/importar-contratos': typeof AuthenticatedImportarContratosRoute
+  '/_authenticated/irp': typeof AuthenticatedIrpRoute
+  '/_authenticated/irp-colunas': typeof AuthenticatedIrpColunasRoute
+  '/_authenticated/logs': typeof AuthenticatedLogsRoute
+  '/_authenticated/numeracao': typeof AuthenticatedNumeracaoRoute
+  '/_authenticated/processos': typeof AuthenticatedProcessosRouteWithChildren
+  '/_authenticated/secretarias': typeof AuthenticatedSecretariasRoute
+  '/_authenticated/contratos/$id': typeof AuthenticatedContratosIdRoute
+  '/_authenticated/processos/$id': typeof AuthenticatedProcessosIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/login'
+    | '/reset-password'
     | '/contratos'
     | '/dashboard'
     | '/fiscais'
@@ -193,17 +206,17 @@ export interface FileRouteTypes {
     | '/importar-contratos'
     | '/irp'
     | '/irp-colunas'
-    | '/login'
     | '/logs'
     | '/numeracao'
     | '/processos'
-    | '/reset-password'
     | '/secretarias'
     | '/contratos/$id'
     | '/processos/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/login'
+    | '/reset-password'
     | '/contratos'
     | '/dashboard'
     | '/fiscais'
@@ -213,90 +226,49 @@ export interface FileRouteTypes {
     | '/importar-contratos'
     | '/irp'
     | '/irp-colunas'
-    | '/login'
     | '/logs'
     | '/numeracao'
     | '/processos'
-    | '/reset-password'
     | '/secretarias'
     | '/contratos/$id'
     | '/processos/$id'
   id:
     | '__root__'
     | '/'
-    | '/contratos'
-    | '/dashboard'
-    | '/fiscais'
-    | '/fornecedores'
-    | '/gestores'
-    | '/historico'
-    | '/importar-contratos'
-    | '/irp'
-    | '/irp-colunas'
+    | '/_authenticated'
     | '/login'
-    | '/logs'
-    | '/numeracao'
-    | '/processos'
     | '/reset-password'
-    | '/secretarias'
-    | '/contratos/$id'
-    | '/processos/$id'
+    | '/_authenticated/contratos'
+    | '/_authenticated/dashboard'
+    | '/_authenticated/fiscais'
+    | '/_authenticated/fornecedores'
+    | '/_authenticated/gestores'
+    | '/_authenticated/historico'
+    | '/_authenticated/importar-contratos'
+    | '/_authenticated/irp'
+    | '/_authenticated/irp-colunas'
+    | '/_authenticated/logs'
+    | '/_authenticated/numeracao'
+    | '/_authenticated/processos'
+    | '/_authenticated/secretarias'
+    | '/_authenticated/contratos/$id'
+    | '/_authenticated/processos/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ContratosRoute: typeof ContratosRouteWithChildren
-  DashboardRoute: typeof DashboardRoute
-  FiscaisRoute: typeof FiscaisRoute
-  FornecedoresRoute: typeof FornecedoresRoute
-  GestoresRoute: typeof GestoresRoute
-  HistoricoRoute: typeof HistoricoRoute
-  ImportarContratosRoute: typeof ImportarContratosRoute
-  IrpRoute: typeof IrpRoute
-  IrpColunasRoute: typeof IrpColunasRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   LoginRoute: typeof LoginRoute
-  LogsRoute: typeof LogsRoute
-  NumeracaoRoute: typeof NumeracaoRoute
-  ProcessosRoute: typeof ProcessosRouteWithChildren
   ResetPasswordRoute: typeof ResetPasswordRoute
-  SecretariasRoute: typeof SecretariasRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/secretarias': {
-      id: '/secretarias'
-      path: '/secretarias'
-      fullPath: '/secretarias'
-      preLoaderRoute: typeof SecretariasRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/reset-password': {
       id: '/reset-password'
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/processos': {
-      id: '/processos'
-      path: '/processos'
-      fullPath: '/processos'
-      preLoaderRoute: typeof ProcessosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/numeracao': {
-      id: '/numeracao'
-      path: '/numeracao'
-      fullPath: '/numeracao'
-      preLoaderRoute: typeof NumeracaoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/logs': {
-      id: '/logs'
-      path: '/logs'
-      fullPath: '/logs'
-      preLoaderRoute: typeof LogsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -306,67 +278,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/irp-colunas': {
-      id: '/irp-colunas'
-      path: '/irp-colunas'
-      fullPath: '/irp-colunas'
-      preLoaderRoute: typeof IrpColunasRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/irp': {
-      id: '/irp'
-      path: '/irp'
-      fullPath: '/irp'
-      preLoaderRoute: typeof IrpRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/importar-contratos': {
-      id: '/importar-contratos'
-      path: '/importar-contratos'
-      fullPath: '/importar-contratos'
-      preLoaderRoute: typeof ImportarContratosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/historico': {
-      id: '/historico'
-      path: '/historico'
-      fullPath: '/historico'
-      preLoaderRoute: typeof HistoricoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/gestores': {
-      id: '/gestores'
-      path: '/gestores'
-      fullPath: '/gestores'
-      preLoaderRoute: typeof GestoresRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/fornecedores': {
-      id: '/fornecedores'
-      path: '/fornecedores'
-      fullPath: '/fornecedores'
-      preLoaderRoute: typeof FornecedoresRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/fiscais': {
-      id: '/fiscais'
-      path: '/fiscais'
-      fullPath: '/fiscais'
-      preLoaderRoute: typeof FiscaisRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dashboard': {
-      id: '/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof DashboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/contratos': {
-      id: '/contratos'
-      path: '/contratos'
-      fullPath: '/contratos'
-      preLoaderRoute: typeof ContratosRouteImport
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -376,64 +292,183 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/processos/$id': {
-      id: '/processos/$id'
+    '/_authenticated/secretarias': {
+      id: '/_authenticated/secretarias'
+      path: '/secretarias'
+      fullPath: '/secretarias'
+      preLoaderRoute: typeof AuthenticatedSecretariasRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/processos': {
+      id: '/_authenticated/processos'
+      path: '/processos'
+      fullPath: '/processos'
+      preLoaderRoute: typeof AuthenticatedProcessosRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/numeracao': {
+      id: '/_authenticated/numeracao'
+      path: '/numeracao'
+      fullPath: '/numeracao'
+      preLoaderRoute: typeof AuthenticatedNumeracaoRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/logs': {
+      id: '/_authenticated/logs'
+      path: '/logs'
+      fullPath: '/logs'
+      preLoaderRoute: typeof AuthenticatedLogsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/irp-colunas': {
+      id: '/_authenticated/irp-colunas'
+      path: '/irp-colunas'
+      fullPath: '/irp-colunas'
+      preLoaderRoute: typeof AuthenticatedIrpColunasRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/irp': {
+      id: '/_authenticated/irp'
+      path: '/irp'
+      fullPath: '/irp'
+      preLoaderRoute: typeof AuthenticatedIrpRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/importar-contratos': {
+      id: '/_authenticated/importar-contratos'
+      path: '/importar-contratos'
+      fullPath: '/importar-contratos'
+      preLoaderRoute: typeof AuthenticatedImportarContratosRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/historico': {
+      id: '/_authenticated/historico'
+      path: '/historico'
+      fullPath: '/historico'
+      preLoaderRoute: typeof AuthenticatedHistoricoRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/gestores': {
+      id: '/_authenticated/gestores'
+      path: '/gestores'
+      fullPath: '/gestores'
+      preLoaderRoute: typeof AuthenticatedGestoresRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/fornecedores': {
+      id: '/_authenticated/fornecedores'
+      path: '/fornecedores'
+      fullPath: '/fornecedores'
+      preLoaderRoute: typeof AuthenticatedFornecedoresRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/fiscais': {
+      id: '/_authenticated/fiscais'
+      path: '/fiscais'
+      fullPath: '/fiscais'
+      preLoaderRoute: typeof AuthenticatedFiscaisRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/contratos': {
+      id: '/_authenticated/contratos'
+      path: '/contratos'
+      fullPath: '/contratos'
+      preLoaderRoute: typeof AuthenticatedContratosRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/processos/$id': {
+      id: '/_authenticated/processos/$id'
       path: '/$id'
       fullPath: '/processos/$id'
-      preLoaderRoute: typeof ProcessosIdRouteImport
-      parentRoute: typeof ProcessosRoute
+      preLoaderRoute: typeof AuthenticatedProcessosIdRouteImport
+      parentRoute: typeof AuthenticatedProcessosRoute
     }
-    '/contratos/$id': {
-      id: '/contratos/$id'
+    '/_authenticated/contratos/$id': {
+      id: '/_authenticated/contratos/$id'
       path: '/$id'
       fullPath: '/contratos/$id'
-      preLoaderRoute: typeof ContratosIdRouteImport
-      parentRoute: typeof ContratosRoute
+      preLoaderRoute: typeof AuthenticatedContratosIdRouteImport
+      parentRoute: typeof AuthenticatedContratosRoute
     }
   }
 }
 
-interface ContratosRouteChildren {
-  ContratosIdRoute: typeof ContratosIdRoute
+interface AuthenticatedContratosRouteChildren {
+  AuthenticatedContratosIdRoute: typeof AuthenticatedContratosIdRoute
 }
 
-const ContratosRouteChildren: ContratosRouteChildren = {
-  ContratosIdRoute: ContratosIdRoute,
+const AuthenticatedContratosRouteChildren: AuthenticatedContratosRouteChildren =
+  {
+    AuthenticatedContratosIdRoute: AuthenticatedContratosIdRoute,
+  }
+
+const AuthenticatedContratosRouteWithChildren =
+  AuthenticatedContratosRoute._addFileChildren(
+    AuthenticatedContratosRouteChildren,
+  )
+
+interface AuthenticatedProcessosRouteChildren {
+  AuthenticatedProcessosIdRoute: typeof AuthenticatedProcessosIdRoute
 }
 
-const ContratosRouteWithChildren = ContratosRoute._addFileChildren(
-  ContratosRouteChildren,
-)
+const AuthenticatedProcessosRouteChildren: AuthenticatedProcessosRouteChildren =
+  {
+    AuthenticatedProcessosIdRoute: AuthenticatedProcessosIdRoute,
+  }
 
-interface ProcessosRouteChildren {
-  ProcessosIdRoute: typeof ProcessosIdRoute
+const AuthenticatedProcessosRouteWithChildren =
+  AuthenticatedProcessosRoute._addFileChildren(
+    AuthenticatedProcessosRouteChildren,
+  )
+
+interface AuthenticatedRouteChildren {
+  AuthenticatedContratosRoute: typeof AuthenticatedContratosRouteWithChildren
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedFiscaisRoute: typeof AuthenticatedFiscaisRoute
+  AuthenticatedFornecedoresRoute: typeof AuthenticatedFornecedoresRoute
+  AuthenticatedGestoresRoute: typeof AuthenticatedGestoresRoute
+  AuthenticatedHistoricoRoute: typeof AuthenticatedHistoricoRoute
+  AuthenticatedImportarContratosRoute: typeof AuthenticatedImportarContratosRoute
+  AuthenticatedIrpRoute: typeof AuthenticatedIrpRoute
+  AuthenticatedIrpColunasRoute: typeof AuthenticatedIrpColunasRoute
+  AuthenticatedLogsRoute: typeof AuthenticatedLogsRoute
+  AuthenticatedNumeracaoRoute: typeof AuthenticatedNumeracaoRoute
+  AuthenticatedProcessosRoute: typeof AuthenticatedProcessosRouteWithChildren
+  AuthenticatedSecretariasRoute: typeof AuthenticatedSecretariasRoute
 }
 
-const ProcessosRouteChildren: ProcessosRouteChildren = {
-  ProcessosIdRoute: ProcessosIdRoute,
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedContratosRoute: AuthenticatedContratosRouteWithChildren,
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedFiscaisRoute: AuthenticatedFiscaisRoute,
+  AuthenticatedFornecedoresRoute: AuthenticatedFornecedoresRoute,
+  AuthenticatedGestoresRoute: AuthenticatedGestoresRoute,
+  AuthenticatedHistoricoRoute: AuthenticatedHistoricoRoute,
+  AuthenticatedImportarContratosRoute: AuthenticatedImportarContratosRoute,
+  AuthenticatedIrpRoute: AuthenticatedIrpRoute,
+  AuthenticatedIrpColunasRoute: AuthenticatedIrpColunasRoute,
+  AuthenticatedLogsRoute: AuthenticatedLogsRoute,
+  AuthenticatedNumeracaoRoute: AuthenticatedNumeracaoRoute,
+  AuthenticatedProcessosRoute: AuthenticatedProcessosRouteWithChildren,
+  AuthenticatedSecretariasRoute: AuthenticatedSecretariasRoute,
 }
 
-const ProcessosRouteWithChildren = ProcessosRoute._addFileChildren(
-  ProcessosRouteChildren,
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
 )
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ContratosRoute: ContratosRouteWithChildren,
-  DashboardRoute: DashboardRoute,
-  FiscaisRoute: FiscaisRoute,
-  FornecedoresRoute: FornecedoresRoute,
-  GestoresRoute: GestoresRoute,
-  HistoricoRoute: HistoricoRoute,
-  ImportarContratosRoute: ImportarContratosRoute,
-  IrpRoute: IrpRoute,
-  IrpColunasRoute: IrpColunasRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
   LoginRoute: LoginRoute,
-  LogsRoute: LogsRoute,
-  NumeracaoRoute: NumeracaoRoute,
-  ProcessosRoute: ProcessosRouteWithChildren,
   ResetPasswordRoute: ResetPasswordRoute,
-  SecretariasRoute: SecretariasRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -13,7 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { M2A_IRP_UNIDADES_CANONICAS, M2A_ORGAOS_MAPPING } from "@/lib/m2a";
 
-export const Route = createFileRoute("/irp-colunas")({
+export const Route = createFileRoute("/_authenticated/irp-colunas")({
   head: () =>
     routeHead({
       path: "/irp-colunas",

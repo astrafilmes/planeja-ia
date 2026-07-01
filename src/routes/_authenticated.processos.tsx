@@ -82,7 +82,7 @@ import { downloadCSV } from"@/lib/export";
 import { Skeleton } from"@/components/ui/skeleton";
 import { PautaConsolidadaExporter } from"@/components/contratos/PautaConsolidadaExporter";
 
-export const Route = createFileRoute("/processos")({
+export const Route = createFileRoute("/_authenticated/processos")({
  component: Page,
  head: () =>
  routeHead({

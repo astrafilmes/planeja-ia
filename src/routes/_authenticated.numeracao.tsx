@@ -30,7 +30,7 @@ interface NumeracaoComSec {
   sec?: Secretaria | null;
 }
 
-export const Route = createFileRoute("/numeracao")({
+export const Route = createFileRoute("/_authenticated/numeracao")({
   component: Page,
   head: () =>
     routeHead({

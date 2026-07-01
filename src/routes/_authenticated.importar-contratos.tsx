@@ -31,7 +31,7 @@ import {
   UploadCard,
 } from "@/features/importar-contratos/components";
 
-export const Route = createFileRoute("/importar-contratos")({
+export const Route = createFileRoute("/_authenticated/importar-contratos")({
   component: Page,
   head: () =>
     routeHead({
