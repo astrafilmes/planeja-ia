@@ -65,15 +65,20 @@ export const ImportWorkflowCard = memo(function ImportWorkflowCard({
     !!file && !busy && (mode === "existing" ? existingReady : novoReady);
 
   return (
-    <Card variant="elevated" className="mx-auto w-full max-w-2xl">
+    <Card variant="elevated" className="w-full">
       <CardContent className="flex flex-col gap-6 p-6">
-        <header className="flex flex-col gap-1">
-          <h2 className="text-base font-semibold text-foreground">
-            Nova importação
-          </h2>
-          <p className="text-[13px] text-muted-foreground">
-            Vincule a planilha ao processo correspondente.
-          </p>
+        <header className="flex items-start gap-3">
+          <div className="grid size-9 shrink-0 place-items-center rounded-md bg-accent-soft text-accent-strong">
+            <Upload className="size-4" />
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold text-foreground">
+              Nova importação
+            </h2>
+            <p className="text-[13px] text-muted-foreground">
+              Vincule a planilha ao processo correspondente.
+            </p>
+          </div>
         </header>
 
         <Tabs
