@@ -624,16 +624,44 @@ async function fetchAtaFornecedorFromDetail(idAta, trace) {
     // 3) CNPJ presente em qualquer lugar
     const cnpjMatch = cleanTextValue($("body").text()).match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/);
     if (cnpjMatch) cnpj = cnpjMatch[0];
+
+    // 4) SITUAÇÃO da ata (Vigente / Expirada / Cancelado / Anulado / Suspenso ...).
+    // Extraída do widget "Situação" no cabeçalho de detalhe da ata.
+    let situacao = "";
+    $(".kt-widget__title, .kt-widget12__desc, label, dt, th, strong, b").each((_, el) => {
+      const t = cleanTextValue($(el).text());
+      if (/^situa/i.test(t)) {
+        const candidatos = [
+          $(el).next(),
+          $(el).parent().find(".kt-widget__value").last(),
+          $(el).siblings().last(),
+        ];
+        for (const c of candidatos) {
+          if (!c || !c.length) continue;
+          const v = cleanTextValue(c.text?.() || "");
+          if (v && v.length < 40) { situacao = v; return false; }
+        }
+      }
+    });
+    const cancelada = /cancelad|anulad|suspenso|revogad/i.test(situacao);
+
     traceStep(trace, {
       fase: "ata-detalhe",
-      label: "fornecedor extraído do detalhe da ata",
+      label: "detalhe da ata",
       id_ata: idAta,
       url,
       status,
       fornecedor: nome || null,
       cnpj: cnpj || null,
+      situacao: situacao || null,
+      cancelada,
     });
-    if (nome || cnpj) return { nome, cnpj: cnpj || undefined };
+    return {
+      nome: nome || "",
+      cnpj: cnpj || undefined,
+      situacao: situacao || null,
+      cancelada,
+    };
   } catch (err) {
     traceStep(trace, {
       fase: "ata-detalhe",
