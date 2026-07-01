@@ -22,45 +22,62 @@ import {
   type SyncedAtaItem,
 } from "../lib";
 
+export type ImportSubmitPayload =
+  | {
+      mode: "existing";
+      file: File;
+      processoId: string;
+    }
+  | {
+      mode: "new";
+      file: File;
+      novo: {
+        codigoM2A: string;
+        numeroProcesso: string;
+        objeto: string;
+        dataAbertura: string;
+      };
+    };
+
 /**
  * Orquestra o fluxo completo de análise/importação de uma planilha:
  *   1. Mapeia refs autorizadas do cadastro
  *   2. Lê e faz parse do XLSX
- *   3. Cria/reaproveita processo local
+ *   3. Cria (modo novo) ou reaproveita (modo existente) processo local
  *   4. Sincroniza snapshot M2A via worker
+ *      - Novo: sincronização completa
+ *      - Existente: incremental — pula se não houve mudança de atas/contratos
  *   5. Faz match item↔ata e persiste job/itens/dotações
  *   6. Registra auditoria
- *
- * Toda a telemetria original (console.group, console.time, console.table) e
- * IDs de notificação (`m2a-import-sync`) são preservados.
  */
 export function useImportarPlanilha(options: {
   secretarias: SecretariaM2A[];
   setActiveJobId: (id: string | null) => void;
-  setFile: (file: File | null) => void;
-  setM2aProcessoUrl: (url: string) => void;
+  onImportDone: () => void;
 }) {
-  const { secretarias, setActiveJobId, setFile, setM2aProcessoUrl } = options;
+  const { secretarias, setActiveJobId, onImportDone } = options;
   const qc = useQueryClient();
   const { startTask, updateProgress, finishTask, failTask } = useProgress();
   const [busy, setBusy] = useState(false);
 
   const handleImportar = useCallback(
-    async (file: File | null, m2aProcessoUrl: string) => {
+    async (payload: ImportSubmitPayload | null) => {
+      if (!payload) return;
+      const { file, mode } = payload;
       if (!file) return;
-      const m2aUrl = m2aProcessoUrl.trim();
-      const m2aProcessoId = extractM2AProcessoId(m2aUrl);
-      if (!m2aProcessoId) {
-        return notify.error("Informe o link válido do processo no portal.");
-      }
+
+      // Resolve identidade M2A conforme o modo
+      let m2aProcessoId: string | null = null;
+      let m2aUrl = "";
+      let processoImportId: string | null = null;
+      let processoCriado = false;
 
       console.group("M2A: Iniciando Importação de Planilha");
       console.time("TempoTotalImportacao");
       console.log("Arquivo selecionado:", file.name, `(${file.size} bytes)`);
-      console.log("Processo M2A:", { m2aUrl, m2aProcessoId });
+      console.log("Modo:", mode);
 
       const allowedRefs: AllowedRefs = new Map();
-      console.log("Passo 0: Mapeando secretarias autorizadas do banco...");
       for (const s of (secretarias ?? []) as any[]) {
         if (s.m2a_ref_coluna && s.m2a_dotacao_default) {
           allowedRefs.set(Number(s.m2a_ref_coluna), {
@@ -69,43 +86,95 @@ export function useImportarPlanilha(options: {
           });
         }
       }
-
       if (allowedRefs.size === 0) {
-        console.warn(
-          "Abortando: Nenhuma secretaria configurada com ref_coluna e dotação default.",
-        );
         console.timeEnd("TempoTotalImportacao");
         console.groupEnd();
         return notify.error(
           "Nenhuma secretaria cadastrada com ref. coluna + dotação. Cadastre em /secretarias antes de importar.",
         );
       }
-      console.log(`Secretarias aptas encontradas: ${allowedRefs.size}`);
 
       startTask("Analisando planilha", "Preparando leitura do arquivo...");
       setBusy(true);
       try {
+        // ── Modo existente ──────────────────────────────────────────────
+        if (mode === "existing") {
+          const { data: proc, error: procErr } = await supabase
+            .from("processos")
+            .select("id, numero_processo, objeto, m2a_url, m2a_processo_id")
+            .eq("id", payload.processoId)
+            .is("deleted_at", null)
+            .single();
+          if (procErr) throw procErr;
+          if (!proc?.m2a_processo_id) {
+            throw new Error(
+              "Processo selecionado não tem código M2A. Edite-o em /processos.",
+            );
+          }
+          processoImportId = proc.id;
+          m2aProcessoId = proc.m2a_processo_id;
+          m2aUrl =
+            proc.m2a_url ??
+            `http://precodereferencia.m2atecnologia.com.br/processo_administrativo/${proc.m2a_processo_id}/`;
+        } else {
+          // ── Modo novo ─────────────────────────────────────────────────
+          const rawCodigo = payload.novo.codigoM2A.trim();
+          m2aProcessoId =
+            extractM2AProcessoId(rawCodigo) ||
+            (/^\d+$/.test(rawCodigo) ? rawCodigo : null);
+          if (!m2aProcessoId) {
+            throw new Error("Código do processo M2A inválido.");
+          }
+          m2aUrl = `http://precodereferencia.m2atecnologia.com.br/processo_administrativo/${m2aProcessoId}/`;
+
+          // Se já existe um processo local com esse código, reutiliza (evita duplicata).
+          const { data: existente, error: lookupErr } = await supabase
+            .from("processos")
+            .select("id")
+            .eq("m2a_processo_id", m2aProcessoId)
+            .is("deleted_at", null)
+            .maybeSingle();
+          if (lookupErr) throw lookupErr;
+          if (existente?.id) {
+            processoImportId = existente.id;
+            await supabase
+              .from("processos")
+              .update({
+                numero_processo: payload.novo.numeroProcesso,
+                objeto: payload.novo.objeto,
+                data_abertura: payload.novo.dataAbertura,
+                m2a_url: m2aUrl,
+                m2a_processo_id: m2aProcessoId,
+              })
+              .eq("id", existente.id);
+          } else {
+            const { data: novoProc, error: novoErr } = await supabase
+              .from("processos")
+              .insert({
+                numero_processo: payload.novo.numeroProcesso,
+                objeto: payload.novo.objeto,
+                data_abertura: payload.novo.dataAbertura,
+                status: "em_andamento",
+                m2a_url: m2aUrl,
+                m2a_processo_id: m2aProcessoId,
+              })
+              .select("id")
+              .single();
+            if (novoErr) throw novoErr;
+            processoImportId = novoProc.id;
+            processoCriado = true;
+          }
+        }
+
         updateProgress(8, "Lendo arquivo da planilha...");
-        console.log(
-          "Passo 1: Lendo arquivo binário e convertendo para matriz...",
-        );
         const matrix = await readWorkbook(file);
-        console.log(`Leitura concluída: ${matrix.length} linhas detectadas.`);
 
         updateProgress(18, "Extraindo itens, dotações e fornecedores...");
-        console.log(
-          "Passo 2: Executando extração de dados (Regras de Negócio)...",
-        );
         const parsed = parseContratoXlsx(matrix, allowedRefs);
-        console.log("Resultado do Parse:", parsed);
 
         if (parsed.refsIgnoradas.length > 0) {
-          console.warn(
-            "Colunas ignoradas por falta de vínculo no cadastro:",
-            parsed.refsIgnoradas,
-          );
           notify.warning(
-            `Aviso: ${parsed.refsIgnoradas.length} coluna(s) da planilha foram ignoradas pois as secretarias/unidades não foram encontradas no cadastro.`,
+            `Aviso: ${parsed.refsIgnoradas.length} coluna(s) da planilha foram ignoradas — secretarias não encontradas no cadastro.`,
             {
               description: `Colunas ignoradas: ${parsed.refsIgnoradas.join(",")}`,
               duration: 8000,
@@ -113,77 +182,32 @@ export function useImportarPlanilha(options: {
           );
         }
 
-        updateProgress(32, "Criando ou vinculando processo local...");
-        console.log("Passo 3: Criando/reaproveitando processo local...");
-        const { data: processoExistente, error: procLookupErr } = await supabase
-          .from("processos")
-          .select("id, numero_processo, objeto")
-          .eq("m2a_processo_id", m2aProcessoId)
-          .is("deleted_at", null)
-          .maybeSingle();
-        if (procLookupErr) throw procLookupErr;
-
-        let processoImportId = processoExistente?.id ?? null;
-        if (!processoImportId) {
-          const { data: novoProc, error: novoProcErr } = await supabase
-            .from("processos")
-            .insert({
-              numero_processo: null,
-              objeto: `Importação de contratos - ${file.name}`,
-              status: "em_andamento",
-              m2a_url: m2aUrl,
-              m2a_processo_id: m2aProcessoId,
-            })
-            .select("id")
-            .single();
-          if (novoProcErr) throw novoProcErr;
-          processoImportId = novoProc.id;
-        } else {
-          await supabase
-            .from("processos")
-            .update({ m2a_url: m2aUrl, m2a_processo_id: m2aProcessoId })
-            .eq("id", processoImportId);
-        }
+        // ── Sincronização com o portal ────────────────────────────────
         updateProgress(48, "Sincronizando atas e itens no portal...");
-        console.log("Passo 4: Sincronizando atas/itens/contratos no portal...");
         notify.loading("Varrendo atas e itens do processo no portal...", {
           id: "m2a-import-sync",
         });
-        const snapshot = await (async () => {
-          const syncT0 = performance.now();
-          console.groupCollapsed("[m2a-import] Passo 4 — worker/VPS");
-          try {
-            console.log("[m2a-import] → fetchProcessoFromWorker", {
-              m2aUrl,
-              m2aProcessoId,
-            });
-            const workerSnapshot = await fetchProcessoFromWorker(m2aUrl);
-            console.log(
-              `[m2a-import] ✓ worker respondeu em ${(performance.now() - syncT0).toFixed(0)}ms`,
-              {
-                atas: workerSnapshot.atas?.length ?? 0,
-                itens: workerSnapshot.itens?.length ?? 0,
-                contratos: workerSnapshot.contratos_existentes?.length ?? 0,
-                resumo: workerSnapshot.resumo,
-              },
-            );
-            console.log("[m2a-import] → persistM2ASnapshot");
-            await persistM2ASnapshot(processoImportId, workerSnapshot, {
-              expectedM2aProcessoId: m2aProcessoId,
-            });
-            console.log(
-              `[m2a-import] ✓ Passo 4 concluído em ${(performance.now() - syncT0).toFixed(0)}ms`,
-            );
-            return workerSnapshot;
-          } finally {
-            console.groupEnd();
-          }
-        })();
+        console.groupCollapsed("[m2a-import] worker/VPS");
+        const syncT0 = performance.now();
+        const workerSnapshot = await fetchProcessoFromWorker(m2aUrl);
+        console.log(
+          `[m2a-import] ✓ worker respondeu em ${(performance.now() - syncT0).toFixed(0)}ms`,
+          {
+            atas: workerSnapshot.atas?.length ?? 0,
+            itens: workerSnapshot.itens?.length ?? 0,
+            contratos: workerSnapshot.contratos_existentes?.length ?? 0,
+          },
+        );
+        await persistM2ASnapshot(processoImportId!, workerSnapshot, {
+          expectedM2aProcessoId: m2aProcessoId,
+        });
+        console.groupEnd();
         notify.success(
-          `Base externa sincronizada: ${snapshot.atas.length} ata(s), ${snapshot.itens.length} item(ns).`,
+          `Base externa sincronizada: ${workerSnapshot.atas.length} ata(s), ${workerSnapshot.itens.length} item(ns).`,
           { id: "m2a-import-sync" },
         );
 
+        const snapshot = workerSnapshot;
         const ataById = new Map(snapshot.atas.map((ata) => [ata.id_ata, ata]));
         const syncedItems: SyncedAtaItem[] = snapshot.itens.map((item) => ({
           ...item,
@@ -194,10 +218,7 @@ export function useImportarPlanilha(options: {
           number,
           ReturnType<typeof resolveM2AItemMatch>
         >();
-        updateProgress(
-          66,
-          "Relacionando itens da planilha com a base do portal...",
-        );
+        updateProgress(66, "Relacionando itens com a base do portal...");
         for (const item of parsed.itens) {
           const match = resolveM2AItemMatch(item, syncedItems);
           itemMatches.set(item.sourceRow, match);
@@ -206,34 +227,12 @@ export function useImportarPlanilha(options: {
             match?.status === "auto" ? match.item.id_ata : null,
           );
         }
-        console.groupCollapsed(
-          "[Importacao] Diagnostico do match item x ata",
-        );
-        console.table(
-          parsed.itens.map((item) => {
-            const match = itemMatches.get(item.sourceRow);
-            return {
-              linha: item.sourceRow,
-              numero_item: item.numeroItem || item.ordemItem || "",
-              empresa: item.empresa,
-              descricao: item.descricao,
-              status: match?.status ?? "sem_match",
-              score: match?.score ?? 0,
-              ata_id: match?.item.id_ata ?? "",
-              ata_numero: match?.item.ata?.numero_ata ?? "",
-              fornecedor_ata: match?.item.ata?.fornecedor?.nome ?? "",
-              item_m2a: match?.item.numero_item ?? "",
-            };
-          }),
-        );
-        console.groupEnd();
         const totalContratosComAta = countPreviewContractsWithAta(
           parsed.itens,
           assignments,
         );
 
         updateProgress(78, "Salvando prévia de importação...");
-        console.log("Passo 5: Persistindo JOB de importação no Supabase...");
         const { data: jobRow, error: jobErr } = await supabase
           .from("contrato_import_jobs")
           .insert({
@@ -252,15 +251,8 @@ export function useImportarPlanilha(options: {
           .select()
           .single();
 
-        if (jobErr) {
-          console.error("Falha ao criar contrato_import_jobs:", jobErr);
-          throw jobErr;
-        }
-        console.log("Job criado. ID:", jobRow.id);
+        if (jobErr) throw jobErr;
 
-        console.log(
-          `Passo 6: Inserindo ${parsed.itens.length} itens para revisão...`,
-        );
         const itensInsert = parsed.itens.map((i) => ({
           ...(() => {
             const match = itemMatches.get(i.sourceRow);
@@ -295,13 +287,8 @@ export function useImportarPlanilha(options: {
           .insert(itensInsert)
           .select("id, source_row");
 
-        if (itErr) {
-          console.error("Falha ao inserir itens preliminares:", itErr);
-          throw itErr;
-        }
-        console.log("Itens inseridos.");
+        if (itErr) throw itErr;
 
-        console.log("Passo 7: Vinculando dotações e quantidades aos itens...");
         const rowToId = new Map(insertedItens.map((r) => [r.source_row, r.id]));
         const dotInsert = parsed.itens.flatMap((i) =>
           i.dotacoes.map((d) => ({
@@ -315,18 +302,12 @@ export function useImportarPlanilha(options: {
         );
         if (dotInsert.length) {
           updateProgress(90, "Salvando dotações e quantidades...");
-          console.log(`Inserindo ${dotInsert.length} dotações...`);
           const { error: dErr } = await supabase
             .from("contrato_import_dotacoes")
             .insert(dotInsert);
-          if (dErr) {
-            console.error("Falha ao inserir dotações:", dErr);
-            throw dErr;
-          }
-          console.log("Dotações inseridas.");
+          if (dErr) throw dErr;
         }
 
-        console.log("Passo 8: Registrando log de auditoria...");
         await logAudit({
           action: "contrato_import",
           entityType: "contrato_import_job",
@@ -337,6 +318,7 @@ export function useImportarPlanilha(options: {
             contratos: totalContratosComAta,
             processo_id: processoImportId,
             m2a_processo_id: m2aProcessoId,
+            processo_criado: processoCriado,
           },
         });
 
@@ -345,10 +327,9 @@ export function useImportarPlanilha(options: {
         );
         finishTask("Planilha analisada com sucesso.");
         setActiveJobId(jobRow.id);
-        setFile(null);
-        setM2aProcessoUrl("");
+        onImportDone();
         qc.invalidateQueries({ queryKey: ["cij-list"] });
-        console.log("Fluxo de importação finalizado.");
+        qc.invalidateQueries({ queryKey: ["processos-min"] });
       } catch (e: any) {
         console.error("ERRO CRÍTICO NA IMPORTAÇÃO:", e);
         failTask(e?.message ?? "Falha ao importar planilha.");
@@ -367,8 +348,7 @@ export function useImportarPlanilha(options: {
       failTask,
       qc,
       setActiveJobId,
-      setFile,
-      setM2aProcessoUrl,
+      onImportDone,
     ],
   );
 
