@@ -102,9 +102,20 @@ export function normalizeFornecedorKey(value: string | null | undefined) {
   return normalized || UNKNOWN_SUPPLIER_KEY;
 }
 
+function normalizeCnpj(value: string | null | undefined) {
+  return (value ?? "").replace(/\D/g, "");
+}
+
 export function resolveFornecedorNome(
-  contrato: Pick<ContratoPreliminar, "fornecedorNome" | "empresa">,
+  contrato: Pick<
+    ContratoPreliminar,
+    "fornecedorNome" | "empresa" | "m2aAtaId"
+  >,
 ) {
+  // Quando há ata vinculada, o nome vindo da ata é a fonte de verdade.
+  if (contrato.m2aAtaId && contrato.fornecedorNome?.trim()) {
+    return contrato.fornecedorNome.trim();
+  }
   const fornecedor = String(
     (contrato.fornecedorNome && String(contrato.fornecedorNome).trim()) ||
       (contrato.empresa && String(contrato.empresa).trim()) ||
@@ -114,8 +125,17 @@ export function resolveFornecedorNome(
 }
 
 export function resolveFornecedorKey(
-  contrato: Pick<ContratoPreliminar, "fornecedorNome" | "empresa">,
+  contrato: Pick<
+    ContratoPreliminar,
+    "fornecedorNome" | "empresa" | "m2aAtaId" | "fornecedorCnpj"
+  >,
 ) {
+  // 1) Ata M2A é a identidade mais forte (mesma ata = mesmo fornecedor).
+  if (contrato.m2aAtaId) return `ATA::${contrato.m2aAtaId}`;
+  // 2) CNPJ oficial (caso ata sem id mas com CNPJ conhecido).
+  const cnpj = normalizeCnpj(contrato.fornecedorCnpj);
+  if (cnpj) return `CNPJ::${cnpj}`;
+  // 3) Último recurso: texto normalizado da planilha.
   return normalizeFornecedorKey(resolveFornecedorNome(contrato));
 }
 
