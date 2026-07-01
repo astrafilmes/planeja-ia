@@ -18,11 +18,12 @@ type WorkflowStep = {
 };
 
 type WorkflowGuideProps = {
-	title?: string;
-	steps?: WorkflowStep[];
-	aside?: ReactNode;
-	compact?: boolean;
-};
+ 	title?: string;
+ 	subtitle?: string;
+ 	steps?: WorkflowStep[];
+ 	aside?: ReactNode;
+ 	compact?: boolean;
+ };
 
 const defaultSteps: WorkflowStep[] = [
 	{
