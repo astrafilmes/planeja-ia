@@ -74,7 +74,7 @@ function SecretariasToolbarImpl({
         </Button>
       </div>
 
-      <Card className="border-border/60 bg-card p-3 text-[13px] dark:bg-foreground">
+      <Card className="border-border/60 bg-card p-3 text-[13px]">
         <div className="flex items-center gap-2 font-medium">
           <UsersRound className="size-3.5 text-muted-foreground" />
           Nomes repetidos no catálogo

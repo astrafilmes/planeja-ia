@@ -121,7 +121,7 @@ export function EnviarM2ADialog({
               </div>
             </div>
           </div>
-          <div className="rounded-lg border border-border/60 bg-card p-3 dark:bg-foreground">
+          <div className="rounded-lg border border-border/60 bg-card p-3">
             <div className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
               Seleção
             </div>

@@ -207,7 +207,7 @@ export const AutorizarGeracaoPanel = memo(function AutorizarGeracaoPanel({
                 detectada na planilha.
               </p>
 
-              <div className="rounded-lg border border-border/60 bg-card p-3 dark:bg-foreground">
+              <div className="rounded-lg border border-border/60 bg-card p-3">
                 <div className="mb-2 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
                   Preposto por fornecedor
                 </div>
