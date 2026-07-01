@@ -27,13 +27,13 @@ import {
   ContratosPreviewList,
   HistoricoJobsSidebar,
   ImportSummaryBar,
+  ImportWorkflowCard,
   ItensReviewTable,
-  UploadCard,
 } from "@/features/importar-contratos/components";
 import type {
   ImportMode,
   NovoProcessoState,
-} from "@/features/importar-contratos/components/UploadCard";
+} from "@/features/importar-contratos/components/ImportWorkflowCard";
 import type { ImportSubmitPayload } from "@/features/importar-contratos/hooks/useImportarPlanilha";
 
 export const Route = createFileRoute("/_authenticated/importar-contratos")({
@@ -193,11 +193,10 @@ function Page() {
       subtitle="Upload da planilha, revisão e geração em lote"
     >
       <WorkflowGuide
-        title="Fluxo da importação"
         steps={[
           {
             label: "Importar",
-            description: "Planilha e processo no portal",
+            description: "Planilha e processo",
             to: "/importar-contratos",
             icon: Upload,
             state: "active",
@@ -223,39 +222,34 @@ function Page() {
         ]}
       />
 
-      <div className="grid gap-5 xl:grid-cols-[360px_1fr]">
+      <div className="grid gap-5 xl:grid-cols-[300px_1fr]">
         <div className="flex flex-col gap-4">
-          <UploadCard
-            file={file}
-            onFileChange={setFile}
-            mode={mode}
-            onModeChange={setMode}
-            processos={processos}
-            existingProcessoId={existingProcessoId}
-            onExistingProcessoIdChange={setExistingProcessoId}
-            novo={novo}
-            onNovoChange={onNovoChange}
-            busy={busy}
-            onSubmit={onSubmitImport}
-          />
           <HistoricoJobsSidebar
             jobs={jobs}
             activeJobId={activeJobId}
             onSelectJob={setActiveJobId}
             onDeleteJob={excluirJob}
+            onNewImport={() => setActiveJobId(null)}
           />
         </div>
 
         <div className="min-w-0">
           {!activeJobId && (
-            <Card className="border-dashed border-border/60">
-              <EmptyState
-                icon={Upload}
-                title="Selecione uma importação"
-                description="Escolha um registro recente ou envie uma nova planilha."
-              />
-            </Card>
+            <ImportWorkflowCard
+              file={file}
+              onFileChange={setFile}
+              mode={mode}
+              onModeChange={setMode}
+              processos={processos}
+              existingProcessoId={existingProcessoId}
+              onExistingProcessoIdChange={setExistingProcessoId}
+              novo={novo}
+              onNovoChange={onNovoChange}
+              busy={busy}
+              onSubmit={onSubmitImport}
+            />
           )}
+
 
           {activeJobId && detailFetching && !jobDetail && (
             <Card className="border-border/60">
