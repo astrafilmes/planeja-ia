@@ -1,4 +1,4 @@
-import { normalizeContratoBase, pad2 } from "@/lib/normalize";
+import { normalizeContratoBase, pad2 } from "@/lib/utils/normalize";
 
 function cleanNumber(value: unknown) {
   return String(value ?? "")

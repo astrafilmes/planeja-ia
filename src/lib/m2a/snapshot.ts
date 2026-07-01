@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { M2aSyncPayload } from "@/lib/m2a-sync";
+import type { M2aSyncPayload } from "@/lib/m2a";
 import { parseNumeroContrato } from "@/lib/numeracao-m2a";
 
 const LOG = "[m2a-sync]";

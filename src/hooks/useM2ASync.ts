@@ -1,8 +1,8 @@
 import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
-import { persistM2ASnapshot } from "@/lib/m2a-snapshot";
-import { fetchProcessoFromWorker } from "@/lib/m2a-worker";
+import { persistM2ASnapshot } from "@/lib/m2a";
+import { fetchProcessoFromWorker } from "@/lib/m2a";
 import { extractM2AProcessoId } from "@/lib/m2a";
 
 interface UseM2aSyncOpts {

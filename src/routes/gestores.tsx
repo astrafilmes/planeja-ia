@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ServidoresCatalogPage } from "@/components/m2a/ServidoresCatalogPage";
-import { routeHead } from "@/lib/route-head";
+import { routeHead } from "@/lib/utils/route-head";
 
 export const Route = createFileRoute("/gestores")({
   component: Page,

@@ -25,7 +25,7 @@ import {
 import { Trash2, Plus, Shield, UserCog, UserCheck } from"lucide-react";
 import { toast } from"sonner";
 import { logAudit } from"@/lib/audit";
-import { formatCPF, isValidCPF, onlyDigits } from"@/lib/cpf";
+import { formatCPF, isValidCPF, onlyDigits } from"@/lib/utils/cpf";
 
 type Ator = {
  id: string;

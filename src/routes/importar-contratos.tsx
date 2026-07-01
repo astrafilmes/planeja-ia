@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from"@tanstack/react-router";
-import { routeHead } from"@/lib/route-head";
+import { routeHead } from"@/lib/utils/route-head";
 import { useEffect, useMemo, useState } from"react";
 import { useQuery, useQueryClient } from"@tanstack/react-query";
 import { AppShell } from"@/components/layout/AppShell";
@@ -66,14 +66,14 @@ import {
  formatNumber,
  normalizeContratoBase,
  normalizeText,
-} from"@/lib/normalize";
+} from"@/lib/utils/normalize";
 import { getNextContratoNumbers } from"@/lib/contrato-numbering";
 import { logAudit } from"@/lib/audit";
 import { Metric, ValorUnitInput } from"@/components/importar/ImportarHelpers";
 import { extractM2AProcessoId } from"@/lib/m2a";
-import { persistM2ASnapshot } from"@/lib/m2a-snapshot";
-import type { M2aSyncPayload } from"@/lib/m2a-sync";
-import { fetchProcessoFromWorker } from"@/lib/m2a-worker";
+import { persistM2ASnapshot } from"@/lib/m2a";
+import type { M2aSyncPayload } from"@/lib/m2a";
+import { fetchProcessoFromWorker } from"@/lib/m2a";
 
 export const Route = createFileRoute("/importar-contratos")({
  component: Page,

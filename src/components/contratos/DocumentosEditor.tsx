@@ -22,7 +22,7 @@ import {
  type M2ABulkDownloadDocumento,
  type M2ADocumentoGerado,
 } from"@/lib/m2a";
-import { downloadM2ADocuments } from"@/lib/m2a-documents";
+import { downloadM2ADocuments } from"@/lib/m2a";
 import { useProgress } from"@/contexts/ProgressContext";
 import JSZip from"jszip";
 import * as FileSaver from"file-saver";

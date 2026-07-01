@@ -1,11 +1,11 @@
 import { createFileRoute } from"@tanstack/react-router";
-import { routeHead } from"@/lib/route-head";
+import { routeHead } from"@/lib/utils/route-head";
 import { useMemo, useState } from"react";
 import { useQuery, useQueryClient } from"@tanstack/react-query";
 import { AppShell } from"@/components/layout/AppShell";
 import { EmptyState } from"@/components/layout/EmptyState";
 import { supabase } from"@/integrations/supabase/client";
-import { normalizeText } from"@/lib/normalize";
+import { normalizeText } from"@/lib/utils/normalize";
 import { logAudit } from"@/lib/audit";
 import { toast } from"sonner";
 import { Button } from"@/components/ui/button";

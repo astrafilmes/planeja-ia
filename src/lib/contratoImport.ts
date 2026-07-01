@@ -1,5 +1,5 @@
 // Parser da planilha de contratos por empresa/secretaria/dotação.
-import { normalizeText } from "./normalize";
+import { normalizeText } from "./utils/normalize";
 import { readXlsxMatrix } from "./workbook";
 
 export interface ParsedItem {

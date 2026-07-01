@@ -1,5 +1,5 @@
 import { Link, createFileRoute } from"@tanstack/react-router";
-import { routeHead } from"@/lib/route-head";
+import { routeHead } from"@/lib/utils/route-head";
 import { useQuery } from"@tanstack/react-query";
 import { AppShell, StatusBadge } from"@/components/layout/AppShell";
 import { EmptyState } from"@/components/layout/EmptyState";
@@ -14,7 +14,7 @@ import {
  TableHeader,
  TableRow,
 } from"@/components/ui/table";
-import { formatBRL, formatNumber } from"@/lib/normalize";
+import { formatBRL, formatNumber } from"@/lib/utils/normalize";
 import { Eye, History } from"lucide-react";
 
 export const Route = createFileRoute("/historico")({
