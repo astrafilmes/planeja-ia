@@ -84,7 +84,7 @@ import {
  Megaphone,
 
 } from"lucide-react";
-import { toast } from"sonner";
+import { notify } from"@/lib/notify";
 import { logAudit } from"@/lib/audit";
 import { normalizeContratoBase } from"@/lib/utils/normalize";
 import { getNextContratoNumbers } from"@/lib/contrato-numbering";
@@ -300,12 +300,12 @@ function Page() {
 
  async function onSubmit(v: z.infer<typeof schema>) {
  const sec = secretarias?.find((s: any) => s.id === v.secretariaId);
- if (!sec) return toast.error("Secretaria inválida");
+ if (!sec) return notify.error("Secretaria inválida");
  let numero = v.numeroContrato ??"";
  if (v.gerarAutomatico) {
  const numeroBase = normalizeContratoBase(v.numeroProcessoBase);
  if (!numeroBase)
- return toast.error("Informe o número base do processo (ex.: 026/2025)");
+ return notify.error("Informe o número base do processo (ex.: 026/2025)");
  const [nextNumber] = await getNextContratoNumbers(supabase, {
  numeroBase,
  secretariaSigla: sec.sigla,
@@ -322,13 +322,13 @@ function Page() {
  },
  );
  if (numeracaoError) {
- return toast.error("Falha ao atualizar contador", {
+ return notify.error("Falha ao atualizar contador", {
  description: numeracaoError.message,
  });
  }
  numero = nextNumber.numeroContrato;
  }
- if (!numero) return toast.error("Informe o número do contrato");
+ if (!numero) return notify.error("Informe o número do contrato");
  const insert = {
  numero_contrato: numero,
  secretaria_num: sec.numero,
@@ -347,14 +347,14 @@ function Page() {
  .insert(insert)
  .select()
  .single();
- if (error) return toast.error(error.message);
+ if (error) return notify.error(error.message);
  await logAudit({
  action:"create",
  entityType:"contrato",
  entityId: data.id,
  payload: insert,
  });
- toast.success(`Contrato ${numero} criado`);
+ notify.success(`Contrato ${numero} criado`);
  form.reset({
  gerarAutomatico: true,
  status:"ativo",
@@ -373,13 +373,13 @@ function Page() {
  .from("contratos")
  .update({ deleted_at: new Date().toISOString() })
  .eq("id", c.id);
- if (error) return toast.error(error.message);
+ if (error) return notify.error(error.message);
  await logAudit({
  action:"delete",
  entityType:"contrato",
  entityId: c.id,
  });
- toast.success("Contrato excluído");
+ notify.success("Contrato excluído");
  setDeleting(null);
  setSelected((prev) => {
  const n = new Set(prev);
@@ -409,7 +409,7 @@ function Page() {
  .from("contratos")
  .update(patch)
  .eq("id", c.id);
- if (error) return toast.error(error.message);
+ if (error) return notify.error(error.message);
  patchContratoLocal(c.id, patch);
  await logAudit({
  action:"update",
@@ -417,7 +417,7 @@ function Page() {
  entityId: c.id,
  payload: { publicado: !isPub },
  });
- toast.success(isPub ?"Marcado como não publicado" :"Marcado como publicado");
+ notify.success(isPub ?"Marcado como não publicado" :"Marcado como publicado");
  qc.invalidateQueries({ queryKey: ["processo-detail"] });
  } finally {
  setTogglingPub(null);
@@ -430,7 +430,7 @@ function Page() {
  .from("contratos")
  .update({ impresso_assinado: next })
  .eq("id", c.id);
- if (error) return toast.error(error.message);
+ if (error) return notify.error(error.message);
  patchContratoLocal(c.id, { impresso_assinado: next });
  await logAudit({
  action:"update",
@@ -438,7 +438,7 @@ function Page() {
  entityId: c.id,
  payload: { impresso_assinado: next },
  });
- toast.success(next ?"Marcado como impresso/assinado" :"Desmarcado");
+ notify.success(next ?"Marcado como impresso/assinado" :"Desmarcado");
  qc.invalidateQueries({ queryKey: ["processo-detail"] });
  }
 
@@ -449,13 +449,13 @@ function Page() {
  .from("contratos")
  .update({ deleted_at: new Date().toISOString() })
  .in("id", ids);
- if (error) return toast.error(error.message);
+ if (error) return notify.error(error.message);
  await Promise.all(
  ids.map((id) =>
  logAudit({ action:"delete", entityType:"contrato", entityId: id }),
  ),
  );
- toast.success(`${ids.length} contrato(s) excluído(s)`);
+ notify.success(`${ids.length} contrato(s) excluído(s)`);
  setSelected(new Set());
  setBulkOpen(false);
  qc.invalidateQueries({ queryKey: ["contratos"] });
@@ -488,7 +488,7 @@ function Page() {
  link: c.link_contrato,
  }));
  downloadCSV(`contratos-${new Date().toISOString().slice(0, 10)}.csv`, rows);
- toast.success(`${rows.length} contratos exportados`);
+ notify.success(`${rows.length} contratos exportados`);
  }
 
  async function handleBulkDownloadDocumentos() {
@@ -500,7 +500,7 @@ function Page() {
 
  if (!selected.size) return;
  if (!docs.length) {
- toast.error("Nenhuma convocação ou contrato encontrado nos contratos selecionados.",
+ notify.error("Nenhuma convocação ou contrato encontrado nos contratos selecionados.",
  );
  return;
  }
@@ -519,15 +519,15 @@ function Page() {
         }
         if (e.status === "concluido") {
           finishTask(`${e.total} documento(s) compactado(s).`);
-          toast.success(`${e.total} documento(s) enviados para download.`);
+          notify.success(`${e.total} documento(s) enviados para download.`);
         }
         if (e.status === "erro") {
           failTask(e.mensagem ?? "Falha");
-          toast.error("Falha no download em lote", { description: e.mensagem });
+          notify.error("Falha no download em lote", { description: e.mensagem });
         }
       });
  } catch (err: any) {
- toast.error(err?.message ??"Falha ao gerar ZIP");
+ notify.error(err?.message ??"Falha ao gerar ZIP");
  } finally {
  setDownloadingDocs(false);
  }

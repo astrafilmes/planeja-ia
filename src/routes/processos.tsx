@@ -75,7 +75,7 @@ import {
  Trash2,
  ArrowUpRight,
 } from"lucide-react";
-import { toast } from"sonner";
+import { notify } from"@/lib/notify";
 import { logAudit } from"@/lib/audit";
 import { extractM2AProcessoId } from"@/lib/m2a";
 import { downloadCSV } from"@/lib/export";
@@ -222,7 +222,7 @@ function Page() {
  async function onSubmit(v: FormValues) {
  const parsed = parseNumeroProcesso(v.numero_processo);
  if (!parsed) {
- toast.error("Informe o número completo do processo.");
+ notify.error("Informe o número completo do processo.");
  return;
  }
  const payload: any = { ...v };
@@ -243,28 +243,28 @@ function Page() {
  .from("processos")
  .update(payload)
  .eq("id", editing.id);
- if (error) return toast.error(error.message);
+ if (error) return notify.error(error.message);
  await logAudit({
  action:"update",
  entityType:"processo",
  entityId: editing.id,
  payload,
  });
- toast.success("Processo atualizado");
+ notify.success("Processo atualizado");
  } else {
  const { data, error } = await supabase
  .from("processos")
  .insert(payload)
  .select()
  .single();
- if (error) return toast.error(error.message);
+ if (error) return notify.error(error.message);
  await logAudit({
  action:"create",
  entityType:"processo",
  entityId: data.id,
  payload,
  });
- toast.success("Processo criado");
+ notify.success("Processo criado");
  }
  form.reset({ numero_processo:"", objeto:"" });
  setEditing(null);
@@ -278,13 +278,13 @@ function Page() {
  .from("processos")
  .update({ deleted_at: new Date().toISOString() })
  .eq("id", deleting.id);
- if (error) return toast.error(error.message);
+ if (error) return notify.error(error.message);
  await logAudit({
  action:"delete",
  entityType:"processo",
  entityId: deleting.id,
  });
- toast.success("Processo excluído");
+ notify.success("Processo excluído");
  setDeleting(null);
  qc.invalidateQueries({ queryKey: ["processos"] });
  }
@@ -296,14 +296,14 @@ function Page() {
  .from("processos")
  .update({ deleted_at: new Date().toISOString() })
  .in("id", ids);
- if (error) return toast.error(error.message);
+ if (error) return notify.error(error.message);
  await logAudit({
  action:"delete",
  entityType:"processo",
  entityId: ids.join(","),
  payload: { ids, count: ids.length },
  });
- toast.success(`${ids.length} processo(s) excluído(s)`);
+ notify.success(`${ids.length} processo(s) excluído(s)`);
  setSelected(new Set());
  setBulkDeleteOpen(false);
  qc.invalidateQueries({ queryKey: ["processos"] });
@@ -321,7 +321,7 @@ function Page() {
  criado_em: p.created_at,
  }));
  downloadCSV(`processos-${new Date().toISOString().slice(0, 10)}.csv`, rows);
- toast.success(`${rows.length} processos exportados`);
+ notify.success(`${rows.length} processos exportados`);
  }
 
  function handleOpenChange(v: boolean) {
