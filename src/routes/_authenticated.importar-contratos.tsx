@@ -193,11 +193,10 @@ function Page() {
       subtitle="Upload da planilha, revisão e geração em lote"
     >
       <WorkflowGuide
-        title="Fluxo da importação"
         steps={[
           {
             label: "Importar",
-            description: "Planilha e processo no portal",
+            description: "Planilha e processo",
             to: "/importar-contratos",
             icon: Upload,
             state: "active",
