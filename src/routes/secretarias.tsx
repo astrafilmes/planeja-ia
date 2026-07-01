@@ -186,7 +186,6 @@ async function syncSecretariaCpfs(
  const calls: Array<Promise<unknown>> = [];
  if (cpfs.fiscal !== undefined) {
  calls.push(
- // eslint-disable-next-line @typescript-eslint/no-explicit-any
  (supabase.rpc as any)("upsert_secretaria_contato", {
  p_secretaria_id: secretariaId,
  p_papel: "fiscal",
@@ -196,7 +195,6 @@ async function syncSecretariaCpfs(
  }
  if (cpfs.gestor !== undefined) {
  calls.push(
- // eslint-disable-next-line @typescript-eslint/no-explicit-any
  (supabase.rpc as any)("upsert_secretaria_contato", {
  p_secretaria_id: secretariaId,
  p_papel: "gestor",

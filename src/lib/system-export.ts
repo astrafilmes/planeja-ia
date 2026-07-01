@@ -61,11 +61,6 @@ export async function setupDailyBackup() {
   });
 }
 
-export async function getLatestBackupInfo() {
-  return invoke<{ available: boolean; updated_at?: string; size_bytes?: number }>(
-    { action: "latest-backup-info" },
-  );
-}
 
 function createRestoreScript() {
   return `#!/usr/bin/env node

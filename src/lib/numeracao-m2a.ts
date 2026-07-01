@@ -37,24 +37,3 @@ export function parseNumeroContrato(raw: string): NumeroContratoParts | null {
   };
 }
 
-/**
- * Calcula o próximo número sequencial de contrato para uma
- * dada sigla + ano, a partir do snapshot da M2A.
- * Retorna `max(sequencia) + 1`, ou `1` se nenhum encontrado.
- */
-export function calcularProximaNumeracao(
-  contratosExistentes: M2aContratoExistente[],
-  siglaSecretaria: string,
-  ano: number,
-): number {
-  const siglaAlvo = stripDiacritics(siglaSecretaria).toUpperCase().trim();
-  let max = 0;
-  for (const c of contratosExistentes ?? []) {
-    const parts = parseNumeroContrato(c.numero_contrato);
-    if (!parts) continue;
-    if (parts.ano !== ano) continue;
-    if (parts.sigla !== siglaAlvo) continue;
-    if (parts.sequencia > max) max = parts.sequencia;
-  }
-  return max + 1;
-}
