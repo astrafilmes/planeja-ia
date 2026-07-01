@@ -39,13 +39,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, s) => {
+    } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) {
         setTimeout(() => fetchRoles(s.user.id), 0);
       } else {
         setRoles([]);
+      }
+
+      // Ciclo de vida do JWT: refletir mudanças de sessão no cache.
+      // - SIGNED_IN / TOKEN_REFRESHED / USER_UPDATED: invalida tudo para
+      //   forçar refetch autenticado (evita respostas cacheadas do usuário anterior
+      //   ou com token expirado).
+      // - SIGNED_OUT: limpa completamente o cache para não vazar dados entre sessões.
+      switch (event) {
+        case "SIGNED_IN":
+        case "TOKEN_REFRESHED":
+        case "USER_UPDATED":
+          queryClient.invalidateQueries();
+          break;
+        case "SIGNED_OUT":
+          queryClient.cancelQueries();
+          queryClient.clear();
+          break;
+        default:
+          break;
       }
     });
 
