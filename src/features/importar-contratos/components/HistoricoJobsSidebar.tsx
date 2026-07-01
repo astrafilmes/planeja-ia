@@ -38,7 +38,7 @@ export const HistoricoJobsSidebar = memo(function HistoricoJobsSidebar({
   return (
     <Card className="overflow-hidden border-border/60">
       <CardHeader className="pb-3">
-        <CardTitle>Importações recentes</CardTitle>
+        <CardTitle className="text-sm">Recentes</CardTitle>
       </CardHeader>
       <CardContent className="p-0">
         <div>
@@ -56,7 +56,7 @@ export const HistoricoJobsSidebar = memo(function HistoricoJobsSidebar({
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="truncate text-[13px] font-medium">
-                    {j.empresa ?? "-"}
+                    {j.empresa ?? "—"}
                   </div>
                   <Badge
                     variant={j.status === "autorizado" ? "default" : "secondary"}
@@ -65,10 +65,7 @@ export const HistoricoJobsSidebar = memo(function HistoricoJobsSidebar({
                     {j.status}
                   </Badge>
                 </div>
-                <div className="truncate text-[13px] text-muted-foreground">
-                  {j.original_filename}
-                </div>
-                <div className="mt-0.5 flex gap-3 text-[12px] text-muted-foreground">
+                <div className="mt-1 flex gap-3 text-[12px] text-muted-foreground">
                   <span>{j.total_itens} itens</span>
                   <span>{j.total_contratos_previstos} contratos</span>
                   <span>{formatBRL(j.total_valor)}</span>
