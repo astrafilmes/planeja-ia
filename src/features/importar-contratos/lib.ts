@@ -244,11 +244,12 @@ export function resolveM2AItemMatch(
   const scored = pool
     .map((candidate) => {
       let score = 40;
-      if (
-        targetNumero &&
-        compactNumber(candidate.numero_item) === targetNumero
-      ) {
+      const candidateNumero = compactNumber(candidate.numero_item);
+      if (numeroCandidates.includes(candidateNumero)) {
         score += 20;
+        // Bônus quando bate com a ordem sequencial exata: sinal muito
+        // confiável quando o "Nº" da planilha é degenerado (todos "1").
+        if (candidateNumero === compactNumber(item.ordemItem)) score += 10;
       }
       if (supplierMatches(item.empresa, candidate.ata?.fornecedor?.nome))
         score += 40;
