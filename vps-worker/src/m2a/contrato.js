@@ -277,14 +277,16 @@ export async function adicionarItensAoContrato(contratoId, itensDesejados) {
     if (d) used.add(d.ataItemId);
     return { desejado: item, disponivel: d };
   });
+  const avisos = [];
+  const encontrados = matches.filter((m) => m.disponivel);
   const ausentes = matches.filter((m) => !m.disponivel).map((m) => m.desejado);
-  if (ausentes.length) {
-    throw new Error(
-      `Itens não localizados na Ata: ${ausentes.map((it) => it.numero || it.descricao || "sem-ref").join(", ")}`,
+  for (const it of ausentes) {
+    avisos.push(
+      `Item pulado (não localizado na Ata): ${it.numero || it.descricao || "sem-ref"}`,
     );
   }
-  const itemIds = matches.map((m) => m.disponivel.ataItemId).join(" ");
-  if (!itemIds) return { adicionados: 0 };
+  const itemIds = encontrados.map((m) => m.disponivel.ataItemId).join(" ");
+  if (!itemIds) return { adicionados: 0, avisos };
 
   const csrf =
     $tab('input[name="csrfmiddlewaretoken"]').attr("value") ||
@@ -296,7 +298,7 @@ export async function adicionarItensAoContrato(contratoId, itensDesejados) {
   });
   ensureOperationAccepted(loadDoc(r.html), "adição de itens ao contrato");
   await sleep(ADD_ITEMS_SETTLE_MS);
-  return { adicionados: matches.length };
+  return { adicionados: encontrados.length, avisos };
 }
 
 // --- Módulo 5: quantidades ---
