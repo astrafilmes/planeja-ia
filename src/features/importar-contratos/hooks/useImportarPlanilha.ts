@@ -280,7 +280,10 @@ export function useImportarPlanilha(options: {
           descricao: i.descricao,
           especificacao: i.especificacao,
           unidade: i.unidade,
-          valor_unitario: i.valorUnitario,
+          valor_unitario:
+            i.valorUnitario && i.valorUnitario > 0
+              ? i.valorUnitario
+              : (Number(itemMatches.get(i.sourceRow)?.item.valor_unitario ?? 0) || 0),
         }));
         const { data: insertedItens, error: itErr } = await supabase
           .from("contrato_import_itens")
