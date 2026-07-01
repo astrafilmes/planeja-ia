@@ -82,6 +82,7 @@ export type M2AItemRow = {
   numero_item: string | null;
   descricao: string | null;
   unidade: string | null;
+  valor_unitario: number | null;
 };
 
 /* ============================================================

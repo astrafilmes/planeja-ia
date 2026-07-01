@@ -308,23 +308,39 @@ export function useAutorizarGeracao(options: {
           const m2aNumeroItemById = new Map(
             m2aItens.map((item) => [item.m2a_item_id, item.numero_item]),
           );
+          const m2aValorById = new Map(
+            m2aItens.map((item) => [item.m2a_item_id, Number(item.valor_unitario ?? 0)]),
+          );
 
-          const itensPayload = c.itens.map((it, idx) => ({
-            contrato_id: contratoId,
-            ordem_item: it.ordemItem ?? idx + 1,
-            numero_item:
-              compactNumber(it.numeroItem) ||
-              compactNumber(m2aNumeroItemById.get(it.m2aItemId ?? "")) ||
-              null,
-            lote: it.lote || null,
-            descricao: it.descricao,
-            especificacao: it.especificacao || null,
-            unidade: it.unidade,
-            quantidade: it.quantidade,
-            valor_unitario: it.valorUnitario,
-            valor_total: it.subtotal,
-            m2a_item_id: it.m2aItemId,
-          }));
+          const itensPayload = c.itens.map((it, idx) => {
+            const fallbackValor = it.m2aItemId
+              ? (m2aValorById.get(it.m2aItemId) ?? 0)
+              : 0;
+            const valorUnitario =
+              it.valorUnitario && it.valorUnitario > 0
+                ? it.valorUnitario
+                : fallbackValor;
+            const subtotal =
+              it.valorUnitario && it.valorUnitario > 0
+                ? it.subtotal
+                : it.quantidade * fallbackValor;
+            return {
+              contrato_id: contratoId,
+              ordem_item: it.ordemItem ?? idx + 1,
+              numero_item:
+                compactNumber(it.numeroItem) ||
+                compactNumber(m2aNumeroItemById.get(it.m2aItemId ?? "")) ||
+                null,
+              lote: it.lote || null,
+              descricao: it.descricao,
+              especificacao: it.especificacao || null,
+              unidade: it.unidade,
+              quantidade: it.quantidade,
+              valor_unitario: valorUnitario,
+              valor_total: subtotal,
+              m2a_item_id: it.m2aItemId,
+            };
+          });
 
           if (itensPayload.length === 0) continue;
           const { data: itensIns, error: itensErr } = await supabase

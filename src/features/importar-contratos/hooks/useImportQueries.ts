@@ -152,7 +152,7 @@ export function useImportQueries(options: { activeJobId: string | null }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("m2a_itens")
-        .select("m2a_ata_id, m2a_item_id, numero_item, descricao, unidade")
+        .select("m2a_ata_id, m2a_item_id, numero_item, descricao, unidade, valor_unitario")
         .eq("processo_id", activeJobProcessoId!)
         .order("numero_item");
       if (error) throw error;
