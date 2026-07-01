@@ -18,13 +18,13 @@ export function HeroCard({
 }) {
   return (
     <div
-      className="relative overflow-hidden rounded-lg border border-border/40 p-7 text-primary-foreground"
+      className="relative overflow-hidden rounded-lg border border-border/40 p-7 text-brand-panel-foreground"
       style={{ backgroundImage: "var(--hero-gradient)" }}
     >
       {/* decorative stars */}
       <svg
         aria-hidden="true"
-        className="pointer-events-none absolute -right-6 -top-6 size-44 text-primary-foreground/15"
+        className="pointer-events-none absolute -right-6 -top-6 size-44 text-brand-panel-foreground/15"
         viewBox="0 0 100 100"
         fill="currentColor"
       >
@@ -32,7 +32,7 @@ export function HeroCard({
       </svg>
       <svg
         aria-hidden="true"
-        className="pointer-events-none absolute right-24 bottom-4 size-20 text-primary-foreground/20"
+        className="pointer-events-none absolute right-24 bottom-4 size-20 text-brand-panel-foreground/20"
         viewBox="0 0 100 100"
         fill="currentColor"
       >
@@ -42,7 +42,7 @@ export function HeroCard({
       <div className="relative z-10 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
         <div className="max-w-xl">
           {eyebrow && (
-            <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-primary-foreground/15 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-primary-foreground/90 backdrop-blur">
+            <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-brand-panel-foreground/15 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-brand-panel-foreground/90 backdrop-blur">
               {eyebrow}
             </div>
           )}
@@ -50,7 +50,7 @@ export function HeroCard({
             {title}
           </h2>
           {description && (
-            <p className="mt-3 max-w-md text-[13.5px] leading-relaxed text-primary-foreground/75">
+            <p className="mt-3 max-w-md text-[13.5px] leading-relaxed text-brand-panel-foreground/75">
               {description}
             </p>
           )}
@@ -59,7 +59,7 @@ export function HeroCard({
               type="button"
               onClick={onCtaClick}
               aria-label={cta}
-              className="mt-6 inline-flex h-11 items-center gap-2 rounded-full bg-cta px-5 text-[13px] font-medium text-cta-foreground ring-1 ring-border/30 transition-all hover:-translate-y-px hover:bg-cta/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="mt-6 inline-flex h-11 items-center gap-2 rounded-full bg-background px-5 text-[13px] font-medium text-foreground ring-1 ring-border/30 transition-all hover:-translate-y-px hover:bg-background/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               {cta}
               <ArrowUpRight className="size-4" aria-hidden="true" />
