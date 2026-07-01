@@ -98,11 +98,15 @@ async function readErrorMessage(res: Response): Promise<string> {
   try {
     const data = await res.clone().json();
     if (data?.error) return String(data.error);
-  } catch {}
+  } catch {
+    /* body não é JSON — segue tentando texto puro */
+  }
   try {
     const text = await res.clone().text();
     if (text) return text;
-  } catch {}
+  } catch {
+    /* sem body legível */
+  }
   return `HTTP ${res.status}`;
 }
 
@@ -140,7 +144,9 @@ async function consumeSSE(
       let parsed: any = raw;
       try {
         parsed = JSON.parse(raw);
-      } catch {}
+      } catch {
+        /* evento sem JSON — repassa string bruta */
+      }
       onEvent(eventName, parsed);
     }
   }

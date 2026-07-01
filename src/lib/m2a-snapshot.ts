@@ -97,7 +97,6 @@ export async function persistM2ASnapshot(
 
     console.log(`${LOG} → RPC sync_m2a_snapshot`);
     const tRpc = performance.now();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase.rpc as any)("sync_m2a_snapshot", {
       p_processo_id: processoId,
       p_payload: rpcPayload,

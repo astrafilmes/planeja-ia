@@ -193,11 +193,6 @@ export function getOrgaoMapping(orgaoId?: string | null) {
   return M2A_ORGAOS_MAPPING[orgaoId] ?? null;
 }
 
-export function getUOMapping(orgaoId?: string | null, uoId?: string | null) {
-  const o = getOrgaoMapping(orgaoId);
-  if (!o || !uoId) return null;
-  return o.unidades.find((u) => String(u.id) === String(uoId)) ?? null;
-}
 
 /** Tenta achar o órgão pai a partir de um UO id (quando vem da planilha). */
 export function findOrgaoByUO(uoId?: string | null): string | null {

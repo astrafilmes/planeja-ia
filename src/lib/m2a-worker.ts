@@ -49,6 +49,3 @@ export function fetchProcessoFromWorker(
   });
 }
 
-export function workerHealth(): Promise<{ ok: boolean }> {
-  return callWorker<{ ok: boolean }>({ path: "/health", method: "GET" });
-}

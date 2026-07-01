@@ -135,12 +135,6 @@ function isTrustedM2AEvent(e: MessageEvent): boolean {
   return true;
 }
 
-// O worker M2A está sempre disponível via edge function. Mantém a função
-// só para compatibilidade — sempre devolve true se há sessão Supabase.
-export async function isExtensionInstalled(_timeoutMs = 600): Promise<boolean> {
-  const { data } = await supabase.auth.getSession();
-  return !!data.session;
-}
 
 function emitWindow(message: Record<string, unknown>) {
   if (typeof window === "undefined") return;
@@ -426,20 +420,6 @@ export function listenM2AProcessCreationProgress(
   return () => window.removeEventListener("message", handler);
 }
 
-export type M2ABulkDownloadProgress =
-  | {
-      type: "M2A_BULK_DOWNLOAD_PROGRESS";
-      status: "iniciado" | "progresso" | "concluido";
-      total: number;
-      baixados: number;
-      documento?: M2ADocumentoGerado;
-      arquivoZip?: boolean;
-    }
-  | {
-      type: "M2A_BULK_DOWNLOAD_PROGRESS";
-      status: "erro";
-      mensagem: string;
-    };
 
 export type M2ABulkDownloadOptions = {
   archive?: boolean;

@@ -95,11 +95,3 @@ export function filterServidoresByUnidade(
   );
 }
 
-export function getUnidadeNome(
-  unidades: M2AUnidadeGestora[],
-  unidadeM2AId?: string | null,
-) {
-  return (
-    unidades.find((unidade) => unidade.m2a_id === unidadeM2AId)?.nome ?? ""
-  );
-}
