@@ -3,18 +3,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { notify } from "@/lib/notify";
+import {
+  IrpJobListItemSchema,
+  parseSupabaseList,
+  type IrpJobListItem,
+} from "@/lib/validators";
 import { irpQueryKeys } from "../lib";
 
-export interface IrpJobListItem {
-  id: string;
-  original_filename: string | null;
-  status: string | null;
-  total_secretarias: number | null;
-  secretarias_com_itens: number | null;
-  total_linhas: number | null;
-  total_valor: number | null;
-  created_at: string | null;
-}
+export type { IrpJobListItem };
 
 export interface UseIrpJobsListResult {
   jobs: IrpJobListItem[];
@@ -37,14 +33,17 @@ export function useIrpJobsList({
   const { data: jobs = [], isLoading } = useQuery({
     queryKey: irpQueryKeys.jobsList,
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("irp_jobs")
         .select(
           "id, original_filename, status, total_secretarias, secretarias_com_itens, total_linhas, total_valor, created_at",
         )
         .order("created_at", { ascending: false })
         .limit(50);
-      return (data ?? []) as IrpJobListItem[];
+      if (error) throw error;
+      // Runtime guard: schema mismatch é logado por linha e a UI degrada
+      // com graça em vez de renderizar undefined.
+      return parseSupabaseList(IrpJobListItemSchema, data, "irp_jobs.list");
     },
   });
 

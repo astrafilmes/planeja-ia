@@ -7,6 +7,11 @@ import {
   type M2AServidor,
   type M2AUnidadeGestora,
 } from "@/hooks/useM2ACatalog";
+import {
+  SecretariaRowSchema,
+  SecretariaCpfRowSchema,
+  parseSupabaseList,
+} from "@/lib/validators";
 import type { EnrichedSec, Sec } from "../lib";
 
 export const SECRETARIAS_QUERY_KEY = ["secretarias"] as const;
@@ -23,6 +28,14 @@ export function useSecretariasQuery() {
         .order("numero");
       if (error) throw error;
 
+      // Validação runtime: se o schema do banco mudar, linhas inválidas
+      // são logadas e descartadas em vez de propagar undefined pela UI.
+      const rows = parseSupabaseList(
+        SecretariaRowSchema,
+        data,
+        "secretarias.select",
+      );
+
       // CPFs sensíveis: só admin/gestor conseguem; merge via RPC quando autorizado.
       let cpfs: Array<{
         id: string;
@@ -33,7 +46,13 @@ export function useSecretariasQuery() {
         const { data: cpfData, error: rpcErr } = await supabase.rpc(
           "get_secretarias_cpfs",
         );
-        if (!rpcErr && Array.isArray(cpfData)) cpfs = cpfData as typeof cpfs;
+        if (!rpcErr) {
+          cpfs = parseSupabaseList(
+            SecretariaCpfRowSchema,
+            cpfData,
+            "get_secretarias_cpfs",
+          );
+        }
       } catch {
         /* sem permissão, segue sem CPFs */
       }
@@ -48,7 +67,7 @@ export function useSecretariasQuery() {
         }),
       );
 
-      return (data ?? []).map((s: any) => ({
+      return rows.map((s) => ({
         ...s,
         m2a_gestor_cpf: cpfMap.get(s.id)?.gestor ?? null,
         m2a_fiscal_cpf: cpfMap.get(s.id)?.fiscal ?? null,
