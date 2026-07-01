@@ -160,6 +160,26 @@ export function useAutorizarGeracao(options: {
         secretaria: resolveSecretariaForContrato(contrato, secretariasM2A),
       }));
 
+      const planoPorAta = new Map<
+        string,
+        { ata: string; contratos: number; itens: number }
+      >();
+      for (const { contrato } of preliminaresResolvidos) {
+        const ata = contrato.m2aAtaNumero ?? contrato.m2aAtaId ?? "SEM_ATA";
+        const atual = planoPorAta.get(ata) ?? { ata, contratos: 0, itens: 0 };
+        atual.contratos += 1;
+        atual.itens += contrato.itens.length;
+        planoPorAta.set(ata, atual);
+      }
+      console.groupCollapsed(
+        `[m2a-geracao] plano: ${preliminaresResolvidos.length} contrato(s), ${preliminaresResolvidos.reduce(
+          (total, { contrato }) => total + contrato.itens.length,
+          0,
+        )} item(ns)`,
+      );
+      console.table(Array.from(planoPorAta.values()));
+      console.groupEnd();
+
       const semSecretaria = preliminaresResolvidos.filter(
         ({ secretaria }) => !secretaria,
       );
@@ -285,6 +305,18 @@ export function useAutorizarGeracao(options: {
         preliminarPorIndex.push(c);
       }
 
+      if (inserts.length !== contratosSelecionados.length) {
+        throw new Error(
+          `Falha ao preparar todos os contratos: ${inserts.length}/${contratosSelecionados.length} preparados.`,
+        );
+      }
+
+      const expectedItensGerados = preliminarPorIndex.reduce(
+        (total, contrato) => total + contrato.itens.length,
+        0,
+      );
+      let totalItensInseridos = 0;
+
       let contratosInseridosIds: string[] = [];
 
       try {
@@ -349,6 +381,13 @@ export function useAutorizarGeracao(options: {
             .select("id");
           if (itensErr) throw itensErr;
 
+          if ((itensIns ?? []).length !== itensPayload.length) {
+            throw new Error(
+              `Falha ao inserir todos os itens do contrato ${i + 1}: ${(itensIns ?? []).length}/${itensPayload.length}.`,
+            );
+          }
+          totalItensInseridos += itensIns?.length ?? 0;
+
           const dotPayload = (itensIns ?? []).map((row) => ({
             item_id: row.id,
             secretaria_sigla: c.secretariaSigla,
@@ -363,6 +402,12 @@ export function useAutorizarGeracao(options: {
             .from("contrato_item_dotacoes")
             .insert(dotPayload);
           if (dotErr) throw dotErr;
+        }
+
+        if (totalItensInseridos !== expectedItensGerados) {
+          throw new Error(
+            `Falha de conferência: ${totalItensInseridos}/${expectedItensGerados} item(ns) foram gravados.`,
+          );
         }
       } catch (innerErr) {
         console.error("FALHA CRÍTICA. Rollback manual...");

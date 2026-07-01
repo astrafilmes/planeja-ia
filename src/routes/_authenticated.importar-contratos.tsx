@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { routeHead } from "@/lib/utils/route-head";
 import { AppShell } from "@/components/layout/AppShell";
 import { EmptyState } from "@/components/layout/EmptyState";
@@ -63,6 +63,10 @@ function Page() {
   const [contratosDesmarcados, setContratosDesmarcados] = useState<Set<string>>(
     new Set(),
   );
+
+  useEffect(() => {
+    setContratosDesmarcados(new Set());
+  }, [activeJobId]);
 
   /* -------------------------------- Queries -------------------------------- */
   const queries = useImportQueries({ activeJobId });
