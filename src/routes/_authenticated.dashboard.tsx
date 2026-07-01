@@ -160,8 +160,8 @@ function Dashboard() {
           title={
             <>
               Acompanhe processos,{" "}
-              <span className="text-white/70">contratos</span> e atas{" "}
-              <span className="text-white/70">em um só lugar.</span>
+              <span className="text-primary-foreground/70">contratos</span> e atas{" "}
+              <span className="text-primary-foreground/70">em um só lugar.</span>
             </>
           }
           description="Sincronize com o M2A, gere pautas consolidadas e mantenha as secretarias sempre atualizadas — sem retrabalho."
