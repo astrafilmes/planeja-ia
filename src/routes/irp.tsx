@@ -200,8 +200,9 @@ function Page() {
     }));
   }, [resultadoSalvo]);
 
+  type SalvoRow = NonNullable<typeof resultadoSalvo>["secretarias"][number];
   const salvoArquivoByKey = useMemo(() => {
-    const map = new Map<string, typeof resultadoSalvo.secretarias[number]>();
+    const map = new Map<string, SalvoRow>();
     if (!resultadoSalvo) return map;
     resultadoSalvo.secretarias.forEach((r) => {
       map.set(`salvo:${r.id}`, r);
