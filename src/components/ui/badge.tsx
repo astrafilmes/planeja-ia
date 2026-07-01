@@ -13,19 +13,19 @@ const badgeVariants = cva(
         secondary:
           "border-border/60 bg-muted text-muted-foreground hover:bg-muted/80",
         destructive:
-          "border-transparent bg-[#FEE2E2] text-[#B91C1C] hover:bg-[#FECACA] dark:bg-[#3a1414] dark:text-[#fca5a5]",
+          "border-transparent bg-destructive/10 text-destructive hover:bg-destructive/15",
         outline: "border-border bg-transparent text-muted-foreground",
-        // Pastel tonal presets
+        // Pastel tonal presets (tokenized)
         indigo:
-          "border-transparent bg-[#DDF4F4] text-[#007879] dark:bg-[#0e3a3b] dark:text-[#5ee2e3]",
-        pink: "border-transparent bg-[#FCE7F0] text-[#B83260] dark:bg-[#4a1f36] dark:text-[#f7a8c8]",
-        blue: "border-transparent bg-[#E3F0FF] text-[#1d4ed8] dark:bg-[#172a48] dark:text-[#8fb8ff]",
+          "border-transparent bg-chip-teal text-chip-teal-foreground",
+        pink: "border-transparent bg-chip-pink text-chip-pink-foreground",
+        blue: "border-transparent bg-chip-blue text-chip-blue-foreground",
         green:
-          "border-transparent bg-[#DCF6E6] text-[#0F8a3d] dark:bg-[#0f3b2a] dark:text-[#7be0a4]",
+          "border-transparent bg-chip-green text-chip-green-foreground",
         amber:
-          "border-transparent bg-[#FFF1D6] text-[#B45309] dark:bg-[#3d2f10] dark:text-[#f7c277]",
+          "border-transparent bg-chip-amber text-chip-amber-foreground",
         slate:
-          "border-transparent bg-slate-100 text-slate-600 dark:bg-slate-800/70 dark:text-slate-300",
+          "border-transparent bg-muted text-muted-foreground",
       },
     },
     defaultVariants: { variant: "default" },
