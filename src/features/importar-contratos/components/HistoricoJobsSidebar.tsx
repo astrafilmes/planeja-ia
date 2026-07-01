@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { FileSpreadsheet, Trash2 } from "lucide-react";
+import { FileSpreadsheet, Plus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,22 +23,34 @@ type Props = {
   activeJobId: string | null;
   onSelectJob: (id: string) => void;
   onDeleteJob: (id: string) => void;
+  onNewImport?: () => void;
 };
 
 /**
- * Lista lateral de importações recentes, com destaque para a selecionada e
- * ação de exclusão por linha (dialog nativo do shadcn).
+ * Lista lateral de importações recentes.
  */
 export const HistoricoJobsSidebar = memo(function HistoricoJobsSidebar({
   jobs,
   activeJobId,
   onSelectJob,
   onDeleteJob,
+  onNewImport,
 }: Props) {
   return (
     <Card className="overflow-hidden border-border/60">
-      <CardHeader className="pb-3">
+      <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
         <CardTitle className="text-sm">Recentes</CardTitle>
+        {onNewImport && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 gap-1 px-2 text-[12px]"
+            onClick={onNewImport}
+          >
+            <Plus className="size-3.5" />
+            Nova
+          </Button>
+        )}
       </CardHeader>
       <CardContent className="p-0">
         <div>

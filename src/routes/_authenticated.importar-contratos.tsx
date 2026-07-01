@@ -27,13 +27,13 @@ import {
   ContratosPreviewList,
   HistoricoJobsSidebar,
   ImportSummaryBar,
+  ImportWorkflowCard,
   ItensReviewTable,
-  UploadCard,
 } from "@/features/importar-contratos/components";
 import type {
   ImportMode,
   NovoProcessoState,
-} from "@/features/importar-contratos/components/UploadCard";
+} from "@/features/importar-contratos/components/ImportWorkflowCard";
 import type { ImportSubmitPayload } from "@/features/importar-contratos/hooks/useImportarPlanilha";
 
 export const Route = createFileRoute("/_authenticated/importar-contratos")({
