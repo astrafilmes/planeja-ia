@@ -63,11 +63,21 @@ export async function processarContratoCompleto(payload, onProgress = () => {}) 
   }
 
   const itensPayload = itens ?? dadosM2A.itens ?? [];
+  const avisos = [];
+  const coletarAvisos = (etapa, lista) => {
+    for (const msg of lista ?? []) {
+      avisos.push({ etapa, mensagem: msg });
+      progress(etapa, `Aviso: ${msg}`, { aviso: true });
+    }
+  };
+
   progress("incluir_itens", "Módulo 4: Adicionando itens da Ata ao contrato...");
-  await adicionarItensAoContrato(m2aInternalId, itensPayload);
+  const addResult = await adicionarItensAoContrato(m2aInternalId, itensPayload);
+  coletarAvisos("incluir_itens", addResult?.avisos);
 
   progress("atualizar_quantidades", "Módulo 5: Atualizando quantidades dos itens...");
-  await atualizarQuantidadesItens(m2aInternalId, itensPayload);
+  const qtdResult = await atualizarQuantidadesItens(m2aInternalId, itensPayload);
+  coletarAvisos("atualizar_quantidades", qtdResult?.avisos);
 
   const dotacaoPayload = dadosDotacao ?? dadosM2A.dotacao ?? null;
   progress("incluir_dotacoes", "Módulo 6: Incluindo dotação orçamentária...");
@@ -76,12 +86,17 @@ export async function processarContratoCompleto(payload, onProgress = () => {}) 
   progress("enviar_documentos", "Módulo 7: Configurando documentos da entidade...");
   const documentosResult = await configurarDocumentos(m2aInternalId, contrato.data);
 
-  progress("concluido", "Contrato integrado com itens, dotação, atores e documentos!", {
+  const mensagemFinal = avisos.length
+    ? `Contrato integrado com ${avisos.length} aviso(s) — verifique itens pulados.`
+    : "Contrato integrado com itens, dotação, atores e documentos!";
+
+  progress("concluido", mensagemFinal, {
     sucesso: true,
     status: "concluido",
     m2a_contrato_id: m2aInternalId,
     documentosM2A: documentosResult.documentosM2A ?? [],
+    avisos,
   });
 
-  return { m2a_contrato_id: m2aInternalId, documentosM2A: documentosResult.documentosM2A ?? [] };
+  return { m2a_contrato_id: m2aInternalId, documentosM2A: documentosResult.documentosM2A ?? [], avisos };
 }
