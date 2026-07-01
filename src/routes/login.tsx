@@ -30,9 +30,10 @@ export const Route = createFileRoute("/login")({
   // Aceita `?redirect=/rota-privada` — populado pelo guard de `_authenticated`
   // quando um usuário sem sessão tenta acessar uma rota protegida. Mantido
   // como string opcional para não quebrar acessos diretos ao /login.
-  validateSearch: (search: Record<string, unknown>) => ({
-    redirect: typeof search.redirect === "string" ? search.redirect : undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>): { redirect?: string } => {
+    const r = search.redirect;
+    return typeof r === "string" ? { redirect: r } : {};
+  },
   head: () =>
     routeHead({
       path: "/login",
