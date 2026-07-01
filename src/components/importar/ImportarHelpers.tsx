@@ -73,7 +73,7 @@ export function M2ASyncReport({ syncData }: { syncData: any }) {
  <div className="px-1 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
  Último número por Secretaria:
  </div>
- <div className="max-h-32 overflow-auto rounded-lg border border-border/60 bg-card dark:bg-foreground">
+ <div className="max-h-32 overflow-auto rounded-lg border border-border/60 bg-card">
  <Table>
  <TableBody>
  {Object.entries(resumo.ultimo_numero_por_secretaria || {}).map(
