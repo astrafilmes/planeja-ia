@@ -1,147 +1,83 @@
-## Verificação dos arquivos enviados
+# Plano — Desmembramento de `src/routes/secretarias.tsx`
 
-Sim, são exatamente os 7 arquivos da extensão antiga:
+Encerrando a Fase 3. Aplicando o mesmo padrão-ouro validado em `contrato-detalhe/` e `irp/`: `lib.ts` + `hooks/` + `components/` + rota puramente orquestradora. Alvo: rota final ~140 linhas.
 
-| Arquivo | Função na extensão | Status do port para o VPS |
-|---|---|---|
-| `app_bridge.js` | Content script no app (postMessage ↔ chrome.runtime) | **Não precisa portar** — eliminado (front fala direto com edge `m2a-proxy`) |
-| `lovable_bridge.js` | Idem app_bridge para preview Lovable | **Não precisa portar** |
-| `m2a_bridge.js` | Content script no portal M2A | **Não precisa portar** |
-| `background.js` | Service worker: orquestra, abre abas, faz bulk download e injeta engines | **Substituído pelo worker Fastify** (`vps-worker/src/server.js`) |
-| `automation_engine.js` (1758 linhas) | Cria contrato, vincula atores, itens, dotação, documentos | ✅ **Já portado** em `vps-worker/src/m2a/contrato.js` + `orquestrador-contrato.js` |
-| `processo_scraper.js` (737 linhas) | Lista atas, itens e contratos de um processo | ✅ **Já portado** em `vps-worker/src/routes/processos.js` |
-| `numeracao_scraper.js` (122 linhas) | Maior número de contrato por secretaria/ano | ✅ **Já portado** em `vps-worker/src/routes/numeracao.js` |
-
-**Conclusão:** o backend (worker) já contém **toda a lógica funcional** da extensão. O que falta é eliminar as últimas referências `window.postMessage` no front e trocá-las por chamadas à edge `m2a-proxy`, além de criar duas rotas auxiliares no worker para os fluxos que ainda não têm endpoint próprio.
-
----
-
-## Plano de execução
-
-### Fase 1 — Worker (completar lacunas do background.js)
-
-Já existe orquestrador de contrato, processos SRP/comum, numeração e processos. Faltam dois fluxos que o `background.js` cobria diretamente:
-
-1. **`POST /documentos/download`** (`vps-worker/src/routes/documentos.js` — já existe parcialmente, validar)
-   - Recebe `{ documentos: [{id_m2a, nome}], archive: boolean, filename }`
-   - Reproduz `fetchDocumentoM2APdf` + `handleBulkDownload` do background.js:1-496
-   - Se `archive=true`: empacota em ZIP com `archiver` (substitui JSZip) e devolve `application/zip`
-   - Se `archive=false` e único doc: devolve `application/pdf`
-   - Se múltiplos sem ZIP: força ZIP (não dá pra fazer N downloads via HTTP único)
-
-2. **`POST /contratos/diagnosticar`** já existe — confirmar paridade com `automation_engine.diagnosticarContrato` (linhas 702-758)
-
-### Fase 2 — Edge function (sem mudança)
-
-`supabase/functions/m2a-proxy/index.ts` já faz HMAC + repasse para a VPS, incluindo binário (PDF/ZIP) e SSE. Nada a alterar.
-
-### Fase 3 — Cliente do front (`src/lib/`)
-
-1. **`src/lib/m2a-worker.ts`** — adicionar helpers:
-   ```ts
-   processarContratoStream(payload, onProgress) // SSE de /contratos/processar
-   processarContratoJson(payload)               // POST /contratos/processar/json
-   diagnosticarContratoWorker(payload)          // POST /contratos/diagnosticar
-   criarProcessoSrpWorker(payload, onProgress)  // SSE de /processos-srp/criar
-   sincronizarNumeracaoWorker(secretarias, ano) // GET /numeracao
-   downloadDocumentosWorker(documentos, opts)   // POST /documentos/download → blob
-   ```
-   Para SSE: usa `fetch` direto na edge function (em vez de `supabase.functions.invoke`) para conseguir ler o stream `text/event-stream`, mantendo o header `Authorization`.
-
-2. **`src/lib/m2a.ts`** — **deletar arquivo inteiro**. Todas as funções `sendToM2A`, `diagnoseM2A`, `requestM2AProcessCreation`, `requestNumeracaoSync`, `listenM2AProgress`, `isExtensionInstalled` deixam de existir. Tipos compartilhados (`M2AProgressEvent`, `M2AEtapa`, `ETAPA_LABEL`, `M2ADocumentoGerado`, `extractM2AProcessoId`) movem para `src/lib/m2a-types.ts`.
-
-### Fase 4 — Páginas que ainda chamam `window.postMessage`
-
-1. **`src/routes/processos.$id.tsx`**
-   - Linha 983: `diagnoseM2A(payload)` → `await diagnosticarContratoWorker(payload)` + toast com resultado
-   - Linha 1040-1046: loop `sendToM2A(payload)` → `await processarContratoStream(payload, onProgress)` em série, atualizando progresso por etapa via callback (não mais via listener global)
-   - Linha 344 / 590: `listenM2AProgress` removido — agora o `onProgress` da chamada SSE alimenta o mesmo state
-   - Linha 1751 / 1852: textos "Configurar envio pela extensão" → "Configurar envio M2A"; "Testar extensão" → "Diagnosticar contrato"
-
-2. **`src/routes/contratos.$id.tsx`** — análogo: `sendToM2A` → `processarContratoStream`, listener removido, textos atualizados (linhas 379, 535, 655, 804)
-
-3. **`src/routes/irp.tsx`** — `requestM2AProcessCreation` → `criarProcessoSrpWorker(payload, onProgress)` em SSE; `listenM2AProcessCreationProgress` removido
-
-4. **`src/routes/numeracao.tsx`** — `requestNumeracaoSync` → `await sincronizarNumeracaoWorker(secretarias, ano)`, sem requestId (resposta síncrona via GET)
-
-5. **`src/routes/login.tsx`** linha 258: texto "Integração com o portal M2A via extensão Chrome" → "Integração automática com o portal M2A"
-
-6. **`src/components/contratos/DocumentosEditor.tsx`** / **`src/routes/contratos.tsx`** / **`src/routes/processos.$id.tsx`** linha 299/590 — comentários já dizem "sem extensão", verificar se ainda há call-sites de `requestM2ABulkDownload` (não há, foi removido). Confirmar.
-
-7. **`src/contexts/M2AConnectionProvider.tsx`** — já é stub; remover `ensureConnected` se ninguém mais usa, ou manter no-op por compatibilidade. Provider some.
-
-### Fase 5 — Progresso ao vivo unificado
-
-Hoje o front escuta `M2A_PROGRESS` via window. Novo modelo:
+## Estrutura de arquivos
 
 ```text
-                    ┌───────────────────────────────────────┐
-                    │ ProgressContext (já existe)           │
-                    └───────────────▲───────────────────────┘
-                                    │ pushProgress(event)
-   processarContratoStream(payload, (ev) => pushProgress(ev))
-                                    │
-                                    ▼ SSE
-        m2a-proxy ────▶ vps-worker /contratos/processar
-                                    │
-                                    └─ orquestrador-contrato.onProgress
+src/features/secretarias/
+├── lib.ts                              # Types + helpers puros + constantes
+├── hooks/
+│   ├── index.ts                        # Barrel
+│   ├── useSecretariasQuery.ts          # Lista + CPFs (RPC) + enrich
+│   ├── useSecretariaMutations.ts       # save / saveGroup / delete + audit + notify
+│   ├── useSecretariaForm.ts            # Estado do formulário individual (open/editing)
+│   ├── useSecretariaGroupForm.ts       # Estado do formulário de grupo (openGroupEdit)
+│   ├── useSecretariaDeleteDialog.ts    # Estado do AlertDialog de exclusão
+│   └── useSecretariasFilters.ts        # search + statusFilter + expandedGroups + filteredRows + secretariaGroups memoizados
+├── components/
+│   ├── index.ts                        # Barrel
+│   ├── SecretariasToolbar.tsx          # Search input + status Select + Expand/Collapse
+│   ├── SecretariasStatsBar.tsx         # Badges de contagem + hint
+│   ├── SecretariasEmptyState.tsx       # EmptyState padronizado com CTA "Nova"
+│   ├── SecretariaGroupCard.tsx         # Card + Collapsible + header do grupo (com onEditGroup)
+│   ├── SecretariaGroupTable.tsx        # Tabela interna do grupo (memoizada, linhas isoladas)
+│   ├── SecretariaEditDialog.tsx        # Dialog individual (formulário completo)
+│   ├── SecretariaGroupEditDialog.tsx   # Dialog de bulk-edit de grupo
+│   ├── SecretariaDeleteDialog.tsx      # AlertDialog de exclusão
+│   └── ActorSelect.tsx                 # Movido do fim do arquivo (já é dumb)
+└── (rota) src/routes/secretarias.tsx   # Orquestrador puro (~140 linhas)
 ```
 
-O componente que disparou o envio recebe o callback direto; nada de listener global. O `ProgressContext` continua sendo a fonte do toast/painel.
+## Distribuição de responsabilidades
 
-### Fase 6 — Limpeza
+### `lib.ts` — Types + helpers puros
+- **Types:** `Sec`, `EnrichedSec`, `SecretariaGroup`, `GroupForm`, `StatusFilter`.
+- **Constantes:** `EMPTY_SELECT_VALUE`, `KEEP_SELECT_VALUE`.
+- **Helpers puros:** `emptySec`, `normalizeText`, `isNumericM2AId`, `trimOrNull`, `toSecretariaPayload`, `actorPatch`, `pickPrincipal`, `groupRows`.
+- **Helper de RPC:** `syncSecretariaCpfs` (fica no lib porque é I/O puro sem estado React).
 
-- Apagar `src/lib/m2a.ts`
-- Apagar `src/contexts/M2AConnectionProvider.tsx` + import em `src/routes/__root.tsx`
-- Apagar `M2AConnectionIndicator` no `AppShell.tsx`
-- Remover textos "extensão" residuais (grep final)
+### Hooks
 
----
+| Hook | Responsabilidade |
+|------|------------------|
+| `useSecretariasQuery` | `useQuery(["secretarias"])` + merge de CPFs via RPC `get_secretarias_cpfs`; expõe `rows`, `enrichedRows` (após join com fiscais/gestores/UGs), `isLoading`. |
+| `useSecretariaMutations` | `save(sec)`, `saveGroup(group, form)`, `remove(sec)` — validação, `supabase.upsert/update/delete`, `syncSecretariaCpfs`, `logAudit`, `notify.*`, `invalidateQueries`. Retorna também `isSaving`. |
+| `useSecretariaForm` | `open`, `editing`, `openNew()`, `openEdit(sec)`, `close()`, `setField(key, value)`. |
+| `useSecretariaGroupForm` | `groupEditing`, `groupForm`, `openGroupEdit(group)`, `close()`, `setField()`. |
+| `useSecretariaDeleteDialog` | `deleting`, `open(sec)`, `close()`. |
+| `useSecretariasFilters` | `search`, `statusFilter`, `expandedGroups`, `toggleGroup`, `expandAll`, `collapseAll`, `filteredRows`, `secretariaGroups` (memoizados). |
 
-## Mapeamento 1:1 das funções da extensão → worker
+### Components (todos dumb + `React.memo` onde couber)
 
-| Função original (extension) | Local atual no worker | OK? |
-|---|---|---|
-| `criarCabecalhoContrato` | `m2a/contrato.js` | ✅ |
-| `buscarIdContratoPorNumero` / `discoverContratoTableUrls` | `m2a/contrato.js` | ✅ |
-| `vincularFiscal/Gestor/Preposto` (autocomplete incluso) | `m2a/contrato.js` | ✅ |
-| `adicionarItensAoContrato` (scrape + match + post) | `m2a/contrato.js` | ✅ |
-| `atualizarQuantidadesItens` | `m2a/contrato.js` | ✅ |
-| `incluirDotacao` | `m2a/contrato.js` | ✅ |
-| `obterDocumentosContrato`/`excluirDocumentos`/`gerarDocumentosEntidade`/`atualizarDatasDocumentos`/`configurarDocumentos` | `m2a/contrato.js` | ✅ |
-| `processarContratoCompleto` (orquestrador) | `m2a/orquestrador-contrato.js` + route `/contratos/processar` (SSE) | ✅ |
-| `diagnosticarContrato` | `m2a/contrato.js` + `/contratos/diagnosticar` | ✅ verificar |
-| `extractAtasFromDoc`/`fetchItensDaAta`/`fetchContratosDaAta`/`runCascata` | `routes/processos.js` /processos/sync | ✅ |
-| `numeracao_scraper` | `routes/numeracao.js` /numeracao | ✅ |
-| `handleBulkDownload` (ZIP de PDFs) | `routes/documentos.js` — **validar paridade** | ⚠️ |
-| `requestM2AProcessCreation` (SRP) | `routes/processos-srp.js` + `orquestrador-processo-srp.js` | ✅ |
+| Componente | Props principais |
+|------------|------------------|
+| `SecretariasToolbar` | `search`, `onSearchChange`, `statusFilter`, `onStatusFilterChange`, `onExpandAll`, `onCollapseAll`, `duplicateCount` |
+| `SecretariasStatsBar` | `groupCount`, `filteredCount`, `totalCount` |
+| `SecretariasEmptyState` | `onNew` |
+| `SecretariaGroupCard` | `group`, `expanded`, `onToggle`, `onEditGroup`, `children` (recebe a tabela) |
+| `SecretariaGroupTable` | `rows`, `fiscaisById`, `gestoresById`, `onEditRow`, `onDeleteRow` — memoizada, linhas em componente interno também `memo` |
+| `SecretariaEditDialog` | `open`, `editing`, `onChange`, `unidades`, `fiscais`, `gestores`, `onSave`, `onCancel`, `isSaving` |
+| `SecretariaGroupEditDialog` | `group`, `form`, `onChange`, `unidades`, `fiscais`, `gestores`, `onSave`, `onCancel`, `isSaving` |
+| `SecretariaDeleteDialog` | `item`, `onConfirm`, `onCancel`, `isDeleting` |
+| `ActorSelect` | (mantém API atual) — apenas realocado |
 
----
+### Rota final (`src/routes/secretarias.tsx`)
+- Apenas: `createFileRoute`, `routeHead`, invocação dos 6 hooks, chamadas a `useUnidadesGestoras`/`useServidores`, `useMemo` para `filterServidoresByUnidade` (row/group), JSX distribuindo props aos componentes.
+- Zero regra de negócio inline. Zero `supabase.*` inline. Zero `notify.*` inline.
 
-## Entregáveis técnicos
+## Regras inegociáveis mantidas
+- **Design System (Fase 2):** tokens semânticos (`border-border/60`, `bg-muted/40`, `text-muted-foreground`), zero cor hardcoded, `rounded-lg`.
+- **API `notify.*`:** todos os toasts existentes preservados 1:1 (`error`/`success` nos mesmos pontos).
+- **Auditoria:** `logAudit` mantido em `save`/`saveGroup`/`remove` com os mesmos `action`/`entityType`/`payload`.
+- **RPC de CPF:** `syncSecretariaCpfs` continua sendo chamado com a mesma assinatura em save/saveGroup.
+- **Performance:** `SecretariaGroupTable` memoizada; linha isolada em subcomponente `memo` com callbacks estáveis (`useCallback` no orquestrador) — mesmo padrão do `IrpSecretariasTable`.
+- **Typecheck:** meta 0 erros — interfaces explícitas em todos os hooks e componentes.
 
-1. `vps-worker/src/routes/documentos.js` — auditar e completar bulk download (ZIP via archiver, fallback PDF único)
-2. `vps-worker/src/m2a/contrato.js` — confirmar export de `diagnosticarContrato`
-3. `src/lib/m2a-types.ts` (novo) — tipos extraídos de `m2a.ts`
-4. `src/lib/m2a-worker.ts` — adicionar 6 helpers (SSE + JSON + GET + blob)
-5. Edição de 5 rotas do front: `processos.$id.tsx`, `contratos.$id.tsx`, `irp.tsx`, `numeracao.tsx`, `login.tsx`
-6. Remoção de `src/lib/m2a.ts`, `src/contexts/M2AConnectionProvider.tsx` e import correspondente em `__root.tsx` / `AppShell.tsx`
-7. Atualização de textos UI ("extensão" → "worker M2A" / "integração M2A")
+## Divisão de entrega (3 partes)
 
----
+1. **Parte 1:** `lib.ts` + todos os 6 hooks + `hooks/index.ts`. Typecheck após.
+2. **Parte 2:** 5 componentes visuais (toolbar, statsBar, emptyState, groupCard, groupTable, ActorSelect). Typecheck após.
+3. **Parte 3:** 3 dialogs (edit, groupEdit, delete) + rota orquestradora final. Typecheck + confirmação da redução de linhas.
 
-## Não vou tocar (fora do escopo)
-
-- Edge function `m2a-proxy` (já genérica)
-- Tabelas Supabase
-- Lógica de RLS / numeração / snapshot
-- UI de importação de contratos (já corrigida em mensagens anteriores)
-
----
-
-## Riscos e observações
-
-- **SSE via `supabase.functions.invoke` não funciona** — vou usar `fetch` direto no endpoint `${SUPABASE_URL}/functions/v1/m2a-proxy` com `Authorization: Bearer <session.access_token>` para conseguir ler o stream linha-a-linha. A edge já tem o passthrough de `text/event-stream`.
-- **Bulk download** precisa de `archiver` no worker (`npm i archiver` em `vps-worker/`). Verifico antes de criar a rota.
-- **Sessão M2A**: o worker usa cookies persistidos do login automatizado (`vps-worker/src/auth.js`). Não muda.
-- Após aprovado, executo tudo em uma única passada de edições paralelas. Não precisa de migration de DB.
+Aguardando aprovação para iniciar a Parte 1.
