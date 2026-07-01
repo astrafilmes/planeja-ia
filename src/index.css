@@ -191,6 +191,22 @@
   --sidebar-accent-foreground: oklch(0.92 0.04 195);
   --sidebar-border: oklch(0.24 0.03 240);
   --sidebar-ring: oklch(0.7 0.12 195);
+  /* Brand marketing panel (login aside) */
+  --brand-panel: #05070f;
+  --brand-panel-foreground: #f8fafc;
+  /* Hero gradient — dashboard hero card (darker in dark mode) */
+  --hero-gradient: linear-gradient(135deg, #06131f 0%, #082130 55%, #007879 100%);
+  /* Pastel tonal chips — dark surfaces */
+  --chip-teal: #0e3a3b;
+  --chip-teal-foreground: #5ee2e3;
+  --chip-pink: #4a1f36;
+  --chip-pink-foreground: #f7a8c8;
+  --chip-blue: #172a48;
+  --chip-blue-foreground: #8fb8ff;
+  --chip-green: #0f3b2a;
+  --chip-green-foreground: #7be0a4;
+  --chip-amber: #3d2f10;
+  --chip-amber-foreground: #f7c277;
 }
 
 @layer base {
