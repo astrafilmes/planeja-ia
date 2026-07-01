@@ -277,14 +277,16 @@ export async function adicionarItensAoContrato(contratoId, itensDesejados) {
     if (d) used.add(d.ataItemId);
     return { desejado: item, disponivel: d };
   });
+  const avisos = [];
+  const encontrados = matches.filter((m) => m.disponivel);
   const ausentes = matches.filter((m) => !m.disponivel).map((m) => m.desejado);
-  if (ausentes.length) {
-    throw new Error(
-      `Itens não localizados na Ata: ${ausentes.map((it) => it.numero || it.descricao || "sem-ref").join(", ")}`,
+  for (const it of ausentes) {
+    avisos.push(
+      `Item pulado (não localizado na Ata): ${it.numero || it.descricao || "sem-ref"}`,
     );
   }
-  const itemIds = matches.map((m) => m.disponivel.ataItemId).join(" ");
-  if (!itemIds) return { adicionados: 0 };
+  const itemIds = encontrados.map((m) => m.disponivel.ataItemId).join(" ");
+  if (!itemIds) return { adicionados: 0, avisos };
 
   const csrf =
     $tab('input[name="csrfmiddlewaretoken"]').attr("value") ||
@@ -296,7 +298,7 @@ export async function adicionarItensAoContrato(contratoId, itensDesejados) {
   });
   ensureOperationAccepted(loadDoc(r.html), "adição de itens ao contrato");
   await sleep(ADD_ITEMS_SETTLE_MS);
-  return { adicionados: matches.length };
+  return { adicionados: encontrados.length, avisos };
 }
 
 // --- Módulo 5: quantidades ---
@@ -339,10 +341,11 @@ export async function atualizarQuantidadesItens(contratoId, itensDesejados) {
     if (enc) used.add(enc.ataItemId);
     return { desejado: item, encontrado: enc ? { ...enc, contratoItemId: enc.ataItemId } : null };
   });
+  const avisos = [];
   const ausentes = matches.filter((m) => !m.encontrado).map((m) => m.desejado);
-  if (ausentes.length) {
-    throw new Error(
-      `Itens não apareceram na tabela do contrato: ${ausentes.map((it) => it.numero || it.descricao).join(", ")}`,
+  for (const it of ausentes) {
+    avisos.push(
+      `Quantidade não atualizada (item ausente no contrato): ${it.numero || it.descricao || "sem-ref"}`,
     );
   }
 
@@ -351,15 +354,21 @@ export async function atualizarQuantidadesItens(contratoId, itensDesejados) {
   for (const m of matches) {
     if (!m.encontrado) continue;
     const url = `/contratos/itens/atualizar_quantidade_contrato_item/${m.encontrado.contratoItemId}/`;
-    const r = await m2a.postForm(url, {
-      csrfmiddlewaretoken: csrf,
-      quantidade: m.desejado.quantidade,
-    });
-    ensureOperationAccepted(loadDoc(r.html), `quantidade do item ${m.desejado.numero}`);
-    atualizados += 1;
+    try {
+      const r = await m2a.postForm(url, {
+        csrfmiddlewaretoken: csrf,
+        quantidade: m.desejado.quantidade,
+      });
+      ensureOperationAccepted(loadDoc(r.html), `quantidade do item ${m.desejado.numero}`);
+      atualizados += 1;
+    } catch (err) {
+      avisos.push(
+        `Item pulado (quantidade insuficiente ou rejeitada) ${m.desejado.numero || m.desejado.descricao || "sem-ref"}: ${err.message}`,
+      );
+    }
     await sleep(ITEM_POST_PAUSE_MS);
   }
-  return { atualizados };
+  return { atualizados, avisos };
 }
 
 // --- Módulo 6: dotação ---

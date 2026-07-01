@@ -56,6 +56,8 @@ export interface M2AProgressEvent {
   numeroLimpo?: string;
   importacoes?: unknown;
   documentosM2A?: M2ADocumentoGerado[];
+  avisos?: Array<{ etapa?: string; mensagem?: string } | string>;
+  aviso?: boolean;
 }
 
 export interface M2ADocumentoGerado {
@@ -264,15 +266,24 @@ export function sendToM2A(payload: M2AAutomationPayload): void {
       });
     },
     onDone: (evt) => {
+      const avisos = (evt as { avisos?: Array<{ etapa?: string; mensagem?: string } | string> })
+        .avisos ?? [];
+      const mensagem = avisos.length
+        ? `Contrato enviado com ${avisos.length} aviso(s). Itens pulados: ${avisos
+            .map((a) => (typeof a === "string" ? a : a.mensagem ?? ""))
+            .filter(Boolean)
+            .join(" | ")}`
+        : "Contrato enviado com sucesso ao portal M2A.";
       emitWindow({
         type: "M2A_PROGRESS",
         contratoId,
         etapa: "concluido",
         sucesso: true,
-        mensagem: "Contrato enviado com sucesso ao portal M2A.",
+        mensagem,
         m2a_contrato_id: (evt as { m2a_contrato_id?: string }).m2a_contrato_id,
         documentosM2A: (evt as { documentosM2A?: M2ADocumentoGerado[] })
           .documentosM2A,
+        avisos,
       } satisfies M2AProgressEvent);
     },
     onError: (err) => {
