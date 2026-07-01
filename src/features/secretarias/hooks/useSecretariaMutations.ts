@@ -183,7 +183,7 @@ export function useSecretariaMutations(
 
         const { error } = await supabase
           .from("secretarias")
-          .update(payload)
+          .update(payload as any)
           .in("id", ids);
 
         if (error) {
