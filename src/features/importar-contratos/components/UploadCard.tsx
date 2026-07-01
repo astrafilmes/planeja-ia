@@ -1,7 +1,7 @@
 import { memo } from "react";
-import { FileSpreadsheet, Loader2, Paperclip } from "lucide-react";
+import { Upload, FileSpreadsheet, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -31,6 +31,11 @@ type Props = {
   onSubmit: () => void;
 };
 
+/**
+ * Formulário unificado: seleciona/cria o processo administrativo já no upload
+ * da planilha e libera a submissão apenas quando a identidade do processo
+ * estiver completa (existente com m2a_processo_id, ou novo com todos os campos).
+ */
 export const UploadCard = memo(function UploadCard({
   file,
   onFileChange,
@@ -50,9 +55,7 @@ export const UploadCard = memo(function UploadCard({
   const existingReady =
     !!processoSelecionado && !!processoSelecionado.m2a_processo_id;
 
-  const novoCodigoOk =
-    !!extractM2AProcessoId(novo.codigoM2A) ||
-    /^\d+$/.test(novo.codigoM2A.trim());
+  const novoCodigoOk = !!extractM2AProcessoId(novo.codigoM2A) || /^\d+$/.test(novo.codigoM2A.trim());
   const novoReady =
     novoCodigoOk &&
     !!novo.numeroProcesso.trim() &&
@@ -64,71 +67,94 @@ export const UploadCard = memo(function UploadCard({
 
   return (
     <Card className="border-border/60">
-      <CardContent className="flex flex-col gap-4 p-4">
-        {/* Segmented toggle */}
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2">
+          <Upload className="size-4" /> Nova importação
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        {/* Toggle de modo */}
         <div
           role="tablist"
-          aria-label="Origem do processo"
-          className="inline-flex w-full rounded-md border border-border bg-muted/40 p-0.5"
+          className="grid grid-cols-2 gap-1 rounded-lg border border-border/60 bg-muted/40 p-1"
         >
-          {[
-            { id: "existing" as const, label: "Existente" },
-            { id: "new" as const, label: "Novo" },
-          ].map((opt) => {
-            const active = mode === opt.id;
-            return (
-              <button
-                key={opt.id}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                onClick={() => onModeChange(opt.id)}
-                className={`flex-1 rounded px-3 py-1.5 text-xs font-medium transition-colors ${
-                  active
-                    ? "bg-background text-foreground shadow-sm ring-1 ring-border"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {opt.label}
-              </button>
-            );
-          })}
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === "existing"}
+            onClick={() => onModeChange("existing")}
+            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+              mode === "existing"
+                ? "bg-card text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Processo existente
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === "new"}
+            onClick={() => onModeChange("new")}
+            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+              mode === "new"
+                ? "bg-card text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Novo processo
+          </button>
         </div>
 
-        {mode === "existing" ? (
+        {/* Modo A — Processo existente */}
+        {mode === "existing" && (
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">Processo</Label>
+            <Label>Selecionar processo</Label>
             <select
-              className="h-10 w-full rounded-md border border-input bg-card px-2 text-sm text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25"
+              className="h-10 w-full rounded-md border border-input bg-card px-2 text-sm text-foreground transition-[border-color,box-shadow] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25"
               value={existingProcessoId}
               onChange={(e) => onExistingProcessoIdChange(e.target.value)}
             >
-              <option value="">Selecionar…</option>
+              <option value="">— Selecione —</option>
               {processos.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.numero_processo ?? "(sem nº)"} · {p.objeto?.slice(0, 50)}
+                  {p.m2a_processo_id ? ` · #${p.m2a_processo_id}` : ""}
                 </option>
               ))}
             </select>
             {processoSelecionado && !processoSelecionado.m2a_processo_id && (
-              <p className="text-[12px] text-destructive">
-                Processo sem código M2A. Ajuste em /processos.
+              <p className="text-[13px] text-destructive">
+                Este processo não tem código M2A cadastrado. Edite-o em
+                /processos antes de importar.
+              </p>
+            )}
+            {existingReady && (
+              <p className="text-[12px] text-muted-foreground">
+                Nº, objeto e código M2A serão reaproveitados. A sincronização
+                será incremental — só reprocessa se houver ata nova.
               </p>
             )}
           </div>
-        ) : (
-          <div className="grid gap-3">
-            <div className="grid gap-3 sm:grid-cols-2">
+        )}
+
+        {/* Modo B — Novo processo */}
+        {mode === "new" && (
+          <>
+            <div className="flex flex-col gap-1.5">
+              <Label>Código do processo M2A *</Label>
+              <Input
+                value={novo.codigoM2A}
+                onChange={(e) => onNovoChange({ codigoM2A: e.target.value })}
+                placeholder="Ex.: 34291"
+              />
+              <p className="text-[12px] text-muted-foreground">
+                Pode colar apenas o número ou a URL completa do portal.
+              </p>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
               <div className="flex flex-col gap-1.5">
-                <Label className="text-xs">Código M2A</Label>
-                <Input
-                  value={novo.codigoM2A}
-                  onChange={(e) => onNovoChange({ codigoM2A: e.target.value })}
-                  placeholder="34291"
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label className="text-xs">Nº do processo</Label>
+                <Label>Nº do processo *</Label>
                 <Input
                   value={novo.numeroProcesso}
                   onChange={(e) =>
@@ -137,42 +163,42 @@ export const UploadCard = memo(function UploadCard({
                   placeholder="026/2025"
                 />
               </div>
+              <div className="flex flex-col gap-1.5">
+                <Label>Data base *</Label>
+                <Input
+                  type="date"
+                  value={novo.dataAbertura}
+                  onChange={(e) =>
+                    onNovoChange({ dataAbertura: e.target.value })
+                  }
+                />
+              </div>
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs">Data base</Label>
-              <Input
-                type="date"
-                value={novo.dataAbertura}
-                onChange={(e) => onNovoChange({ dataAbertura: e.target.value })}
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-xs">Objeto</Label>
+              <Label>Objeto *</Label>
               <Textarea
                 rows={2}
                 value={novo.objeto}
                 onChange={(e) => onNovoChange({ objeto: e.target.value })}
-                placeholder="Aquisição de…"
+                placeholder="Ex.: Aquisição de material de expediente..."
               />
             </div>
-          </div>
+          </>
         )}
 
-        {/* Arquivo — botão discreto */}
+        {/* Arquivo */}
         <div className="flex flex-col gap-1.5">
-          <Label className="text-xs">Planilha</Label>
-          <label className="flex cursor-pointer items-center gap-2 rounded-md border border-input bg-card px-3 py-2 text-sm transition-colors hover:border-accent">
-            <Paperclip className="size-4 text-muted-foreground" />
-            <span className="truncate text-muted-foreground">
-              {file ? file.name : "Selecionar arquivo…"}
-            </span>
-            <input
-              type="file"
-              accept=".xlsx"
-              className="hidden"
-              onChange={(e) => onFileChange(e.target.files?.[0] ?? null)}
-            />
-          </label>
+          <Label>Planilha (.xlsx)</Label>
+          <Input
+            type="file"
+            accept=".xlsx"
+            onChange={(e) => onFileChange(e.target.files?.[0] ?? null)}
+          />
+          {file && (
+            <div className="mt-1.5 truncate text-[13px] text-muted-foreground">
+              {file.name}
+            </div>
+          )}
         </div>
 
         <Button
@@ -185,9 +211,13 @@ export const UploadCard = memo(function UploadCard({
             <Loader2 className="size-4 animate-spin" />
           ) : (
             <FileSpreadsheet className="size-4" />
-          )}
-          Analisar
+          )}{" "}
+          Analisar e importar
         </Button>
+        <p className="text-[13px] leading-relaxed text-muted-foreground">
+          A planilha vai para uma área de revisão. Nada é enviado ao sistema de
+          contratos até você clicar em <strong>Autorizar geração</strong>.
+        </p>
       </CardContent>
     </Card>
   );

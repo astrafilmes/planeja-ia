@@ -193,10 +193,11 @@ function Page() {
       subtitle="Upload da planilha, revisão e geração em lote"
     >
       <WorkflowGuide
+        title="Fluxo da importação"
         steps={[
           {
             label: "Importar",
-            description: "Planilha e processo",
+            description: "Planilha e processo no portal",
             to: "/importar-contratos",
             icon: Upload,
             state: "active",
@@ -250,7 +251,8 @@ function Page() {
             <Card className="border-dashed border-border/60">
               <EmptyState
                 icon={Upload}
-                title="Nenhuma importação selecionada"
+                title="Selecione uma importação"
+                description="Escolha um registro recente ou envie uma nova planilha."
               />
             </Card>
           )}
