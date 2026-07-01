@@ -375,7 +375,6 @@ function Page() {
               </Tabs>
             </div>
           )}
-        </div>
       </div>
     </AppShell>
   );
