@@ -1,115 +1,138 @@
-import { Link, createFileRoute } from"@tanstack/react-router";
-import { routeHead } from"@/lib/utils/route-head";
-import { useQuery } from"@tanstack/react-query";
-import { AppShell, StatusBadge } from"@/components/layout/AppShell";
-import { EmptyState } from"@/components/layout/EmptyState";
-import { supabase } from"@/integrations/supabase/client";
-import { Button } from"@/components/ui/button";
-import { Card } from"@/components/ui/card";
-import {
- Table,
- TableBody,
- TableCell,
- TableHead,
- TableHeader,
- TableRow,
-} from"@/components/ui/table";
-import { formatBRL, formatNumber } from"@/lib/utils/normalize";
-import { Eye, History } from"lucide-react";
+import { Link, createFileRoute } from "@tanstack/react-router";
+import { routeHead } from "@/lib/utils/route-head";
+import { useQuery } from "@tanstack/react-query";
+import { AppShell, StatusBadge } from "@/components/layout/AppShell";
+import { EmptyState } from "@/components/layout/EmptyState";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
+import { formatBRL, formatNumber } from "@/lib/utils/normalize";
+import { Eye, History } from "lucide-react";
 
 export const Route = createFileRoute("/historico")({
- component: Page,
- head: () =>
- routeHead({
- path:"/historico",
- title:"Histórico",
- description:"Linha do tempo das alterações em processos, contratos e cadastros do Planeja IA.",
- noindex: true,
- }),
+  component: Page,
+  head: () =>
+    routeHead({
+      path: "/historico",
+      title: "Histórico",
+      description:
+        "Linha do tempo das alterações em processos, contratos e cadastros do Planeja IA.",
+      noindex: true,
+    }),
 });
 
+type JobRow = {
+  id: string;
+  original_filename: string;
+  secretarias_com_itens: number | null;
+  total_secretarias: number | null;
+  total_linhas: number | null;
+  total_valor: number | string | null;
+  created_at: string;
+  status: string;
+};
+
 function Page() {
- const { data, isLoading } = useQuery({
- queryKey: ["irp_jobs"],
- queryFn: async () =>
- (
- await supabase
- .from("irp_jobs")
- .select("*")
- .order("created_at", { ascending: false })
- .limit(100)
- ).data ?? [],
- });
- return (
- <AppShell title="Histórico" subtitle="Processamentos IRP anteriores">
- <Card className="overflow-hidden border-border/60">
- <Table>
- <TableHeader>
- <TableRow>
- <TableHead>Arquivo</TableHead>
- <TableHead className="w-32 text-right">Unidades</TableHead>
- <TableHead className="w-32 text-right">Itens</TableHead>
- <TableHead className="w-36 text-right">Valor</TableHead>
- <TableHead className="w-40">Quando</TableHead>
- <TableHead className="w-28 text-right">Status</TableHead>
- <TableHead className="w-24 text-right"></TableHead>
- </TableRow>
- </TableHeader>
- <TableBody>
- {isLoading && (
- <TableRow>
- <TableCell
- colSpan={7}
- className="py-8 text-center text-[13px] text-muted-foreground"
- >
- Carregando...
- </TableCell>
- </TableRow>
- )}
- {!isLoading && (data?.length ?? 0) === 0 && (
- <TableRow>
- <TableCell colSpan={7}>
- <EmptyState
- icon={History}
- title="Nenhum processamento ainda"
- description="As análises IRP concluídas aparecerão neste histórico."
- />
- </TableCell>
- </TableRow>
- )}
- {data?.map((j: any) => (
- <TableRow key={j.id}>
- <TableCell className="text-xs font-medium truncate max-w-md">
- {j.original_filename}
- </TableCell>
- <TableCell className="text-right font-mono text-xs">
- {formatNumber(j.secretarias_com_itens)}/
- {formatNumber(j.total_secretarias)}
- </TableCell>
- <TableCell className="text-right font-mono text-xs">
- {formatNumber(j.total_linhas)}
- </TableCell>
- <TableCell className="text-right font-mono text-xs">
- {formatBRL(Number(j.total_valor))}
- </TableCell>
- <TableCell className="text-xs text-muted-foreground">
- {new Date(j.created_at).toLocaleString("pt-BR")}
- </TableCell>
- <TableCell className="text-right">
- <StatusBadge status={j.status} />
- </TableCell>
- <TableCell className="text-right">
- <Button asChild size="sm" variant="outline">
- <Link to="/irp" search={{ job: j.id }}>
- <Eye className="size-4" /> Abrir
- </Link>
- </Button>
- </TableCell>
- </TableRow>
- ))}
- </TableBody>
- </Table>
- </Card>
- </AppShell>
- );
+  const { data, isLoading } = useQuery({
+    queryKey: ["irp_jobs"],
+    queryFn: async () =>
+      ((
+        await supabase
+          .from("irp_jobs")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(100)
+      ).data ?? []) as unknown as JobRow[],
+  });
+
+  const columns: DataTableColumn<JobRow>[] = [
+    {
+      id: "arquivo",
+      header: "Arquivo",
+      cell: (r) => (
+        <span className="block max-w-md truncate text-xs font-medium">
+          {r.original_filename}
+        </span>
+      ),
+      sortable: true,
+      sortAccessor: (r) => r.original_filename ?? "",
+    },
+    {
+      id: "unidades",
+      header: "Unidades",
+      align: "right",
+      width: "w-32",
+      cell: (r) => (
+        <span className="font-mono text-xs">
+          {formatNumber(Number(r.secretarias_com_itens ?? 0))}/
+          {formatNumber(Number(r.total_secretarias ?? 0))}
+        </span>
+      ),
+    },
+    {
+      id: "itens",
+      header: "Itens",
+      align: "right",
+      width: "w-32",
+      sortable: true,
+      sortAccessor: (r) => Number(r.total_linhas ?? 0),
+      cell: (r) => (
+        <span className="font-mono text-xs">{formatNumber(Number(r.total_linhas ?? 0))}</span>
+      ),
+    },
+    {
+      id: "valor",
+      header: "Valor",
+      align: "right",
+      width: "w-36",
+      sortable: true,
+      sortAccessor: (r) => Number(r.total_valor ?? 0),
+      cell: (r) => <span className="font-mono text-xs">{formatBRL(Number(r.total_valor))}</span>,
+    },
+    {
+      id: "quando",
+      header: "Quando",
+      width: "w-40",
+      sortable: true,
+      sortAccessor: (r) => new Date(r.created_at).getTime(),
+      cell: (r) => (
+        <span className="text-xs text-muted-foreground">
+          {new Date(r.created_at).toLocaleString("pt-BR")}
+        </span>
+      ),
+    },
+    {
+      id: "status",
+      header: "Status",
+      align: "right",
+      width: "w-28",
+      cell: (r) => <StatusBadge status={r.status} />,
+    },
+  ];
+
+  return (
+    <AppShell title="Histórico" subtitle="Processamentos IRP anteriores">
+      <DataTable<JobRow>
+        data={data ?? []}
+        columns={columns}
+        getRowId={(r) => r.id}
+        isLoading={isLoading}
+        pagination={{ pageSize: 25 }}
+        emptyState={
+          <EmptyState
+            icon={History}
+            title="Nenhum processamento ainda"
+            description="As análises IRP concluídas aparecerão neste histórico."
+          />
+        }
+        rowActions={(r) => (
+          <Button asChild size="sm" variant="outline">
+            <Link to="/irp" search={{ job: r.id }}>
+              <Eye className="size-4" /> Abrir
+            </Link>
+          </Button>
+        )}
+      />
+    </AppShell>
+  );
 }
