@@ -275,7 +275,7 @@ function Page() {
                 uploadAnalise.setAnalise(null);
                 uploadAnalise.setFile(null);
                 detalhe.setResultadoSalvo(null);
-                navigate({ to: "/irp", search: {} });
+                navigate({ to: "/irp", search: { job: undefined } });
               }}
             >
               Nova importação
