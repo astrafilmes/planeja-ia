@@ -219,17 +219,75 @@ export function useImportarPlanilha(options: {
           ReturnType<typeof resolveM2AItemMatch>
         >();
         updateProgress(66, "Relacionando itens com a base do portal...");
+        console.groupCollapsed(
+          `[m2a-import] matching (${parsed.itens.length} itens da planilha × ${syncedItems.length} itens do portal)`,
+        );
+        const matchStats = {
+          auto: 0,
+          ambigua: 0,
+          sem_match: 0,
+          por_ata: {} as Record<string, number>,
+        };
+        const semMatchDetalhe: any[] = [];
         for (const item of parsed.itens) {
+          let debugInfo: any = null;
           const match = resolveM2AItemMatch(
             { ...item, lote: item.lote },
             syncedItems,
+            (d) => {
+              debugInfo = d;
+            },
           );
           itemMatches.set(item.sourceRow, match);
           assignments.set(
             item.sourceRow,
             match?.status === "auto" ? match.item.id_ata : null,
           );
+          const status = match?.status ?? "sem_match";
+          matchStats[status] = (matchStats[status] ?? 0) + 1;
+          if (match?.status === "auto") {
+            const ataNum = match.item.ata?.numero_ata ?? match.item.id_ata;
+            matchStats.por_ata[ataNum] = (matchStats.por_ata[ataNum] ?? 0) + 1;
+          }
+          if (!match || match.status !== "auto") {
+            semMatchDetalhe.push({
+              linha: item.sourceRow,
+              lote: item.lote,
+              numeroItem: item.numeroItem,
+              ordemItem: item.ordemItem,
+              empresa: item.empresa,
+              descricao: (item.descricao ?? "").slice(0, 60),
+              debug: debugInfo,
+            });
+          }
         }
+        console.log("[m2a-import] resumo do match:", matchStats);
+        if (semMatchDetalhe.length > 0) {
+          console.warn(
+            `[m2a-import] ⚠ ${semMatchDetalhe.length} item(ns) da planilha SEM match automático:`,
+          );
+          console.table(
+            semMatchDetalhe.map((d) => ({
+              linha: d.linha,
+              lote: d.lote,
+              nº: d.numeroItem,
+              ordem: d.ordemItem,
+              empresa: (d.empresa ?? "").slice(0, 30),
+              descricao: d.descricao,
+              numCand: d.debug?.numberMatchesCount ?? 0,
+              descCand: d.debug?.descMatchesCount ?? 0,
+              pool: d.debug?.poolSize ?? 0,
+            })),
+          );
+          for (const d of semMatchDetalhe) {
+            console.log(
+              `  → linha ${d.linha} [${d.lote}] "${d.descricao}"`,
+              d.debug,
+            );
+          }
+        }
+        console.groupEnd();
+
         const totalContratosComAta = countPreviewContractsWithAta(
           parsed.itens,
           assignments,
