@@ -16,7 +16,7 @@ export type ItemRow = {
   valor_total: number | string | null;
   lote: string | null;
   especificacao: string | null;
-  numero_item: string | number | null;
+  numero_item: string | null;
   ordem_item: number | null;
   m2a_item_id: string | null;
   dotacoes: DotacaoRow[];
@@ -96,7 +96,6 @@ export type DocumentoRow = {
   id: string;
   contrato_id: string;
   nome: string | null;
-  url: string | null;
   [key: string]: unknown;
 };
 
