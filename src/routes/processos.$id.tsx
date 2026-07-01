@@ -70,7 +70,7 @@ import {
   Megaphone,
   Send as SendIcon,
 } from"lucide-react";
-import { toast } from"sonner";
+import { notify } from"@/lib/notify";
 import { logAudit } from"@/lib/audit";
 import { useM2ASync } from"@/hooks/useM2ASync";
 import {
@@ -757,14 +757,14 @@ function Page() {
  .from("processos")
  .update(payload)
  .eq("id", id);
- if (error) return toast.error(error.message);
+ if (error) return notify.error(error.message);
  await logAudit({
  action:"update",
  entityType:"processo",
  entityId: id,
  payload,
  });
- toast.success("Processo atualizado");
+ notify.success("Processo atualizado");
  setDirty(false);
  qc.invalidateQueries({ queryKey: ["processo-detail", id] });
  qc.invalidateQueries({ queryKey: ["processos"] });
@@ -775,9 +775,9 @@ function Page() {
  .from("processos")
  .update({ deleted_at: new Date().toISOString() })
  .eq("id", id);
- if (error) return toast.error(error.message);
+ if (error) return notify.error(error.message);
  await logAudit({ action:"delete", entityType:"processo", entityId: id });
- toast.success("Processo excluído");
+ notify.success("Processo excluído");
  qc.invalidateQueries({ queryKey: ["processos"] });
  navigate({ to:"/processos" });
   }
@@ -788,8 +788,8 @@ function Page() {
       .from("contratos")
       .update({ impresso_assinado: next })
       .eq("id", c.id);
-    if (error) return toast.error(error.message);
-    toast.success(next ?"Marcado como impresso/assinado" :"Desmarcado");
+    if (error) return notify.error(error.message);
+    notify.success(next ?"Marcado como impresso/assinado" :"Desmarcado");
     qc.invalidateQueries({ queryKey: ["processo-detail", id] });
     qc.invalidateQueries({ queryKey: ["contratos"] });
   }
@@ -803,8 +803,8 @@ function Page() {
         publicado_at: next ? new Date().toISOString() : null,
       })
       .eq("id", c.id);
-    if (error) return toast.error(error.message);
-    toast.success(next ?"Marcado como publicado" :"Desmarcado");
+    if (error) return notify.error(error.message);
+    notify.success(next ?"Marcado como publicado" :"Desmarcado");
     qc.invalidateQueries({ queryKey: ["processo-detail", id] });
     qc.invalidateQueries({ queryKey: ["contratos"] });
   }
@@ -823,12 +823,12 @@ function Page() {
  });
  },
  onSuccess: (_d, ids) => {
- toast.success(`${ids.length} contrato(s) excluído(s)`);
+ notify.success(`${ids.length} contrato(s) excluído(s)`);
  setSelected(new Set());
  qc.invalidateQueries({ queryKey: ["processo-detail", id] });
  qc.invalidateQueries({ queryKey: ["contratos"] });
  },
- onError: (e: any) => toast.error(e.message ??"Falha ao excluir"),
+ onError: (e: any) => notify.error(e.message ??"Falha ao excluir"),
  });
 
  function toggleAll(checked: boolean) {
@@ -846,28 +846,28 @@ function Page() {
  function validateM2AConfig() {
  const ids = Array.from(selected);
  if (ids.length === 0) {
- toast.error("Nenhum contrato selecionado.");
+ notify.error("Nenhum contrato selecionado.");
  return null;
  }
  if (shouldAskFiscal && !m2aFiscalId) {
- toast.error("Selecione o fiscal do contrato.");
+ notify.error("Selecione o fiscal do contrato.");
  return null;
  }
  if (!m2aContratoData) {
- toast.error("Informe a data do contrato.");
+ notify.error("Informe a data do contrato.");
  return null;
  }
  if (
  !data?.processo?.m2a_url ||
  !extractM2AProcessoId(data.processo.m2a_url)
  ) {
- toast.error("Processo sem URL externa válida.", {
+ notify.error("Processo sem URL externa válida.", {
  description:"Informe e salve o link do processo no portal antes de enviar contratos.",
  });
  return null;
  }
  if (shouldAskFiscal && !isNumericM2AId(m2aFiscalId)) {
- toast.error("IDs externos inválidos.", {
+ notify.error("IDs externos inválidos.", {
  description:"Fiscal deve usar apenas código numérico.",
  });
  return null;
@@ -890,7 +890,7 @@ function Page() {
  !isNumericM2AId(contrato.m2a_gestor_codigo),
  );
  if (invalidos.length > 0) {
- toast.error("Contrato sem cadastro externo completo.", {
+ notify.error("Contrato sem cadastro externo completo.", {
  description:"A secretaria do contrato precisa ter Unidade Gestora, Órgão da Dotação, UO, Dotação e Gestor cadastrados.",
  });
  console.table(
@@ -912,7 +912,7 @@ function Page() {
  (contrato) => contrato.itens.length === 0,
  );
  if (semItens.length > 0) {
- toast.error("Contrato sem itens para envio.", {
+ notify.error("Contrato sem itens para envio.", {
  description:"A automação precisa dos itens importados para adicionar e ajustar quantidades.",
  });
  console.table(
@@ -929,7 +929,7 @@ function Page() {
  !contrato.m2a_ata_id || !isNumericM2AId(contrato.m2a_ata_id),
  );
  if (semAta.length > 0) {
- toast.error("Contrato sem ata definida.", {
+ notify.error("Contrato sem ata definida.", {
  description:"Revise a importação: cada contrato precisa carregar a ata correta dos seus itens.",
  });
  console.table(
@@ -982,7 +982,7 @@ function Page() {
  const payload = buildM2APayload(config.ids[0]);
  if (!payload) return;
 
- toast.info("Diagnóstico iniciado. Veja o console da aba do portal.");
+ notify.info("Diagnóstico iniciado. Veja o console da aba do portal.");
  diagnoseM2A(payload as any);
  }
 
@@ -997,7 +997,7 @@ function Page() {
  startTask("Enviando contratos ao portal",
  `Preparando ${config.ids.length} contrato(s)...`,
  );
- toast.info(
+ notify.info(
  `Iniciando envio sequencial de ${config.ids.length} contrato(s)...`,
  );
 
@@ -1008,7 +1008,7 @@ function Page() {
  if (dataError) {
  setSending(false);
  failTask(dataError.message);
- toast.error("Falha ao salvar a data dos contratos.", {
+ notify.error("Falha ao salvar a data dos contratos.", {
  description: dataError.message,
  });
  return;
@@ -1045,7 +1045,7 @@ function Page() {
  }
 
  setSending(false);
- toast.success(
+ notify.success(
  `${config.ids.length} envio(s) iniciado(s) no worker M2A.`,
  );
  qc.invalidateQueries({ queryKey: ["processo-detail", id] });
@@ -1054,7 +1054,7 @@ function Page() {
  async function handleDownloadContratoDocs(contrato: ContratoRow) {
  const docs = getContratoDocumentos(contrato);
  if (!docs.length) {
- toast.error("Este contrato ainda não possui convocação ou contrato.");
+ notify.error("Este contrato ainda não possui convocação ou contrato.");
  return;
  }
  startTask("Compactando documentos",
@@ -1069,7 +1069,7 @@ function Page() {
  if (e.status ==="erro") failTask(e.mensagem ??"Falha ao gerar ZIP");
  });
  } catch (err: any) {
- toast.error(err?.message ??"Falha ao gerar ZIP");
+ notify.error(err?.message ??"Falha ao gerar ZIP");
  }
  }
 
@@ -1077,7 +1077,7 @@ function Page() {
  const docs = selectedContracts.flatMap(getContratoDocumentos);
  if (!selected.size) return;
  if (!docs.length) {
- toast.error("Nenhuma convocação ou contrato encontrado nos contratos selecionados.",
+ notify.error("Nenhuma convocação ou contrato encontrado nos contratos selecionados.",
  );
  return;
  }
@@ -1093,7 +1093,7 @@ function Page() {
  if (e.status ==="erro") failTask(e.mensagem ??"Falha ao gerar ZIP");
  });
  } catch (err: any) {
- toast.error(err?.message ??"Falha ao gerar ZIP");
+ notify.error(err?.message ??"Falha ao gerar ZIP");
  }
  }
 

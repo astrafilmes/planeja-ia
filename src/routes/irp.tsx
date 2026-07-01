@@ -46,7 +46,7 @@ import {
  DialogTitle,
 } from"@/components/ui/dialog";
 import { Upload, FileSpreadsheet, Download, Package, Send } from"lucide-react";
-import { toast } from"sonner";
+import { notify } from"@/lib/notify";
 import {
  listenM2AProcessCreationProgress,
  requestM2AProcessCreation,
@@ -378,7 +378,7 @@ function Page() {
    try {
      const { error } = await supabase.from("irp_jobs").delete().eq("id", id);
      if (error) throw error;
-     toast.success("Importação excluída.");
+     notify.success("Importação excluída.");
      if (jobId === id) {
        setJobId(null);
        setResultadoSalvo(null);
@@ -387,7 +387,7 @@ function Page() {
      }
      qc.invalidateQueries({ queryKey: ["irp-jobs-list"] });
    } catch (e: any) {
-     toast.error("Falha ao excluir", { description: e?.message });
+     notify.error("Falha ao excluir", { description: e?.message });
    }
  }
 
@@ -413,7 +413,7 @@ function Page() {
  .catch((e: any) => {
  if (cancelled) return;
  failTask(e?.message ??"Falha ao carregar resultado IRP.");
- toast.error("Falha ao carregar resultado", { description: e?.message });
+ notify.error("Falha ao carregar resultado", { description: e?.message });
  })
  .finally(() => {
  if (!cancelled) setBusy(false);
@@ -657,7 +657,7 @@ function Page() {
 
  async function baixarArquivoSalvo(arquivo?: AppFile | null) {
  if (!arquivo) {
- toast.error("Arquivo nao encontrado no historico.");
+ notify.error("Arquivo nao encontrado no historico.");
  return;
  }
  setBusy(true);
@@ -672,7 +672,7 @@ function Page() {
  }
  saveAs(await response.blob(), arquivo.original_name);
  } catch (e: any) {
- toast.error("Falha ao baixar arquivo", { description: e?.message });
+ notify.error("Falha ao baixar arquivo", { description: e?.message });
  } finally {
  setBusy(false);
  }
@@ -751,10 +751,10 @@ function Page() {
  });
  setProgress(100);
  finishTask(`Planilha analisada: ${a.resultados.length} unidade(s).`);
- toast.success(`Planilha analisada: ${a.resultados.length} unidades`);
+ notify.success(`Planilha analisada: ${a.resultados.length} unidades`);
  } catch (e: any) {
  failTask(e?.message ??"Falha na análise IRP.");
- toast.error("Falha na análise", { description: e?.message });
+ notify.error("Falha na análise", { description: e?.message });
  } finally {
  setBusy(false);
  setTimeout(() => setProgress(0), 800);
@@ -801,10 +801,10 @@ function Page() {
  entityId: jobId,
  });
  finishTask("Arquivo .zip gerado com sucesso.");
- toast.success("Arquivo .zip gerado");
+ notify.success("Arquivo .zip gerado");
  } catch (e: any) {
  failTask(e?.message ??"Falha ao gerar zip IRP.");
- toast.error("Falha ao gerar zip", { description: e?.message });
+ notify.error("Falha ao gerar zip", { description: e?.message });
  } finally {
  setBusy(false);
  }
@@ -834,11 +834,11 @@ function Page() {
  function abrirConfirmacaoProcessoM2A() {
  if (!ensureConnected()) return;
  if (!selectedImportRows.length) {
- toast.error("Selecione ao menos uma planilha para importar.");
+ notify.error("Selecione ao menos uma planilha para importar.");
  return;
  }
  if (rowsMissingM2A.length > 0) {
- toast.error("Ha planilhas sem IDs M2A cadastrados.", {
+ notify.error("Ha planilhas sem IDs M2A cadastrados.", {
   description:"Complete Unidade Gestora, Órgão da Dotação e Unidade Orçamentária em /secretarias.",
  });
  return;
@@ -857,7 +857,7 @@ function Page() {
  ([field]) => !String(processoM2AForm[field] ??"").trim(),
  );
  if (missing.length > 0) {
- toast.error("Preencha os dados do processo M2A.", {
+ notify.error("Preencha os dados do processo M2A.", {
  description: missing.map(([, label]) => label).join(","),
  });
  return;
@@ -1016,7 +1016,7 @@ function Page() {
  .eq("id", jobId);
  }
  failTask(evt.mensagem ?? "Envio cancelado.");
- toast.warning("Envio cancelado", { description: evt.mensagem });
+ notify.warning("Envio cancelado", { description: evt.mensagem });
  setBusy(false);
   } else if (evt.type === "done") {
  if (jobId) {
@@ -1081,7 +1081,7 @@ function Page() {
     }
   } catch (err: any) {
     console.error("[irp] falha ao criar processo local", err);
-    toast.warning("Processo M2A criado, mas o registro local falhou", {
+    notify.warning("Processo M2A criado, mas o registro local falhou", {
       description: err?.message ?? "Crie manualmente em Processos se necessário.",
     });
   }
@@ -1091,7 +1091,7 @@ function Page() {
  const okCount = eSRP
    ? `${(evt.totalPlanilhas ?? 0) - (evt.erros?.length ?? 0)}/${evt.totalPlanilhas ?? 0} planilhas OK`
    : `${(evt.totalDfds ?? 0)} DFD(s) criadas · ${evt.erros?.length ?? 0} aviso(s)`;
- toast.success(`${tituloOk} criado no M2A`, {
+ notify.success(`${tituloOk} criado no M2A`, {
  description: `Processo ${evt.processoId} · ${okCount}${processoLocalId ? " · registro local criado" : ""}`,
  });
  setBusy(false);
@@ -1107,7 +1107,7 @@ function Page() {
  .eq("id", jobId);
  }
  failTask(evt.error);
- toast.error("Falha ao criar processo M2A", { description: evt.error });
+ notify.error("Falha ao criar processo M2A", { description: evt.error });
  setBusy(false);
  }
  }
@@ -1115,7 +1115,7 @@ function Page() {
  await runner;
  } catch (e: any) {
  failTask(e?.message ??"Falha ao iniciar criacao do processo M2A.");
- toast.error("Falha ao iniciar processo M2A", { description: e?.message });
+ notify.error("Falha ao iniciar processo M2A", { description: e?.message });
  setBusy(false);
  }
  }

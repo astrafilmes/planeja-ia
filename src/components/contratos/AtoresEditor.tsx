@@ -23,7 +23,7 @@ import {
  AlertDialogTrigger,
 } from"@/components/ui/alert-dialog";
 import { Trash2, Plus, Shield, UserCog, UserCheck } from"lucide-react";
-import { toast } from"sonner";
+import { notify } from"@/lib/notify";
 import { logAudit } from"@/lib/audit";
 import { formatCPF, isValidCPF, onlyDigits } from"@/lib/utils/cpf";
 
@@ -92,9 +92,9 @@ export function AtoresEditor({
  const [showForm, setShowForm] = useState(false);
 
  async function adicionar() {
- if (!form.nome.trim()) return toast.error("Informe o nome");
+ if (!form.nome.trim()) return notify.error("Informe o nome");
  const cpfDigits = onlyDigits(form.cpf);
- if (cpfDigits && !isValidCPF(cpfDigits)) return toast.error("CPF inválido");
+ if (cpfDigits && !isValidCPF(cpfDigits)) return notify.error("CPF inválido");
  setSaving(true);
  const { error } = await supabase.from("contrato_atores").insert({
  contrato_id: contratoId,
@@ -105,7 +105,7 @@ export function AtoresEditor({
  portaria: form.portaria.trim() || null,
  });
  setSaving(false);
- if (error) return toast.error(error.message);
+ if (error) return notify.error(error.message);
  await logAudit({
  action:"create",
  entityType:"contrato_ator",
@@ -120,7 +120,7 @@ export function AtoresEditor({
  portaria:"",
  });
  setShowForm(false);
- toast.success("Servidor adicionado");
+ notify.success("Servidor adicionado");
  onChange();
  }
 
@@ -129,13 +129,13 @@ export function AtoresEditor({
  .from("contrato_atores")
  .delete()
  .eq("id", id);
- if (error) return toast.error(error.message);
+ if (error) return notify.error(error.message);
  await logAudit({
  action:"delete",
  entityType:"contrato_ator",
  entityId: id,
  });
- toast.success("Servidor removido");
+ notify.success("Servidor removido");
  onChange();
  }
 

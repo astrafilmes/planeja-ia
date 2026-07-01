@@ -32,7 +32,7 @@ import {
  TableHeader,
  TableRow,
 } from"@/components/ui/table";
-import { toast } from"sonner";
+import { notify } from"@/lib/notify";
 import {
  Send,
  ArrowLeft,
@@ -224,8 +224,8 @@ function Page() {
      })
      .eq("id", editingItem.id);
    setSavingItem(false);
-   if (error) return toast.error(error.message);
-   toast.success("Item atualizado");
+   if (error) return notify.error(error.message);
+   notify.success("Item atualizado");
    setEditingItem(null);
    refetch();
  }
@@ -237,8 +237,8 @@ function Page() {
      .delete()
      .eq("id", deletingItem.id);
    setSavingItem(false);
-   if (error) return toast.error(error.message);
-   toast.success("Item removido");
+   if (error) return notify.error(error.message);
+   notify.success("Item removido");
    setDeletingItem(null);
    refetch();
  }
@@ -380,7 +380,7 @@ function Page() {
  ultimo_erro_m2a: null,
  })
  .eq("id", id);
- toast.success("Contrato enviado ao portal M2A");
+ notify.success("Contrato enviado ao portal M2A");
  finishTask("Contrato enviado ao portal com sucesso.");
  setEnviando(false);
  refetch();
@@ -389,7 +389,7 @@ function Page() {
  .from("contratos")
  .update({ status_envio_m2a:"erro", ultimo_erro_m2a: e.mensagem })
  .eq("id", id);
- toast.error(e.mensagem);
+ notify.error(e.mensagem);
  failTask(e.mensagem);
  setEnviando(false);
  refetch();
@@ -428,11 +428,11 @@ function Page() {
  if (!contrato) return;
  const numero = editNumeroContrato.trim();
  if (!numero) {
- toast.error("Informe o número do contrato.");
+ notify.error("Informe o número do contrato.");
  return;
  }
  if (editAtaId && !isNumericM2AId(editAtaId)) {
- toast.error("Selecione uma ata válida.");
+ notify.error("Selecione uma ata válida.");
  return;
  }
  const ataSelecionada = editAtaId
@@ -455,10 +455,10 @@ function Page() {
   .eq("id", id);
  setSalvandoM2AConfig(false);
  if (error) {
-  toast.error(error.message);
+  notify.error(error.message);
   return;
  }
- toast.success("Contrato atualizado para envio.");
+ notify.success("Contrato atualizado para envio.");
  await Promise.all([
  qc.invalidateQueries({ queryKey: ["contrato-full", id] }),
  qc.invalidateQueries({ queryKey: ["processo-detail"] }),
@@ -473,10 +473,10 @@ function Page() {
  const m2aId =
  contrato.processo?.m2a_processo_id || extractM2AProcessoId(m2aUrl);
  if (!m2aUrl || !m2aId)
- return toast.error("O processo não tem URL externa configurada.");
+ return notify.error("O processo não tem URL externa configurada.");
  const secretaria = contrato.secretaria;
  if (!secretaria) {
- return toast.error("Contrato sem secretaria vinculada.");
+ return notify.error("Contrato sem secretaria vinculada.");
  }
  const ataId = contrato.contrato.m2a_ata_id;
  const dadosDotacao = {
@@ -496,14 +496,14 @@ function Page() {
  ].filter(Boolean);
 
  if (missing.length) {
- return toast.error("Cadastro externo incompleto", {
+ return notify.error("Cadastro externo incompleto", {
  description: `Complete: ${missing.join(",")}.`,
  });
  }
 
  const dataContrato = contrato.contrato.data;
  if (!dataContrato) {
- return toast.error("Informe a data do contrato antes do envio.");
+ return notify.error("Informe a data do contrato antes do envio.");
  }
 
  let payload;
@@ -523,7 +523,7 @@ function Page() {
  gestorId: preference?.gestor_id ?? secretaria.m2a_gestor_codigo,
  });
  } catch (error) {
- return toast.error((error as Error).message);
+ return notify.error((error as Error).message);
  }
 
  setLogs([]);

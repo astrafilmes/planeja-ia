@@ -16,7 +16,7 @@ import {
  AlertDialogTrigger,
 } from"@/components/ui/alert-dialog";
 import { Archive, Download, FileText, Trash2 } from"lucide-react";
-import { toast } from"sonner";
+import { notify } from"@/lib/notify";
 import { logAudit } from"@/lib/audit";
 import {
  type M2ABulkDownloadDocumento,
@@ -147,7 +147,7 @@ export function DocumentosEditor({
  const { data, error } = await supabase.storage
  .from("contrato-documentos")
  .createSignedUrl(d.storage_path, 60);
- if (error || !data) return toast.error(error?.message ??"Falha");
+ if (error || !data) return notify.error(error?.message ??"Falha");
  triggerUrlDownload(data.signedUrl, downloadName(d.nome));
  }
 
@@ -163,7 +163,7 @@ export function DocumentosEditor({
  if (e.status ==="erro") failTask(e.mensagem ??"Falha ao baixar");
  });
  } catch (err: any) {
- toast.error(err?.message ??"Falha ao baixar documento.");
+ notify.error(err?.message ??"Falha ao baixar documento.");
  }
  return;
  }
@@ -172,7 +172,7 @@ export function DocumentosEditor({
 
  async function baixarZip(docs: DocumentoLista[]) {
  if (!docs.length) {
- toast.error("Nenhum documento disponível para compactar.");
+ notify.error("Nenhum documento disponível para compactar.");
  return;
  }
 
@@ -241,7 +241,7 @@ export function DocumentosEditor({
  });
  } catch (e: any) {
  failTask(e.message ??"Falha ao gerar ZIP");
- toast.error(e.message ??"Falha ao gerar ZIP");
+ notify.error(e.message ??"Falha ao gerar ZIP");
  } finally {
  setDownloadingZip(false);
  }
@@ -253,13 +253,13 @@ export function DocumentosEditor({
  .from("contrato_documentos")
  .delete()
  .eq("id", d.id);
- if (error) return toast.error(error.message);
+ if (error) return notify.error(error.message);
  await logAudit({
  action:"delete",
  entityType:"contrato_documento",
  entityId: d.id,
  });
- toast.success("Documento removido");
+ notify.success("Documento removido");
  setSelected((current) => {
  const next = new Set(current);
  next.delete(`local:${d.id}`);

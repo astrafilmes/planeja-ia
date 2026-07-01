@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Send, Save, Loader2, CheckCircle2, FileText } from "lucide-react";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import {
   listarOrgaosOrdenados,
   getOrgaoMapping,
@@ -161,7 +161,7 @@ export function IrpCabecalhoCard({
         2000,
       );
     } catch (e: any) {
-      toast.error("Falha ao salvar cabeçalho", { description: e?.message });
+      notify.error("Falha ao salvar cabeçalho", { description: e?.message });
     } finally {
       setSaving(false);
     }

@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -98,10 +98,10 @@ function ResetPassword() {
     const { error } = await supabase.auth.updateUser({ password: v.password });
     setSubmitting(false);
     if (error)
-      return toast.error("Não foi possível atualizar a senha", {
+      return notify.error("Não foi possível atualizar a senha", {
         description: error.message,
       });
-    toast.success("Senha redefinida", {
+    notify.success("Senha redefinida", {
       description: "Você já pode entrar com a nova senha.",
     });
     await supabase.auth.signOut();

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import { FileSpreadsheet, Loader2 } from "lucide-react";
 import {
   prepararDadosPautaConsolidada,
@@ -48,7 +48,7 @@ export function PautaConsolidadaExporter({
 
   const handleGenerateXls = async () => {
     setLoading(true);
-    toast.info(`Gerando Pauta Consolidada...`, { id: "pauta-export" });
+    notify.info(`Gerando Pauta Consolidada...`, { id: "pauta-export" });
 
     try {
       // 1) Resolver IDs de processo + (opcional) lista de contratos selecionados
@@ -70,7 +70,7 @@ export function PautaConsolidadaExporter({
       }
 
       if (resolvedProcessoIds.length === 0) {
-        toast.error("Nenhum processo identificado para exportação.", {
+        notify.error("Nenhum processo identificado para exportação.", {
           id: "pauta-export",
         });
         setLoading(false);
@@ -108,7 +108,7 @@ export function PautaConsolidadaExporter({
 
 
       if (allRaw.length === 0) {
-        toast.error("Nenhum dado encontrado para os contratos/processos selecionados.", {
+        notify.error("Nenhum dado encontrado para os contratos/processos selecionados.", {
           id: "pauta-export",
         });
         setLoading(false);
@@ -125,13 +125,13 @@ export function PautaConsolidadaExporter({
 
       await exportarPautaConsolidadaExcel(processes, filename);
 
-      toast.success(
+      notify.success(
         `Pauta Consolidada gerada (${processes.length} aba${processes.length > 1 ? "s" : ""}).`,
         { id: "pauta-export" }
       );
     } catch (e: any) {
       console.error("Error generating pauta:", e);
-      toast.error("Erro ao exportar Pauta Consolidada", {
+      notify.error("Erro ao exportar Pauta Consolidada", {
         description: e.message,
         id: "pauta-export",
       });
