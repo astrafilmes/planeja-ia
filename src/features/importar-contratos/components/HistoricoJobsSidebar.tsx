@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { FileSpreadsheet, Plus, Trash2 } from "lucide-react";
+import { FileSpreadsheet, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,34 +23,22 @@ type Props = {
   activeJobId: string | null;
   onSelectJob: (id: string) => void;
   onDeleteJob: (id: string) => void;
-  onNewImport?: () => void;
 };
 
 /**
- * Lista lateral de importações recentes.
+ * Lista lateral de importações recentes, com destaque para a selecionada e
+ * ação de exclusão por linha (dialog nativo do shadcn).
  */
 export const HistoricoJobsSidebar = memo(function HistoricoJobsSidebar({
   jobs,
   activeJobId,
   onSelectJob,
   onDeleteJob,
-  onNewImport,
 }: Props) {
   return (
     <Card className="overflow-hidden border-border/60">
-      <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
-        <CardTitle className="text-sm">Recentes</CardTitle>
-        {onNewImport && (
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-7 gap-1 px-2 text-[12px]"
-            onClick={onNewImport}
-          >
-            <Plus className="size-3.5" />
-            Nova
-          </Button>
-        )}
+      <CardHeader className="pb-3">
+        <CardTitle>Importações recentes</CardTitle>
       </CardHeader>
       <CardContent className="p-0">
         <div>
@@ -68,7 +56,7 @@ export const HistoricoJobsSidebar = memo(function HistoricoJobsSidebar({
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="truncate text-[13px] font-medium">
-                    {j.empresa ?? "—"}
+                    {j.empresa ?? "-"}
                   </div>
                   <Badge
                     variant={j.status === "autorizado" ? "default" : "secondary"}
@@ -77,7 +65,10 @@ export const HistoricoJobsSidebar = memo(function HistoricoJobsSidebar({
                     {j.status}
                   </Badge>
                 </div>
-                <div className="mt-1 flex gap-3 text-[12px] text-muted-foreground">
+                <div className="truncate text-[13px] text-muted-foreground">
+                  {j.original_filename}
+                </div>
+                <div className="mt-0.5 flex gap-3 text-[12px] text-muted-foreground">
                   <span>{j.total_itens} itens</span>
                   <span>{j.total_contratos_previstos} contratos</span>
                   <span>{formatBRL(j.total_valor)}</span>
