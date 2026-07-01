@@ -2,11 +2,19 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useMemo, useState } from "react";
 import { routeHead } from "@/lib/utils/route-head";
 import { AppShell } from "@/components/layout/AppShell";
-import { EmptyState } from "@/components/layout/EmptyState";
 import { WorkflowGuide } from "@/components/layout/WorkflowGuide";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
+  Clock,
   FileSignature,
   FileText,
   Loader2,
