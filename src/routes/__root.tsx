@@ -10,6 +10,7 @@ import { M2AConnectionProvider } from "@/contexts/M2AConnectionProvider";
 import { ProgressProvider } from "@/contexts/ProgressContext";
 import { GlobalProgressTracker } from "@/components/layout/GlobalProgressTracker";
 import { Toaster } from "@/components/ui/sonner";
+import { GlobalErrorBoundary } from "@/components/system/GlobalErrorBoundary";
 
 function NotFoundComponent() {
   return (
@@ -68,18 +69,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <ProgressProvider>
-          <M2AConnectionProvider>
-            <main id="main-content">
-              <Outlet />
-            </main>
-            <GlobalProgressTracker />
-          </M2AConnectionProvider>
-        </ProgressProvider>
-        <Toaster position="top-right" richColors />
-      </AuthProvider>
-    </QueryClientProvider>
+    <GlobalErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <ProgressProvider>
+            <M2AConnectionProvider>
+              <main id="main-content">
+                <Outlet />
+              </main>
+              <GlobalProgressTracker />
+            </M2AConnectionProvider>
+          </ProgressProvider>
+          <Toaster position="top-right" richColors />
+        </AuthProvider>
+      </QueryClientProvider>
+    </GlobalErrorBoundary>
   );
 }
