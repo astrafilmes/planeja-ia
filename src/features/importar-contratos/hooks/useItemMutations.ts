@@ -28,6 +28,7 @@ export function useItemMutations(options: {
         m2a_item_id?: string | null;
         m2a_ata_numero?: string | null;
         m2a_fornecedor_nome?: string | null;
+        m2a_fornecedor_cnpj?: string | null;
         numero_item?: string | null;
         m2a_match_status?: string;
         m2a_match_score?: number;
@@ -55,6 +56,7 @@ export function useItemMutations(options: {
           m2a_item_id: null,
           m2a_ata_numero: null,
           m2a_fornecedor_nome: null,
+          m2a_fornecedor_cnpj: null,
           m2a_match_status: "manual_sem_ata",
           m2a_match_score: 0,
         });
@@ -88,6 +90,7 @@ export function useItemMutations(options: {
         m2a_item_id: (m2aItem as any)?.m2a_item_id ?? null,
         m2a_ata_numero: (ata as any)?.numero_ata ?? null,
         m2a_fornecedor_nome: (ata as any)?.fornecedor_nome ?? null,
+        m2a_fornecedor_cnpj: (ata as any)?.fornecedor_cnpj ?? null,
         numero_item: (m2aItem as any)?.numero_item ?? item.numero_item ?? null,
         m2a_match_status: m2aItem ? "manual" : "manual_sem_item",
         m2a_match_score: m2aItem ? 100 : 70,

@@ -309,6 +309,7 @@ export interface ContratoPreliminar {
   m2aAtaId: string | null;
   m2aAtaNumero: string | null;
   fornecedorNome: string | null;
+  fornecedorCnpj: string | null;
   secretariaSigla: string;
   dotacao: string;
   refColuna: number;
@@ -330,6 +331,7 @@ export function agruparContratos(
     m2a_ata_id?: string | null;
     m2a_ata_numero?: string | null;
     m2a_fornecedor_nome?: string | null;
+    m2a_fornecedor_cnpj?: string | null;
     m2a_item_id?: string | null;
     numero_item?: string | null;
     ordem_item?: number | null;
@@ -351,7 +353,12 @@ export function agruparContratos(
     if (!item || item.excluido) continue;
     const empresa = (item.empresa ?? "").trim();
     const m2aAtaId = item.m2a_ata_id ?? null;
-    const key = `${empresa}|${d.secretaria_sigla}|${d.dotacao}|${m2aAtaId ?? "sem-ata"}`;
+    // IDENTIDADE DO FORNECEDOR: quando há ata M2A, ela é a fonte de verdade
+    // (mesmo CNPJ). Sem ata, cai no texto da planilha (fallback legado).
+    const fornecedorKey = m2aAtaId
+      ? `ATA::${m2aAtaId}`
+      : `SEM_ATA::${empresa.toLowerCase().replace(/\s+/g, "")}`;
+    const key = `${fornecedorKey}|${d.secretaria_sigla}|${d.dotacao}`;
     if (!map.has(key)) {
       map.set(key, {
         key,
@@ -361,6 +368,9 @@ export function agruparContratos(
         fornecedorNome:
           (item.m2a_fornecedor_nome && item.m2a_fornecedor_nome.trim()) ||
           empresa ||
+          null,
+        fornecedorCnpj:
+          (item.m2a_fornecedor_cnpj && item.m2a_fornecedor_cnpj.trim()) ||
           null,
         secretariaSigla: d.secretaria_sigla,
         dotacao: d.dotacao,

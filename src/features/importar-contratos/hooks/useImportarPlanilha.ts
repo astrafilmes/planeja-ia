@@ -271,6 +271,7 @@ export function useImportarPlanilha(options: {
               m2a_item_id: canApplyMatch ? (match?.item.id_item ?? null) : null,
               m2a_ata_numero: ata?.numero_ata ?? null,
               m2a_fornecedor_nome: ata?.fornecedor?.nome ?? null,
+              m2a_fornecedor_cnpj: ata?.fornecedor?.cnpj ?? null,
               m2a_match_status: match?.status ?? "sem_match",
               m2a_match_score: match?.score ?? 0,
             };

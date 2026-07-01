@@ -271,6 +271,7 @@ export type Database = {
           lote: string | null
           m2a_ata_id: string | null
           m2a_ata_numero: string | null
+          m2a_fornecedor_cnpj: string | null
           m2a_fornecedor_nome: string | null
           m2a_item_id: string | null
           m2a_match_score: number
@@ -294,6 +295,7 @@ export type Database = {
           lote?: string | null
           m2a_ata_id?: string | null
           m2a_ata_numero?: string | null
+          m2a_fornecedor_cnpj?: string | null
           m2a_fornecedor_nome?: string | null
           m2a_item_id?: string | null
           m2a_match_score?: number
@@ -317,6 +319,7 @@ export type Database = {
           lote?: string | null
           m2a_ata_id?: string | null
           m2a_ata_numero?: string | null
+          m2a_fornecedor_cnpj?: string | null
           m2a_fornecedor_nome?: string | null
           m2a_item_id?: string | null
           m2a_match_score?: number
