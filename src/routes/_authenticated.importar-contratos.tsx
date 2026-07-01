@@ -303,6 +303,7 @@ function Page() {
           </Card>
         )}
 
+        {jobDetail && (
             <div className="flex flex-col gap-4">
               <ImportSummaryBar
                 fornecedoresUnicos={fornecedoresUnicos}
