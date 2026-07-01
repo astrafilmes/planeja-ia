@@ -1,83 +1,122 @@
-# Plano — Desmembramento de `src/routes/secretarias.tsx`
+# Plano — Identificação Determinística de Fornecedor via Ata M2A
 
-Encerrando a Fase 3. Aplicando o mesmo padrão-ouro validado em `contrato-detalhe/` e `irp/`: `lib.ts` + `hooks/` + `components/` + rota puramente orquestradora. Alvo: rota final ~140 linhas.
+## Diagnóstico do problema atual
 
-## Estrutura de arquivos
+Hoje o "fornecedor" de cada contrato preliminar é derivado do texto bruto da coluna **EMPRESA** da planilha. Isso causa duplicidade porque a mesma empresa aparece com grafias diferentes:
+
+- `PAPER JOY` vs `PAPER JOY PAPELARIA LTDA`
+- `CEBRASIL - CEARA BRASIL DISTRIBUIDORA LTDA` vs `CEBRASIL`
+
+Onde o vazamento acontece hoje:
+
+- `src/lib/contratoImport.ts::agruparContratos` (linha 354) — chave do contrato é `${empresa}|${secretaria}|${dotacao}|${m2aAtaId}`. Se a mesma ata aparece com dois textos diferentes de "empresa", vira dois contratos.
+- `src/features/importar-contratos/lib.ts::resolveFornecedorKey` — normaliza o texto da planilha; nunca consulta o CNPJ da ata.
+- `usePrepostosState` e o painel de prepostos agrupam por esse mesmo texto → o usuário vê o mesmo fornecedor duas vezes (screenshot).
+
+O sistema **já** puxa o snapshot M2A (atas + fornecedor + CNPJ) e **já** faz `resolveM2AItemMatch` por número de item. O que falta é **usar a ata como fonte de verdade do fornecedor** e ignorar o texto da planilha para identidade.
+
+## Objetivo
+
+Trocar o eixo de identidade do fornecedor: de **texto livre da planilha** para **ata M2A (CNPJ)**. Consequência: contratos preliminares agrupam por ata, prepostos aparecem uma vez por fornecedor real, contratos nomeados com a razão social oficial.
+
+## Novo fluxo de importação (UX)
 
 ```text
-src/features/secretarias/
-├── lib.ts                              # Types + helpers puros + constantes
-├── hooks/
-│   ├── index.ts                        # Barrel
-│   ├── useSecretariasQuery.ts          # Lista + CPFs (RPC) + enrich
-│   ├── useSecretariaMutations.ts       # save / saveGroup / delete + audit + notify
-│   ├── useSecretariaForm.ts            # Estado do formulário individual (open/editing)
-│   ├── useSecretariaGroupForm.ts       # Estado do formulário de grupo (openGroupEdit)
-│   ├── useSecretariaDeleteDialog.ts    # Estado do AlertDialog de exclusão
-│   └── useSecretariasFilters.ts        # search + statusFilter + expandedGroups + filteredRows + secretariaGroups memoizados
-├── components/
-│   ├── index.ts                        # Barrel
-│   ├── SecretariasToolbar.tsx          # Search input + status Select + Expand/Collapse
-│   ├── SecretariasStatsBar.tsx         # Badges de contagem + hint
-│   ├── SecretariasEmptyState.tsx       # EmptyState padronizado com CTA "Nova"
-│   ├── SecretariaGroupCard.tsx         # Card + Collapsible + header do grupo (com onEditGroup)
-│   ├── SecretariaGroupTable.tsx        # Tabela interna do grupo (memoizada, linhas isoladas)
-│   ├── SecretariaEditDialog.tsx        # Dialog individual (formulário completo)
-│   ├── SecretariaGroupEditDialog.tsx   # Dialog de bulk-edit de grupo
-│   ├── SecretariaDeleteDialog.tsx      # AlertDialog de exclusão
-│   └── ActorSelect.tsx                 # Movido do fim do arquivo (já é dumb)
-└── (rota) src/routes/secretarias.tsx   # Orquestrador puro (~140 linhas)
+1. Usuário cola link do processo M2A + escolhe arquivo
+2. Botão "Sincronizar atas" (executa ANTES do parse)
+   → puxa snapshot: atas, itens, fornecedores (nome + CNPJ)
+   → mostra painel "Atas encontradas": N atas, N itens, N fornecedores únicos
+3. Usuário confirma → parse da planilha
+4. Sistema linka cada linha da planilha a um id_ata (auto por nº item + score)
+5. Tela de revisão mostra:
+   - Itens com match automático (verde)
+   - Itens ambíguos (amarelo) → dropdown com atas candidatas do processo
+   - Itens sem match (vermelho) → dropdown obrigatório antes de autorizar
+6. Ao autorizar: contratos gerados com fornecedor = ata.fornecedor.nome (razão social + CNPJ oficiais)
 ```
 
-## Distribuição de responsabilidades
+Diferença chave: o texto "EMPRESA" da planilha vira apenas **dica de matching**, nunca identidade.
 
-### `lib.ts` — Types + helpers puros
-- **Types:** `Sec`, `EnrichedSec`, `SecretariaGroup`, `GroupForm`, `StatusFilter`.
-- **Constantes:** `EMPTY_SELECT_VALUE`, `KEEP_SELECT_VALUE`.
-- **Helpers puros:** `emptySec`, `normalizeText`, `isNumericM2AId`, `trimOrNull`, `toSecretariaPayload`, `actorPatch`, `pickPrincipal`, `groupRows`.
-- **Helper de RPC:** `syncSecretariaCpfs` (fica no lib porque é I/O puro sem estado React).
+## Mudanças por camada
 
-### Hooks
+### 1. Modelo de dados (migration)
 
-| Hook | Responsabilidade |
-|------|------------------|
-| `useSecretariasQuery` | `useQuery(["secretarias"])` + merge de CPFs via RPC `get_secretarias_cpfs`; expõe `rows`, `enrichedRows` (após join com fiscais/gestores/UGs), `isLoading`. |
-| `useSecretariaMutations` | `save(sec)`, `saveGroup(group, form)`, `remove(sec)` — validação, `supabase.upsert/update/delete`, `syncSecretariaCpfs`, `logAudit`, `notify.*`, `invalidateQueries`. Retorna também `isSaving`. |
-| `useSecretariaForm` | `open`, `editing`, `openNew()`, `openEdit(sec)`, `close()`, `setField(key, value)`. |
-| `useSecretariaGroupForm` | `groupEditing`, `groupForm`, `openGroupEdit(group)`, `close()`, `setField()`. |
-| `useSecretariaDeleteDialog` | `deleting`, `open(sec)`, `close()`. |
-| `useSecretariasFilters` | `search`, `statusFilter`, `expandedGroups`, `toggleGroup`, `expandAll`, `collapseAll`, `filteredRows`, `secretariaGroups` (memoizados). |
+Adicionar em `contrato_import_itens`:
 
-### Components (todos dumb + `React.memo` onde couber)
+- `m2a_fornecedor_cnpj text` — copiado da ata no momento do match
+- índice `(job_id, m2a_ata_id)` para agrupamento rápido
 
-| Componente | Props principais |
-|------------|------------------|
-| `SecretariasToolbar` | `search`, `onSearchChange`, `statusFilter`, `onStatusFilterChange`, `onExpandAll`, `onCollapseAll`, `duplicateCount` |
-| `SecretariasStatsBar` | `groupCount`, `filteredCount`, `totalCount` |
-| `SecretariasEmptyState` | `onNew` |
-| `SecretariaGroupCard` | `group`, `expanded`, `onToggle`, `onEditGroup`, `children` (recebe a tabela) |
-| `SecretariaGroupTable` | `rows`, `fiscaisById`, `gestoresById`, `onEditRow`, `onDeleteRow` — memoizada, linhas em componente interno também `memo` |
-| `SecretariaEditDialog` | `open`, `editing`, `onChange`, `unidades`, `fiscais`, `gestores`, `onSave`, `onCancel`, `isSaving` |
-| `SecretariaGroupEditDialog` | `group`, `form`, `onChange`, `unidades`, `fiscais`, `gestores`, `onSave`, `onCancel`, `isSaving` |
-| `SecretariaDeleteDialog` | `item`, `onConfirm`, `onCancel`, `isDeleting` |
-| `ActorSelect` | (mantém API atual) — apenas realocado |
+Backfill: itens existentes com `m2a_ata_id` recebem CNPJ via join com `m2a_atas`.
 
-### Rota final (`src/routes/secretarias.tsx`)
-- Apenas: `createFileRoute`, `routeHead`, invocação dos 6 hooks, chamadas a `useUnidadesGestoras`/`useServidores`, `useMemo` para `filterServidoresByUnidade` (row/group), JSX distribuindo props aos componentes.
-- Zero regra de negócio inline. Zero `supabase.*` inline. Zero `notify.*` inline.
+Nenhuma mudança em `contrato_import_jobs` / `contrato_import_dotacoes`.
+
+### 2. `src/lib/contratoImport.ts`
+
+**`agruparContratos`** — nova chave de agrupamento:
+
+```text
+antes:  `${empresa}|${secretaria}|${dotacao}|${m2aAtaId}`
+depois: `${m2aAtaId ?? `SEM_ATA::${empresaNorm}`}|${secretaria}|${dotacao}`
+```
+
+- Contratos com ata: agrupados **exclusivamente** por `m2a_ata_id`. Texto "empresa" da planilha é ignorado para identidade.
+- Contratos sem ata (fallback): mantém agrupamento por empresa normalizada para não perder dados legados.
+- `fornecedorNome` no `ContratoPreliminar` passa a ser sempre `item.m2a_fornecedor_nome` quando houver ata; só cai no texto da planilha se `m2aAtaId === null`.
+
+### 3. `src/features/importar-contratos/lib.ts`
+
+- `resolveFornecedorKey(contrato)` → prioridade: `m2aAtaId` > `cnpj_normalizado` > texto normalizado. Retorna `ATA::${id}` quando ata presente.
+- `resolveFornecedorNome(contrato)` → prioridade: `fornecedorNome` (já vem da ata) > texto da planilha.
+- `resolveM2AItemMatch` — inalterado, mas o score passa a favorecer também CNPJ (quando a planilha tiver coluna CNPJ; opcional, se não tiver mantém como está).
+
+### 4. `useImportarPlanilha.ts`
+
+Ao montar `itensInsert` (linha 264), quando `canApplyMatch`:
+
+```ts
+m2a_fornecedor_cnpj: ata?.fornecedor?.cnpj ?? null,
+```
+
+E também popular quando o usuário resolver manualmente um item ambíguo (via `useItemMutations`).
+
+### 5. `useContratosDerivados.ts`
+
+`fornecedoresPrepostoTargets` passa a ser deduplicado pela nova `resolveFornecedorKey` — resultado: uma linha por ata (ou por CNPJ), eliminando as duplicatas do screenshot.
+
+### 6. UI
+
+- **UploadCard**: dividir em dois passos visuais — (a) sincronizar processo, (b) escolher planilha. Botão "Analisar planilha" desabilitado enquanto o snapshot não estiver carregado.
+- **AutorizarGeracaoPanel** (painel de fornecedores/prepostos): passa a exibir `fornecedor.nome` da ata + CNPJ formatado + nº ata.
+- **ItensReviewTable**: coluna "Fornecedor" mostra nome da ata (não da planilha); item sem ata fica destacado com CTA "Selecionar ata".
+- **ContratosPreviewList**: título do contrato = razão social da ata; badge secundária com nº da ata.
+
+### 7. `useItemMutations`
+
+Nova ação `setItemAta(itemId, ataId | null)` que:
+
+- Atualiza `m2a_ata_id`, `m2a_item_id`, `m2a_ata_numero`, `m2a_fornecedor_nome`, `m2a_fornecedor_cnpj`, `m2a_match_status = 'manual'`.
+- Invalida `["cij-detail", jobId]`.
+
+Usada pelos dropdowns de "Selecionar ata" na tela de revisão.
 
 ## Regras inegociáveis mantidas
-- **Design System (Fase 2):** tokens semânticos (`border-border/60`, `bg-muted/40`, `text-muted-foreground`), zero cor hardcoded, `rounded-lg`.
-- **API `notify.*`:** todos os toasts existentes preservados 1:1 (`error`/`success` nos mesmos pontos).
-- **Auditoria:** `logAudit` mantido em `save`/`saveGroup`/`remove` com os mesmos `action`/`entityType`/`payload`.
-- **RPC de CPF:** `syncSecretariaCpfs` continua sendo chamado com a mesma assinatura em save/saveGroup.
-- **Performance:** `SecretariaGroupTable` memoizada; linha isolada em subcomponente `memo` com callbacks estáveis (`useCallback` no orquestrador) — mesmo padrão do `IrpSecretariasTable`.
-- **Typecheck:** meta 0 erros — interfaces explícitas em todos os hooks e componentes.
+
+- Design system: tokens semânticos, zero cor hardcoded.
+- `notify.*` preservado nos mesmos pontos.
+- `logAudit` em cada mutação de match manual.
+- Compatibilidade com jobs antigos (fallback por empresa normalizada quando `m2a_ata_id` for null).
+- Typecheck 0 erros.
 
 ## Divisão de entrega (3 partes)
 
-1. **Parte 1:** `lib.ts` + todos os 6 hooks + `hooks/index.ts`. Typecheck após.
-2. **Parte 2:** 5 componentes visuais (toolbar, statsBar, emptyState, groupCard, groupTable, ActorSelect). Typecheck após.
-3. **Parte 3:** 3 dialogs (edit, groupEdit, delete) + rota orquestradora final. Typecheck + confirmação da redução de linhas.
+1. **Migration + backfill de CNPJ** + ajuste de `agruparContratos` e `resolveFornecedorKey/Nome`. Verificar em jobs existentes que as duplicatas do screenshot colapsam.
+2. **`useImportarPlanilha` + `useItemMutations.setItemAta`** — popular CNPJ e permitir correção manual.
+3. **UI**: UploadCard em 2 passos, AutorizarGeracaoPanel com CNPJ+ata, ItensReviewTable com seletor de ata, ContratosPreviewList com razão social da ata.
+
+## Riscos e mitigação
+
+- **Jobs antigos** sem CNPJ: backfill via `m2a_atas` cobre o histórico; itens que continuarem sem ata (fallback) mantêm comportamento atual.
+- **Ata M2A com fornecedor vazio**: manter fallback para texto da planilha e sinalizar na UI ("fornecedor não informado na ata").
+- **Snapshot demorado**: já é feito hoje; apenas antecipamos a percepção movendo o botão para antes do upload.
 
 Aguardando aprovação para iniciar a Parte 1.
