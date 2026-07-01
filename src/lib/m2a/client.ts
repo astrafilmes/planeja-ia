@@ -56,6 +56,8 @@ export interface M2AProgressEvent {
   numeroLimpo?: string;
   importacoes?: unknown;
   documentosM2A?: M2ADocumentoGerado[];
+  avisos?: Array<{ etapa?: string; mensagem?: string } | string>;
+  aviso?: boolean;
 }
 
 export interface M2ADocumentoGerado {
