@@ -27,6 +27,12 @@ import {
 
 export const Route = createFileRoute("/login")({
   component: Login,
+  // Aceita `?redirect=/rota-privada` — populado pelo guard de `_authenticated`
+  // quando um usuário sem sessão tenta acessar uma rota protegida. Mantido
+  // como string opcional para não quebrar acessos diretos ao /login.
+  validateSearch: (search: Record<string, unknown>) => ({
+    redirect: typeof search.redirect === "string" ? search.redirect : undefined,
+  }),
   head: () =>
     routeHead({
       path: "/login",
@@ -86,6 +92,7 @@ function passwordStrength(pw: string) {
 function Login() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const { redirect: redirectTo } = Route.useSearch();
   const [submitting, setSubmitting] = useState(false);
   const [mode, setMode] = useState<Mode>("auth");
   const [showPw, setShowPw] = useState(false);
@@ -93,8 +100,11 @@ function Login() {
   const [trustDevice, setTrustDevice] = useState(true);
 
   useEffect(() => {
-    if (!loading && user) navigate({ to: "/dashboard" });
-  }, [user, loading, navigate]);
+    if (!loading && user) {
+      // Preserva o destino original quando o usuário chegou aqui via guard.
+      navigate({ to: redirectTo ?? "/dashboard" });
+    }
+  }, [user, loading, navigate, redirectTo]);
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -137,7 +147,7 @@ function Login() {
     }
     setSubmitting(false);
     notify.success("Bem-vindo de volta");
-    navigate({ to: "/dashboard" });
+    navigate({ to: redirectTo ?? "/dashboard" });
   }
 
 
