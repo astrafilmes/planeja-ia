@@ -250,8 +250,7 @@ function Page() {
             <Card className="border-dashed border-border/60">
               <EmptyState
                 icon={Upload}
-                title="Selecione uma importação"
-                description="Escolha um registro recente ou envie uma nova planilha."
+                title="Nenhuma importação selecionada"
               />
             </Card>
           )}
