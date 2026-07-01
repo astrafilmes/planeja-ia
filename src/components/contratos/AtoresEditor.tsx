@@ -154,7 +154,7 @@ export function AtoresEditor({
  return (
  <div
  key={i}
- className="flex flex-col gap-1 rounded-xl border border-border/60 bg-muted/40 p-3 dark:bg-muted/30"
+ className="flex flex-col gap-1 rounded-lg border border-border/60 bg-muted/40 p-3 dark:bg-muted/30"
  >
  <Badge
  variant="outline"
@@ -201,7 +201,7 @@ export function AtoresEditor({
  </div>
 
  {showForm && (
- <div className="flex flex-col gap-3 rounded-xl border border-border/60 bg-muted/40 p-3 dark:bg-muted/30">
+ <div className="flex flex-col gap-3 rounded-lg border border-border/60 bg-muted/40 p-3 dark:bg-muted/30">
  <div className="grid gap-2 md:grid-cols-5">
  <div className="flex flex-col gap-1.5">
  <Label>Tipo</Label>
@@ -282,7 +282,7 @@ export function AtoresEditor({
  e preposto.
  </p>
  ) : (
- <div className="overflow-hidden rounded-xl border border-border/60">
+ <div className="overflow-hidden rounded-lg border border-border/60">
  {atores.map((a) => (
  <div
  key={a.id}

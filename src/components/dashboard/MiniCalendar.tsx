@@ -42,7 +42,7 @@ export function MiniCalendar({
   const todayIso = `${year}-${String(month + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
   return (
-    <div className="rounded-2xl border border-border/50 bg-surface-elevated p-4">
+    <div className="rounded-lg border border-border/50 bg-surface-elevated p-4">
       <div className="mb-3 flex items-baseline justify-between">
         <div>
           <div className="text-[10.5px] font-medium uppercase tracking-[0.14em] text-muted-foreground">

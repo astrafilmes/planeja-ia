@@ -200,7 +200,7 @@ function Dashboard() {
                 {[0, 1, 2, 3].map((i) => (
                   <div
                     key={i}
-                    className="h-32 animate-pulse rounded-3xl bg-muted"
+                    className="h-32 animate-pulse rounded-lg bg-muted"
                   />
                 ))}
               </div>
@@ -316,7 +316,7 @@ function Dashboard() {
             </ChartCard>
 
             {/* Guia rápido — compact, full width */}
-            <Card variant="elevated" className="rounded-3xl border-border/50">
+            <Card variant="elevated" className="rounded-lg border-border/50">
               <CardHeader className="pb-3">
                 <CardTitle className="text-[15px]">Guia rápido</CardTitle>
                 <p className="text-[12px] text-muted-foreground">

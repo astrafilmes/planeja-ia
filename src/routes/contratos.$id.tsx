@@ -681,7 +681,7 @@ function Page() {
  <div className="grid gap-0 lg:grid-cols-[1fr_auto]">
  <div className="flex flex-col gap-2 p-4">
         <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px]">
-          <div className="rounded-xl border border-border/60 bg-muted/40 p-3 dark:bg-muted/30">
+          <div className="rounded-lg border border-border/60 bg-muted/40 p-3 dark:bg-muted/30">
             <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
              Número do contrato
             </p>
@@ -701,7 +701,7 @@ function Page() {
               )}
             </div>
           </div>
-          <div className="rounded-xl border border-border/60 bg-muted/40 p-3 dark:bg-muted/30">
+          <div className="rounded-lg border border-border/60 bg-muted/40 p-3 dark:bg-muted/30">
             <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
               Início vigência
             </p>
@@ -851,7 +851,7 @@ function Page() {
  <div className="flex flex-col gap-3">
  <Progress value={pct} className="h-1.5" />
  {logs.length > 0 && (
- <div className="flex max-h-52 flex-col gap-1 overflow-auto rounded-xl border border-border/60 bg-muted/40 p-3 font-mono text-[11px] dark:bg-muted/30">
+ <div className="flex max-h-52 flex-col gap-1 overflow-auto rounded-lg border border-border/60 bg-muted/40 p-3 font-mono text-[11px] dark:bg-muted/30">
  {logs.map((l, i) => (
  <div
  key={i}
@@ -868,7 +868,7 @@ function Page() {
  </div>
  )}
  {c.ultimo_erro_m2a && (
- <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-2.5 text-[13px] text-red-700 dark:text-red-400">
+ <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-2.5 text-[13px] text-red-700 dark:text-red-400">
  <p className="font-medium mb-0.5 flex items-center gap-1">
  <XCircle className="size-3" /> Último erro
  </p>

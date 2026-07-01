@@ -59,7 +59,7 @@ export function WorkflowGuide({
 }: WorkflowGuideProps) {
 	const wrapperClass = compact
 		? "flex flex-col gap-3"
-		: "mb-6 rounded-xl border border-border/60 bg-card p-4";
+		: "mb-6 rounded-lg border border-border/60 bg-card p-4";
 	const innerClass = compact
 		? "flex flex-col gap-3"
 		: "flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between";

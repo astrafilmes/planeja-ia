@@ -1795,13 +1795,13 @@ function Page() {
  )}
  </div>
  ) : (
- <div className="rounded-xl border border-border/60 bg-muted/40 p-3 text-[13px] text-muted-foreground ">
+ <div className="rounded-lg border border-border/60 bg-muted/40 p-3 text-[13px] text-muted-foreground ">
  Fiscal e gestor serão aplicados a partir do cadastro de cada
  secretaria.
  </div>
  )}
  </div>
- <div className="rounded-xl border border-border/60 bg-muted/40 p-3 text-[13px] text-muted-foreground ">
+ <div className="rounded-lg border border-border/60 bg-muted/40 p-3 text-[13px] text-muted-foreground ">
  <div className="font-medium text-slate-800 ">
  Dados automáticos
  </div>
@@ -1813,7 +1813,7 @@ function Page() {
  </div>
  </div>
  </div>
- <div className="rounded-xl border border-border/60 bg-card p-3 dark:bg-foreground">
+ <div className="rounded-lg border border-border/60 bg-card p-3 dark:bg-foreground">
  <div className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
  Seleção
  </div>

@@ -641,7 +641,7 @@ function Page() {
  </p>
  )}
  </div>
- <div className="col-span-3 flex h-[60px] items-center justify-between rounded-xl border border-border/60 bg-muted/40 px-3 dark:bg-muted/30">
+ <div className="col-span-3 flex h-[60px] items-center justify-between rounded-lg border border-border/60 bg-muted/40 px-3 dark:bg-muted/30">
  <div>
  <div className="text-[13px] font-medium text-foreground/85">
  Numeração automática

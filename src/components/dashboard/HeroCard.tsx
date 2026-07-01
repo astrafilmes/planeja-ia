@@ -17,7 +17,7 @@ export function HeroCard({
   illustration?: ReactNode;
 }) {
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-[#0a1f33] via-[#0d2f3d] to-[#00a7a8] p-7 text-white">
+    <div className="relative overflow-hidden rounded-lg border border-border/40 bg-gradient-to-br from-[#0a1f33] via-[#0d2f3d] to-[#00a7a8] p-7 text-white">
       {/* decorative stars */}
       <svg
         aria-hidden="true"

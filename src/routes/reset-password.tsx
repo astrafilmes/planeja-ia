@@ -140,7 +140,7 @@ function ResetPassword() {
           </p>
         </header>
 
-        <div className="rounded-2xl border border-border/70 bg-card/80 p-6 shadow-[var(--shadow-card)] backdrop-blur-xl">
+        <div className="rounded-lg border border-border/70 bg-card/80 p-6 shadow-[var(--shadow-card)] backdrop-blur-xl">
           {!ready ? (
             <div className="grid place-items-center py-10 text-muted-foreground">
               <Loader2 className="size-5 animate-spin" />

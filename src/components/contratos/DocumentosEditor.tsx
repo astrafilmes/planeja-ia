@@ -284,7 +284,7 @@ export function DocumentosEditor({
 
  return (
  <div className="flex flex-col gap-4">
- <div className="overflow-hidden rounded-xl border border-border/60 bg-card dark:bg-foreground">
+ <div className="overflow-hidden rounded-lg border border-border/60 bg-card dark:bg-foreground">
  <div className="flex flex-col gap-3 border-b border-border/60 px-3 py-3 md:flex-row md:items-center md:justify-between">
  <div className="flex items-center gap-2">
  <Checkbox

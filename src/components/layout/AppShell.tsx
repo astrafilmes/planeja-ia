@@ -160,7 +160,7 @@ function NavList({
                       to={to}
                       onClick={onNavigate}
                       title={label}
-                      className={`group relative flex h-10 items-center justify-center rounded-xl border transition-colors
+                      className={`group relative flex h-10 items-center justify-center rounded-lg border transition-colors
                         ${
                           active
                             ? "border-sidebar-border bg-sidebar-accent/60 text-sidebar-accent-foreground"
@@ -245,7 +245,7 @@ function NavList({
             to={to}
             onClick={onNavigate}
             title={collapsed ? label : undefined}
-            className={`group flex items-center gap-3 rounded-xl border px-3 py-2.5 text-[13px] font-medium transition-colors
+            className={`group flex items-center gap-3 rounded-lg border px-3 py-2.5 text-[13px] font-medium transition-colors
               ${
                 active
                   ? "border-sidebar-border bg-sidebar-accent/60 text-sidebar-accent-foreground"
@@ -365,7 +365,7 @@ export function AppShell({
   const renderBrand = (compact = false) => (
     <div className="px-4 pb-3 pt-5">
       <div className="flex items-center gap-2.5">
-        <div className="grid size-9 shrink-0 place-items-center rounded-xl border border-sidebar-border bg-sidebar-accent/40 text-sm font-bold text-sidebar-accent-foreground">
+        <div className="grid size-9 shrink-0 place-items-center rounded-lg border border-sidebar-border bg-sidebar-accent/40 text-sm font-bold text-sidebar-accent-foreground">
           P
         </div>
         {!compact && (
@@ -383,7 +383,7 @@ export function AppShell({
   );
 
   const renderUserBlock = (compact = false) => (
-    <div className="mx-3 mb-3 mt-2 rounded-2xl border border-sidebar-border bg-sidebar-accent/30 p-2">
+    <div className="mx-3 mb-3 mt-2 rounded-lg border border-sidebar-border bg-sidebar-accent/30 p-2">
       <div className="flex items-center gap-2.5">
         <Avatar className="size-9">
           <AvatarFallback className="bg-gradient-to-br from-accent to-accent-strong text-[11px] font-semibold text-white">

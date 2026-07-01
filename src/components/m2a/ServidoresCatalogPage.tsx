@@ -417,7 +417,7 @@ export function ServidoresCatalogPage({
  </div>
  <div className="flex flex-col gap-2">
  <Label>Unidades Gestoras Vinculadas</Label>
- <div className="grid max-h-72 gap-2 overflow-y-auto rounded-xl border border-border/60 bg-muted/40 p-3 dark:bg-muted/30 md:grid-cols-2">
+ <div className="grid max-h-72 gap-2 overflow-y-auto rounded-lg border border-border/60 bg-muted/40 p-3 dark:bg-muted/30 md:grid-cols-2">
  {unidades.map((unidade) => (
  <label
  key={unidade.id_local}
