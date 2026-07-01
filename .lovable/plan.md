@@ -1,122 +1,75 @@
-# Plano — Identificação Determinística de Fornecedor via Ata M2A
-
-## Diagnóstico do problema atual
-
-Hoje o "fornecedor" de cada contrato preliminar é derivado do texto bruto da coluna **EMPRESA** da planilha. Isso causa duplicidade porque a mesma empresa aparece com grafias diferentes:
-
-- `PAPER JOY` vs `PAPER JOY PAPELARIA LTDA`
-- `CEBRASIL - CEARA BRASIL DISTRIBUIDORA LTDA` vs `CEBRASIL`
-
-Onde o vazamento acontece hoje:
-
-- `src/lib/contratoImport.ts::agruparContratos` (linha 354) — chave do contrato é `${empresa}|${secretaria}|${dotacao}|${m2aAtaId}`. Se a mesma ata aparece com dois textos diferentes de "empresa", vira dois contratos.
-- `src/features/importar-contratos/lib.ts::resolveFornecedorKey` — normaliza o texto da planilha; nunca consulta o CNPJ da ata.
-- `usePrepostosState` e o painel de prepostos agrupam por esse mesmo texto → o usuário vê o mesmo fornecedor duas vezes (screenshot).
-
-O sistema **já** puxa o snapshot M2A (atas + fornecedor + CNPJ) e **já** faz `resolveM2AItemMatch` por número de item. O que falta é **usar a ata como fonte de verdade do fornecedor** e ignorar o texto da planilha para identidade.
+# Plano — Fluxo unificado de Importação com Processo integrado
 
 ## Objetivo
+Transformar o card de importação em um formulário único que já contempla a identidade do **processo administrativo** (existente ou novo) antes de enviar a planilha. Isso elimina o retrabalho de preencher número/objeto no painel "Autorizar geração" e permite que a sincronização com a M2A seja **inteligente**: incremental para processos já conhecidos, completa para novos.
 
-Trocar o eixo de identidade do fornecedor: de **texto livre da planilha** para **ata M2A (CNPJ)**. Consequência: contratos preliminares agrupam por ata, prepostos aparecem uma vez por fornecedor real, contratos nomeados com a razão social oficial.
+## Novo fluxo (UX)
 
-## Novo fluxo de importação (UX)
+Tela `Importar contratos` → `UploadCard` com dois modos, alternáveis por toggle:
 
-```text
-1. Usuário cola link do processo M2A + escolhe arquivo
-2. Botão "Sincronizar atas" (executa ANTES do parse)
-   → puxa snapshot: atas, itens, fornecedores (nome + CNPJ)
-   → mostra painel "Atas encontradas": N atas, N itens, N fornecedores únicos
-3. Usuário confirma → parse da planilha
-4. Sistema linka cada linha da planilha a um id_ata (auto por nº item + score)
-5. Tela de revisão mostra:
-   - Itens com match automático (verde)
-   - Itens ambíguos (amarelo) → dropdown com atas candidatas do processo
-   - Itens sem match (vermelho) → dropdown obrigatório antes de autorizar
-6. Ao autorizar: contratos gerados com fornecedor = ata.fornecedor.nome (razão social + CNPJ oficiais)
-```
+### Modo A — Processo existente
+- `Select` com lista de processos (mesma query `processos` já usada em `AutorizarGeracaoPanel`).
+- Ao selecionar, sistema **auto-preenche** internamente: `numero_processo`, `objeto`, `m2a_processo_id`, `m2a_url` (sem exibir campos editáveis; se faltar `m2a_processo_id`, exibir aviso e pedir o código).
+- Campo `Arquivo (.xlsx)`.
+- Botão **Analisar e importar** → dispara sincronização **incremental**: só busca atas/contratos/itens novos desde `processos.m2a_sync_at`, e detecta se há novas atas para exigir re-análise completa.
 
-Diferença chave: o texto "EMPRESA" da planilha vira apenas **dica de matching**, nunca identidade.
+### Modo B — Novo processo
+- `Input` **Código do processo M2A** (só o número, ex.: `34291`) — não pedir URL completa.
+  - Aceitar também colar URL: extrair com `extractM2AProcessoId`.
+- `Input` **Nº do processo administrativo** (`numero_processo`, ex.: `001/2025`).
+- `Textarea` **Objeto**.
+- `Input date` **Data base do lote** (default hoje).
+- `Arquivo (.xlsx)`.
+- Botão **Analisar e importar** → cria registro em `processos` (rascunho) e dispara sincronização **completa** (atas + itens + snapshot de contratos).
 
-## Mudanças por camada
+Ambos os modos: após submit, comportamento existente (job aparece no histórico, tabs de revisão etc.) permanece igual. O painel **Autorizar geração** deixa de pedir "criar processo / vincular processo / nº base / objeto" — passa a apenas confirmar prepostos e a lista de contratos selecionados, pois o processo já está definido desde o upload.
 
-### 1. Modelo de dados (migration)
+## Comportamento de sincronização
 
-Adicionar em `contrato_import_itens`:
+`useImportarPlanilha` recebe `mode: 'existing' | 'new'` e o `processoId` (existente) ou os campos do novo.
 
-- `m2a_fornecedor_cnpj text` — copiado da ata no momento do match
-- índice `(job_id, m2a_ata_id)` para agrupamento rápido
+- **Existente:**
+  - `syncM2AProcesso({ processoId, incremental: true })`.
+  - Se `atas_upserted > 0` OU `snapshot_upserted > 0` (via retorno de `sync_m2a_snapshot`), tratar como full para os itens novos; caso contrário só atualiza numeração/últimos contratos.
+- **Novo:**
+  - `INSERT` em `processos` com os campos preenchidos + `m2a_processo_id` + `m2a_url` derivada.
+  - `syncM2AProcesso({ processoId: novoId, incremental: false })` — sincronização completa como hoje.
 
-Backfill: itens existentes com `m2a_ata_id` recebem CNPJ via join com `m2a_atas`.
+Nada muda no lado do banco: `sync_m2a_snapshot` já faz upsert idempotente; "incremental" é apenas uma flag no cliente para evitar re-parsear itens quando não há novidade.
 
-Nenhuma mudança em `contrato_import_jobs` / `contrato_import_dotacoes`.
+## Impacto em `AutorizarGeracaoPanel`
 
-### 2. `src/lib/contratoImport.ts`
+Remover da UI:
+- Toggle "Criar novo processo / vincular a existente".
+- Campo `Nº base do processo`, `Objeto`, `Data base` (agora vêm do processo).
+- `Select` de processo existente.
 
-**`agruparContratos`** — nova chave de agrupamento:
+Manter:
+- Prepostos por fornecedor.
+- Lista de contratos selecionados/desmarcados + avisos de sem-ata / sem-cadastro M2A.
+- Botão **Autorizar geração** — passa `processoId` (sempre existente neste ponto) para `useAutorizarGeracao`.
 
-```text
-antes:  `${empresa}|${secretaria}|${dotacao}|${m2aAtaId}`
-depois: `${m2aAtaId ?? `SEM_ATA::${empresaNorm}`}|${secretaria}|${dotacao}`
-```
+## Arquivos afetados
 
-- Contratos com ata: agrupados **exclusivamente** por `m2a_ata_id`. Texto "empresa" da planilha é ignorado para identidade.
-- Contratos sem ata (fallback): mantém agrupamento por empresa normalizada para não perder dados legados.
-- `fornecedorNome` no `ContratoPreliminar` passa a ser sempre `item.m2a_fornecedor_nome` quando houver ata; só cai no texto da planilha se `m2aAtaId === null`.
+**UI**
+- `src/features/importar-contratos/components/UploadCard.tsx` — reescrever com toggle e campos condicionais; validação por modo.
+- `src/features/importar-contratos/components/AutorizarGeracaoPanel.tsx` — remover blocos de processo/objeto/data/numeroBase.
+- `src/routes/_authenticated.importar-contratos.tsx` — estado consolidado (`mode`, `processoId`, `novoProcesso: {codigoM2A, numeroProcesso, objeto, data}`), remover props redundantes de `AutorizarGeracaoPanel`.
 
-### 3. `src/features/importar-contratos/lib.ts`
+**Hooks**
+- `src/features/importar-contratos/hooks/useImportarPlanilha.ts` — receber `{mode, processoId?, novoProcesso?, file}`; criar processo quando `mode==='new'`; chamar sync incremental/completo; salvar `processo_id` e `m2a_url` já no `contrato_import_jobs`.
+- `src/features/importar-contratos/hooks/useAutorizarGeracao.ts` — remover parâmetros de criação de processo; usar `jobDetail.job.processo_id`.
 
-- `resolveFornecedorKey(contrato)` → prioridade: `m2aAtaId` > `cnpj_normalizado` > texto normalizado. Retorna `ATA::${id}` quando ata presente.
-- `resolveFornecedorNome(contrato)` → prioridade: `fornecedorNome` (já vem da ata) > texto da planilha.
-- `resolveM2AItemMatch` — inalterado, mas o score passa a favorecer também CNPJ (quando a planilha tiver coluna CNPJ; opcional, se não tiver mantém como está).
+**Sem migração de schema.** `contrato_import_jobs.processo_id` e `m2a_url` já existem.
 
-### 4. `useImportarPlanilha.ts`
+## Regras invioláveis
+- Design system tokens (nada de cor hardcoded).
+- Zero alteração em RLS/edge functions/`sync_m2a_snapshot`.
+- `notify.*` e `logAudit` mantidos nos mesmos pontos.
+- Retrocompatibilidade: jobs antigos (sem `processo_id`) continuam abrindo — apenas exigem que o usuário vincule antes de autorizar (fallback preservado só nesse caso).
 
-Ao montar `itensInsert` (linha 264), quando `canApplyMatch`:
+## Entrega em 2 partes
+1. **Refactor de UI + estado** (UploadCard novo, remoção dos campos em AutorizarGeracaoPanel, route ajustada).
+2. **Hook** (`useImportarPlanilha` cria processo + sync incremental; `useAutorizarGeracao` simplificado).
 
-```ts
-m2a_fornecedor_cnpj: ata?.fornecedor?.cnpj ?? null,
-```
-
-E também popular quando o usuário resolver manualmente um item ambíguo (via `useItemMutations`).
-
-### 5. `useContratosDerivados.ts`
-
-`fornecedoresPrepostoTargets` passa a ser deduplicado pela nova `resolveFornecedorKey` — resultado: uma linha por ata (ou por CNPJ), eliminando as duplicatas do screenshot.
-
-### 6. UI
-
-- **UploadCard**: dividir em dois passos visuais — (a) sincronizar processo, (b) escolher planilha. Botão "Analisar planilha" desabilitado enquanto o snapshot não estiver carregado.
-- **AutorizarGeracaoPanel** (painel de fornecedores/prepostos): passa a exibir `fornecedor.nome` da ata + CNPJ formatado + nº ata.
-- **ItensReviewTable**: coluna "Fornecedor" mostra nome da ata (não da planilha); item sem ata fica destacado com CTA "Selecionar ata".
-- **ContratosPreviewList**: título do contrato = razão social da ata; badge secundária com nº da ata.
-
-### 7. `useItemMutations`
-
-Nova ação `setItemAta(itemId, ataId | null)` que:
-
-- Atualiza `m2a_ata_id`, `m2a_item_id`, `m2a_ata_numero`, `m2a_fornecedor_nome`, `m2a_fornecedor_cnpj`, `m2a_match_status = 'manual'`.
-- Invalida `["cij-detail", jobId]`.
-
-Usada pelos dropdowns de "Selecionar ata" na tela de revisão.
-
-## Regras inegociáveis mantidas
-
-- Design system: tokens semânticos, zero cor hardcoded.
-- `notify.*` preservado nos mesmos pontos.
-- `logAudit` em cada mutação de match manual.
-- Compatibilidade com jobs antigos (fallback por empresa normalizada quando `m2a_ata_id` for null).
-- Typecheck 0 erros.
-
-## Divisão de entrega (3 partes)
-
-1. **Migration + backfill de CNPJ** + ajuste de `agruparContratos` e `resolveFornecedorKey/Nome`. Verificar em jobs existentes que as duplicatas do screenshot colapsam.
-2. **`useImportarPlanilha` + `useItemMutations.setItemAta`** — popular CNPJ e permitir correção manual.
-3. **UI**: UploadCard em 2 passos, AutorizarGeracaoPanel com CNPJ+ata, ItensReviewTable com seletor de ata, ContratosPreviewList com razão social da ata.
-
-## Riscos e mitigação
-
-- **Jobs antigos** sem CNPJ: backfill via `m2a_atas` cobre o histórico; itens que continuarem sem ata (fallback) mantêm comportamento atual.
-- **Ata M2A com fornecedor vazio**: manter fallback para texto da planilha e sinalizar na UI ("fornecedor não informado na ata").
-- **Snapshot demorado**: já é feito hoje; apenas antecipamos a percepção movendo o botão para antes do upload.
-
-Aguardando aprovação para iniciar a Parte 1.
+Confirma esse fluxo para eu executar?
