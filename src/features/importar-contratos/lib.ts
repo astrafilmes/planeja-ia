@@ -192,14 +192,24 @@ export function resolveM2AItemMatch(
   },
   syncedItems: SyncedAtaItem[],
 ) {
-  const targetNumero =
-    compactNumber(item.numeroItem) || compactNumber(item.ordemItem);
+  // A planilha oscila entre usar a coluna "Nº" (às vezes degenerada — todos
+  // "1") e a coluna "ITEM" (ordem sequencial 1..N). Tratamos ambos como
+  // candidatos válidos para casar contra `numero_item` da tabela mestra do
+  // portal — caso contrário, itens de lotes inteiros ficam órfãos quando o
+  // "Nº" da planilha não corresponde à numeração real da ata.
+  const numeroCandidates = Array.from(
+    new Set(
+      [compactNumber(item.numeroItem), compactNumber(item.ordemItem)].filter(
+        Boolean,
+      ),
+    ),
+  );
 
-  // Fase 1 — match por número (comportamento original).
+  // Fase 1 — match por qualquer candidato de número.
   let pool: SyncedAtaItem[] = [];
-  if (targetNumero) {
-    const numberMatches = syncedItems.filter(
-      (candidate) => compactNumber(candidate.numero_item) === targetNumero,
+  if (numeroCandidates.length > 0) {
+    const numberMatches = syncedItems.filter((candidate) =>
+      numeroCandidates.includes(compactNumber(candidate.numero_item)),
     );
     if (numberMatches.length > 0) {
       const supplierMatchesList = numberMatches.filter((candidate) =>
@@ -234,11 +244,12 @@ export function resolveM2AItemMatch(
   const scored = pool
     .map((candidate) => {
       let score = 40;
-      if (
-        targetNumero &&
-        compactNumber(candidate.numero_item) === targetNumero
-      ) {
+      const candidateNumero = compactNumber(candidate.numero_item);
+      if (numeroCandidates.includes(candidateNumero)) {
         score += 20;
+        // Bônus quando bate com a ordem sequencial exata: sinal muito
+        // confiável quando o "Nº" da planilha é degenerado (todos "1").
+        if (candidateNumero === compactNumber(item.ordemItem)) score += 10;
       }
       if (supplierMatches(item.empresa, candidate.ata?.fornecedor?.nome))
         score += 40;
