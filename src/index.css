@@ -128,6 +128,22 @@
   --sidebar-accent-foreground: oklch(0.32 0.13 195);
   --sidebar-border: oklch(0.94 0.008 240);
   --sidebar-ring: oklch(0.65 0.12 195);
+  /* Brand marketing panel (login aside) */
+  --brand-panel: #0c1020;
+  --brand-panel-foreground: #f8fafc;
+  /* Hero gradient — dashboard hero card */
+  --hero-gradient: linear-gradient(135deg, #0a1f33 0%, #0d2f3d 55%, #00a7a8 100%);
+  /* Pastel tonal chips (StatChip / Badge / Chip) */
+  --chip-teal: #ddf4f4;
+  --chip-teal-foreground: #007879;
+  --chip-pink: #fce7f0;
+  --chip-pink-foreground: #b83260;
+  --chip-blue: #e3f0ff;
+  --chip-blue-foreground: #1d4ed8;
+  --chip-green: #dcf6e6;
+  --chip-green-foreground: #0f8a3d;
+  --chip-amber: #fff1d6;
+  --chip-amber-foreground: #b45309;
 }
 
 .dark {
