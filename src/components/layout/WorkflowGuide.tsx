@@ -54,6 +54,7 @@ const defaultSteps: WorkflowStep[] = [
 
 export function WorkflowGuide({
 	title = "Fluxo recomendado",
+	subtitle,
 	steps = defaultSteps,
 	aside,
 	compact = false,
@@ -77,10 +78,11 @@ export function WorkflowGuide({
 							<h2 className="text-sm font-semibold text-foreground">
 								{title}
 							</h2>
-							<p className="line-clamp-2 text-sm text-muted-foreground">
-								Use esta sequência para sair da planilha e chegar ao contrato
-								enviado, sem voltar procurando a próxima etapa.
-							</p>
+							{subtitle && (
+								<p className="line-clamp-2 text-sm text-muted-foreground">
+									{subtitle}
+								</p>
+							)}
 						</div>
 					</div>
 				)}
