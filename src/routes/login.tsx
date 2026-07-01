@@ -211,21 +211,21 @@ function Login() {
         />
 
         <div className="relative flex items-center gap-3 animate-fade-in">
-          <div className="grid size-11 place-items-center rounded-lg bg-gradient-to-br from-accent-strong to-accent font-semibold text-white">
+          <div className="grid size-11 place-items-center rounded-lg bg-gradient-to-br from-accent-strong to-accent font-semibold text-brand-panel-foreground">
             P
           </div>
           <div className="leading-tight">
             <div className="text-[15px] font-semibold tracking-tight">
               Planejamento
             </div>
-            <div className="text-[12px] text-white/55">
+            <div className="text-[12px] text-brand-panel-foreground/55">
               Contratações Públicas
             </div>
           </div>
         </div>
 
         <div className="relative flex max-w-lg flex-col gap-7 animate-fade-in">
-          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-white/75 backdrop-blur">
+          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-brand-panel-foreground/10 bg-brand-panel-foreground/5 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-brand-panel-foreground/75 backdrop-blur">
             <Sparkles className="size-3 text-accent-strong" /> Plataforma institucional
           </span>
           <h1
@@ -235,7 +235,7 @@ function Login() {
             Onde processos, contratos e o{" "}
             <em className="bg-gradient-to-r from-accent-strong to-accent bg-clip-text text-transparent not-italic">fluxo IRP</em> convergem com clareza.
           </h1>
-          <p className="max-w-md text-[15px] leading-relaxed text-white/65">
+          <p className="max-w-md text-[15px] leading-relaxed text-brand-panel-foreground/65">
             Importação automática de planilhas, geração por secretaria,
             numeração transacional e auditoria completa — em uma única
             plataforma elegante e segura.
@@ -249,7 +249,7 @@ function Login() {
             ].map((s, i) => (
               <div
                 key={s.l}
-                className={`rounded-lg border border-white/10 bg-white/[0.04] px-3 py-3 backdrop-blur transition-all hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.07] animate-fade-in stagger-${i + 1}`}
+                className={`rounded-lg border border-brand-panel-foreground/10 bg-brand-panel-foreground/[0.04] px-3 py-3 backdrop-blur transition-all hover:-translate-y-0.5 hover:border-brand-panel-foreground/20 hover:bg-brand-panel-foreground/[0.07] animate-fade-in stagger-${i + 1}`}
               >
                 <div
                   className="text-2xl tracking-tight"
@@ -257,14 +257,14 @@ function Login() {
                 >
                   {s.n}
                 </div>
-                <div className="mt-0.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-white/45">
+                <div className="mt-0.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-brand-panel-foreground/45">
                   {s.l}
                 </div>
               </div>
             ))}
           </div>
 
-          <ul className="mt-2 grid gap-2 text-[13px] text-white/75">
+          <ul className="mt-2 grid gap-2 text-[13px] text-brand-panel-foreground/75">
             {[
               "Integração automática com o portal M2A",
               "Numeração transacional por secretaria e ano",
@@ -278,10 +278,10 @@ function Login() {
           </ul>
         </div>
 
-        <div className="relative flex items-center justify-between text-[11.5px] uppercase tracking-[0.2em] text-white/45">
+        <div className="relative flex items-center justify-between text-[11.5px] uppercase tracking-[0.2em] text-brand-panel-foreground/45">
           <span>© {new Date().getFullYear()} Setor de Planejamento</span>
           <span className="inline-flex items-center gap-1.5">
-            <ShieldCheck className="size-3.5 text-emerald-400" /> Conexão segura
+            <ShieldCheck className="size-3.5 text-success" /> Conexão segura
           </span>
         </div>
       </aside>
@@ -298,7 +298,7 @@ function Login() {
         />
 
         <div className="mb-7 flex items-center gap-2.5 lg:hidden">
-          <div className="grid size-9 place-items-center rounded-lg bg-gradient-to-br from-accent-strong to-accent text-white">
+          <div className="grid size-9 place-items-center rounded-lg bg-gradient-to-br from-accent-strong to-accent text-brand-panel-foreground">
             <Building2 className="size-4" />
           </div>
           <span className="font-semibold tracking-tight">Planejamento</span>
