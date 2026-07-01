@@ -624,16 +624,44 @@ async function fetchAtaFornecedorFromDetail(idAta, trace) {
     // 3) CNPJ presente em qualquer lugar
     const cnpjMatch = cleanTextValue($("body").text()).match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/);
     if (cnpjMatch) cnpj = cnpjMatch[0];
+
+    // 4) SITUAÇÃO da ata (Vigente / Expirada / Cancelado / Anulado / Suspenso ...).
+    // Extraída do widget "Situação" no cabeçalho de detalhe da ata.
+    let situacao = "";
+    $(".kt-widget__title, .kt-widget12__desc, label, dt, th, strong, b").each((_, el) => {
+      const t = cleanTextValue($(el).text());
+      if (/^situa/i.test(t)) {
+        const candidatos = [
+          $(el).next(),
+          $(el).parent().find(".kt-widget__value").last(),
+          $(el).siblings().last(),
+        ];
+        for (const c of candidatos) {
+          if (!c || !c.length) continue;
+          const v = cleanTextValue(c.text?.() || "");
+          if (v && v.length < 40) { situacao = v; return false; }
+        }
+      }
+    });
+    const cancelada = /cancelad|anulad|suspenso|revogad/i.test(situacao);
+
     traceStep(trace, {
       fase: "ata-detalhe",
-      label: "fornecedor extraído do detalhe da ata",
+      label: "detalhe da ata",
       id_ata: idAta,
       url,
       status,
       fornecedor: nome || null,
       cnpj: cnpj || null,
+      situacao: situacao || null,
+      cancelada,
     });
-    if (nome || cnpj) return { nome, cnpj: cnpj || undefined };
+    return {
+      nome: nome || "",
+      cnpj: cnpj || undefined,
+      situacao: situacao || null,
+      cancelada,
+    };
   } catch (err) {
     traceStep(trace, {
       fase: "ata-detalhe",
@@ -999,27 +1027,38 @@ async function runCascata(processoId) {
 
   // FASE 3 — Vínculos + contratos por ata
   const resultados = await mapWithConcurrency(atas, SYNC_CONCURRENCY, async (ata) => {
+    // Detalhe da ata SEMPRE — para descobrir Situação (Cancelada/Anulada/Suspensa).
+    // Atas canceladas ainda entregam contratos (para numeração), mas seus vínculos
+    // de itens são descartados, liberando os itens para a próxima ata válida.
+    const detalhe = await fetchAtaFornecedorFromDetail(ata.id_ata, trace);
+    ata.situacao = detalhe?.situacao ?? null;
+    ata.cancelada = !!detalhe?.cancelada;
+    if (!ata.fornecedor) ata.fornecedor = { nome: "", cnpj: undefined };
+    if (detalhe?.nome && !(ata.fornecedor.nome || "").trim()) ata.fornecedor.nome = detalhe.nome;
+    if (detalhe?.cnpj && !(ata.fornecedor.cnpj || "")) ata.fornecedor.cnpj = detalhe.cnpj;
+
+    const vinculosPromise = ata.cancelada
+      ? Promise.resolve([])
+      : fetchVinculosDaAta(ata, mapaMestraPorOrdem, trace);
     const [vinculos, contratos] = await Promise.all([
-      fetchVinculosDaAta(ata, mapaMestraPorOrdem, trace),
+      vinculosPromise,
       fetchContratosDaAta(ata, trace),
     ]);
+    if (ata.cancelada) {
+      traceStep(trace, {
+        fase: "vinculos",
+        label: "ata cancelada — vínculos ignorados",
+        id_ata: ata.id_ata,
+        numero_ata: ata.numero_ata,
+        situacao: ata.situacao,
+        contratos: contratos.length,
+      });
+    }
     return { ata, vinculos, contratos };
   });
 
-  // Enriquecimento de fornecedor: contratos no portal M2A são listados POR ata,
-  // então herdamos o fornecedor da ata sempre que o contrato não trouxer coluna própria.
-  // Se a própria ata estiver sem fornecedor, buscamos a página de detalhe da ata
-  // (/ata_registro_precos/{id}) para tentar extrair nome e CNPJ.
+  // Enriquecimento adicional de fornecedor (herda para contratos sem coluna própria).
   for (const r of resultados) {
-    if (!r.ata.fornecedor) r.ata.fornecedor = { nome: "", cnpj: undefined };
-    const nomeAta = (r.ata.fornecedor?.nome || "").trim();
-    const cnpjAta = (r.ata.fornecedor?.cnpj || "").trim?.() || r.ata.fornecedor?.cnpj || "";
-    const algumContratoSemForn = r.contratos.some((c) => !(c.fornecedor_nome || "").trim());
-    if (!nomeAta || (algumContratoSemForn && !cnpjAta)) {
-      const detalhe = await fetchAtaFornecedorFromDetail(r.ata.id_ata, trace);
-      if (detalhe?.nome && !nomeAta) r.ata.fornecedor.nome = detalhe.nome;
-      if (detalhe?.cnpj && !cnpjAta) r.ata.fornecedor.cnpj = detalhe.cnpj;
-    }
     const nomeFinal = (r.ata.fornecedor?.nome || "").trim();
     const cnpjFinal = (r.ata.fornecedor?.cnpj || "").trim?.() || r.ata.fornecedor?.cnpj || "";
     if (nomeFinal || cnpjFinal) {
@@ -1031,14 +1070,13 @@ async function runCascata(processoId) {
   }
 
   // Payload compatível com sync_m2a_snapshot:
-  // 1 item ÚNICO por ordem da tabela mestra, atrelado à primeira ata válida onde aparece.
-  // Isso evita duplicação. O id_item é determinístico = id_item_mestre.
+  // 1 item ÚNICO por ordem da tabela mestra, atrelado à primeira ata VÁLIDA (não cancelada)
+  // onde aparece. Atas canceladas não recebem itens.
   const primeiraAtaPorOrdem = new Map();
-  // Mapa (id_ata|ordem) -> valor_unitario_contratado (vindo da subtabela da ata).
   const valorContratadoPorAtaOrdem = new Map();
-  // Fallback (ordem) -> primeiro valor contratado encontrado em qualquer ata.
   const valorContratadoPorOrdem = new Map();
   for (const { ata, vinculos } of resultados) {
+    if (ata.cancelada) continue;
     for (const v of vinculos) {
       if (!primeiraAtaPorOrdem.has(v.ordem)) primeiraAtaPorOrdem.set(v.ordem, ata.id_ata);
       const vc = Number(v.valor_unitario_contratado) || 0;

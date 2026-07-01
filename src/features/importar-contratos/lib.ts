@@ -188,27 +188,58 @@ export function resolveM2AItemMatch(
     ordemItem?: number | null;
     descricao?: string;
     valorUnitario?: number;
+    lote?: string | null;
   },
   syncedItems: SyncedAtaItem[],
 ) {
   const targetNumero =
     compactNumber(item.numeroItem) || compactNumber(item.ordemItem);
-  if (!targetNumero) return null;
 
-  const numberMatches = syncedItems.filter(
-    (candidate) => compactNumber(candidate.numero_item) === targetNumero,
-  );
-  if (numberMatches.length === 0) return null;
+  // Fase 1 — match por número (comportamento original).
+  let pool: SyncedAtaItem[] = [];
+  if (targetNumero) {
+    const numberMatches = syncedItems.filter(
+      (candidate) => compactNumber(candidate.numero_item) === targetNumero,
+    );
+    if (numberMatches.length > 0) {
+      const supplierMatchesList = numberMatches.filter((candidate) =>
+        supplierMatches(item.empresa, candidate.ata?.fornecedor?.nome),
+      );
+      pool =
+        supplierMatchesList.length > 0 ? supplierMatchesList : numberMatches;
+    }
+  }
 
-  const supplierMatchesList = numberMatches.filter((candidate) =>
-    supplierMatches(item.empresa, candidate.ata?.fornecedor?.nome),
-  );
-  const pool =
-    supplierMatchesList.length > 0 ? supplierMatchesList : numberMatches;
+  // Fase 2 — fallback por descrição/lote quando o número não bate.
+  // Evita que itens de um lote completo fiquem órfãos apenas porque o
+  // portal e a planilha usam numerações divergentes.
+  if (pool.length === 0 && item.descricao) {
+    const alvoDesc = normalizeText(item.descricao).slice(0, 32);
+    if (alvoDesc.length >= 8) {
+      const descMatches = syncedItems.filter((candidate) => {
+        const desc = normalizeText(candidate.descricao);
+        return desc.includes(alvoDesc) || alvoDesc.includes(desc.slice(0, 32));
+      });
+      if (descMatches.length > 0) {
+        const supplierMatchesList = descMatches.filter((candidate) =>
+          supplierMatches(item.empresa, candidate.ata?.fornecedor?.nome),
+        );
+        pool = supplierMatchesList.length > 0 ? supplierMatchesList : descMatches;
+      }
+    }
+  }
+
+  if (pool.length === 0) return null;
 
   const scored = pool
     .map((candidate) => {
-      let score = 50;
+      let score = 40;
+      if (
+        targetNumero &&
+        compactNumber(candidate.numero_item) === targetNumero
+      ) {
+        score += 20;
+      }
       if (supplierMatches(item.empresa, candidate.ata?.fornecedor?.nome))
         score += 40;
       if (
