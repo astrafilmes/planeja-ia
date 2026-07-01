@@ -309,6 +309,7 @@ export interface ContratoPreliminar {
   m2aAtaId: string | null;
   m2aAtaNumero: string | null;
   fornecedorNome: string | null;
+  fornecedorCnpj: string | null;
   secretariaSigla: string;
   dotacao: string;
   refColuna: number;
