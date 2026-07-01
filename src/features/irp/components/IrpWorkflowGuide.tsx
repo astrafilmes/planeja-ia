@@ -9,6 +9,7 @@ export function IrpWorkflowGuide() {
   return (
     <WorkflowGuide
       title="Fluxo da importação"
+      subtitle="Consolide a IRP, gere o processo-mãe no M2A e siga para contratos."
       steps={[
         {
           label: "Importar",
