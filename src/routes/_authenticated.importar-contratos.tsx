@@ -2,11 +2,19 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useMemo, useState } from "react";
 import { routeHead } from "@/lib/utils/route-head";
 import { AppShell } from "@/components/layout/AppShell";
-import { EmptyState } from "@/components/layout/EmptyState";
 import { WorkflowGuide } from "@/components/layout/WorkflowGuide";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
+  Clock,
   FileSignature,
   FileText,
   Loader2,
@@ -193,6 +201,7 @@ function Page() {
       subtitle="Upload da planilha, revisão e geração em lote"
     >
       <WorkflowGuide
+        subtitle="Envie a planilha, revise os contratos derivados e autorize a geração em lote no M2A."
         steps={[
           {
             label: "Importar",
@@ -222,45 +231,79 @@ function Page() {
         ]}
       />
 
-      <div className="grid gap-5 xl:grid-cols-[300px_1fr]">
-        <div className="flex flex-col gap-4">
-          <HistoricoJobsSidebar
-            jobs={jobs}
-            activeJobId={activeJobId}
-            onSelectJob={setActiveJobId}
-            onDeleteJob={excluirJob}
-            onNewImport={() => setActiveJobId(null)}
-          />
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="text-[13px] text-muted-foreground">
+          {activeJobId
+            ? "Revisando importação selecionada."
+            : "Vincule uma nova planilha ao processo correspondente."}
         </div>
-
-        <div className="min-w-0">
-          {!activeJobId && (
-            <ImportWorkflowCard
-              file={file}
-              onFileChange={setFile}
-              mode={mode}
-              onModeChange={setMode}
-              processos={processos}
-              existingProcessoId={existingProcessoId}
-              onExistingProcessoIdChange={setExistingProcessoId}
-              novo={novo}
-              onNovoChange={onNovoChange}
-              busy={busy}
-              onSubmit={onSubmitImport}
-            />
+        <div className="flex items-center gap-2">
+          {activeJobId && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setActiveJobId(null)}
+            >
+              Nova importação
+            </Button>
           )}
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1.5">
+                <Clock className="size-3.5" />
+                Histórico
+                {jobs.length > 0 && (
+                  <span className="ml-1 rounded bg-muted px-1.5 text-[11px] text-muted-foreground">
+                    {jobs.length}
+                  </span>
+                )}
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-full sm:max-w-md">
+              <SheetHeader>
+                <SheetTitle>Importações recentes</SheetTitle>
+              </SheetHeader>
+              <div className="mt-4">
+                <HistoricoJobsSidebar
+                  jobs={jobs}
+                  activeJobId={activeJobId}
+                  onSelectJob={setActiveJobId}
+                  onDeleteJob={excluirJob}
+                  onNewImport={() => setActiveJobId(null)}
+                />
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
+      </div>
 
+      <div className="mx-auto w-full max-w-3xl">
+        {!activeJobId && (
+          <ImportWorkflowCard
+            file={file}
+            onFileChange={setFile}
+            mode={mode}
+            onModeChange={setMode}
+            processos={processos}
+            existingProcessoId={existingProcessoId}
+            onExistingProcessoIdChange={setExistingProcessoId}
+            novo={novo}
+            onNovoChange={onNovoChange}
+            busy={busy}
+            onSubmit={onSubmitImport}
+          />
+        )}
 
-          {activeJobId && detailFetching && !jobDetail && (
-            <Card className="border-border/60">
-              <CardContent className="py-12 text-center text-[13px] text-muted-foreground">
-                <Loader2 className="mr-2 inline size-5 animate-spin" />
-                Carregando...
-              </CardContent>
-            </Card>
-          )}
+        {activeJobId && detailFetching && !jobDetail && (
+          <Card className="border-border/60">
+            <CardContent className="py-12 text-center text-[13px] text-muted-foreground">
+              <Loader2 className="mr-2 inline size-5 animate-spin" />
+              Carregando...
+            </CardContent>
+          </Card>
+        )}
 
-          {jobDetail && (
+        {jobDetail && (
             <div className="flex flex-col gap-4">
               <ImportSummaryBar
                 fornecedoresUnicos={fornecedoresUnicos}
@@ -332,7 +375,6 @@ function Page() {
               </Tabs>
             </div>
           )}
-        </div>
       </div>
     </AppShell>
   );

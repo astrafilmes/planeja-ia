@@ -1,8 +1,16 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useMemo, useState } from "react";
-import { FileSpreadsheet, Upload } from "lucide-react";
+import { Clock, FileSpreadsheet, Upload } from "lucide-react";
 import { routeHead } from "@/lib/utils/route-head";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { IrpCabecalhoCard } from "@/components/irp/IrpCabecalhoCard";
 import { IrpConfirmacaoProcessoModal } from "@/components/irp/IrpConfirmacaoProcessoModal";
@@ -251,8 +259,59 @@ function Page() {
     <IrpHeader>
       <IrpWorkflowGuide />
 
-      <div className="grid gap-5 xl:grid-cols-[360px_1fr]">
-        <div className="flex flex-col gap-4">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="text-[13px] text-muted-foreground">
+          {jobId || analise
+            ? "Revisando planilha selecionada."
+            : "Envie uma planilha IRP consolidada para começar."}
+        </div>
+        <div className="flex items-center gap-2">
+          {(jobId || analise) && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setJobId(null);
+                uploadAnalise.setAnalise(null);
+                uploadAnalise.setFile(null);
+                detalhe.setResultadoSalvo(null);
+                navigate({ to: "/irp", search: { job: undefined } });
+              }}
+            >
+              Nova importação
+            </Button>
+          )}
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1.5">
+                <Clock className="size-3.5" />
+                Histórico
+                {jobsList.jobs.length > 0 && (
+                  <span className="ml-1 rounded bg-muted px-1.5 text-[11px] text-muted-foreground">
+                    {jobsList.jobs.length}
+                  </span>
+                )}
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-full sm:max-w-md">
+              <SheetHeader>
+                <SheetTitle>Importações recentes</SheetTitle>
+              </SheetHeader>
+              <div className="mt-4">
+                <IrpJobsHistorySidebar
+                  jobs={jobsList.jobs}
+                  activeJobId={jobId}
+                  onSelectJob={handleSelectJob}
+                  onExcluirJob={(id) => void jobsList.excluirIrpJob(id)}
+                />
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
+      </div>
+
+      <div className="mx-auto w-full max-w-3xl">
+        {!jobId && !analise && (
           <IrpUploadCard
             file={uploadAnalise.file}
             busy={uploadAnalise.busy}
@@ -264,123 +323,105 @@ function Page() {
             }}
             onAnalisar={() => void uploadAnalise.handleAnalisar()}
           />
+        )}
 
-          <IrpJobsHistorySidebar
-            jobs={jobsList.jobs}
-            activeJobId={jobId}
-            onSelectJob={handleSelectJob}
-            onExcluirJob={(id) => void jobsList.excluirIrpJob(id)}
-          />
-        </div>
-
-        <div className="min-w-0">
-          {!jobId && !analise && (
-            <Card className="border-dashed border-border/60">
-              <EmptyState
-                icon={Upload}
-                title="Selecione uma importação"
-                description="Escolha um registro recente no histórico ou envie uma nova planilha."
+        {(jobId || analise) && (
+          <Card className="overflow-hidden border-border/60">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2">
+                <FileSpreadsheet className="size-4 text-primary" />
+                {resultadoSalvo && !analise
+                  ? "Resultado salvo"
+                  : "Resultado por secretaria"}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <IrpProcessoM2AProgress
+                visible={enviarM2A.busy}
+                etapa="Envio M2A"
+                mensagem="Acompanhe o progresso detalhado na barra global."
+                percent={0}
               />
-            </Card>
-          )}
 
-          {(jobId || analise) && (
-            <Card className="overflow-hidden border-border/60">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2">
-                  <FileSpreadsheet className="size-4 text-primary" />
-                  {resultadoSalvo && !analise
-                    ? "Resultado salvo"
-                    : "Resultado por secretaria"}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <IrpProcessoM2AProgress
-                  visible={enviarM2A.busy}
-                  etapa="Envio M2A"
-                  mensagem="Acompanhe o progresso detalhado na barra global."
-                  percent={0}
-                />
-
-                {jobId && (analise || resultadoSalvo) && (
-                  <div className="mb-4">
-                    <IrpCabecalhoCard
-                      jobId={jobId}
-                      initialJob={resultadoSalvo?.job ?? null}
-                      form={processoM2AForm}
-                      onChange={setProcessoM2AForm}
-                      onSubmit={enviarM2A.abrirConfirmacaoProcessoM2A}
-                      submitDisabled={cabecalhoSubmitDisabled}
-                      submitHelper={cabecalhoHelper}
-                    />
-                  </div>
-                )}
-
-                {!analise && !resultadoSalvo ? (
-                  <EmptyState
-                    icon={FileSpreadsheet}
-                    title="Nenhuma análise carregada"
-                    description="Envie uma planilha para visualizar os resultados por secretaria."
+              {jobId && (analise || resultadoSalvo) && (
+                <div className="mb-4">
+                  <IrpCabecalhoCard
+                    jobId={jobId}
+                    initialJob={resultadoSalvo?.job ?? null}
+                    form={processoM2AForm}
+                    onChange={setProcessoM2AForm}
+                    onSubmit={enviarM2A.abrirConfirmacaoProcessoM2A}
+                    submitDisabled={cabecalhoSubmitDisabled}
+                    submitHelper={cabecalhoHelper}
                   />
-                ) : analise && analiseSummary ? (
-                  <>
-                    <IrpAnaliseSummary
-                      totalUnidades={analiseSummary.totalUnidades}
-                      comItens={analiseSummary.comItens}
-                      totalItens={analiseSummary.totalItens}
-                      totalQuantidade={analiseSummary.totalQuantidade}
-                      totalValor={analiseSummary.totalValor}
-                    />
-                    <IrpBulkActionsBar
-                      title="Planilhas analisadas"
-                      selectedCount={importRows.selectedImportRows.length}
-                      totalCount={importRows.importableRows.length}
-                      missingCount={importRows.rowsMissingM2A.length}
-                      onBaixarZip={() => void downloads.baixarZip()}
-                      baixarZipDisabled={busy}
-                    />
-                    <IrpSecretariasTable
-                      rows={analiseTableRows}
-                      selectedKeys={importRows.selectedIrpImportIds}
-                      allSelected={importRows.allImportRowsSelected}
-                      showQuantidade
-                      onToggleRow={importRows.toggleIrpImportSelection}
-                      onToggleAll={importRows.toggleAllIrpImportSelection}
-                      onDownload={handleAnaliseDownload}
-                      downloadDisabled={busy}
-                    />
-                  </>
-                ) : resultadoSalvo ? (
-                  <>
-                    <IrpResultadoSalvoCard
-                      job={resultadoSalvo.job}
-                      temZip={!!resultadoSalvo.zipFile}
-                    />
-                    <IrpBulkActionsBar
-                      title="Resultado salvo"
-                      selectedCount={importRows.selectedImportRows.length}
-                      totalCount={importRows.importableRows.length}
-                      missingCount={importRows.rowsMissingM2A.length}
-                      onBaixarZip={() => void downloads.baixarZip()}
-                      baixarZipDisabled={busy || !resultadoSalvo.zipFile}
-                    />
-                    <IrpSecretariasTable
-                      rows={salvoTableRows}
-                      selectedKeys={importRows.selectedIrpImportIds}
-                      allSelected={importRows.allImportRowsSelected}
-                      showCabecalho
-                      onToggleRow={importRows.toggleIrpImportSelection}
-                      onToggleAll={importRows.toggleAllIrpImportSelection}
-                      onDownload={handleSalvoDownload}
-                      downloadDisabled={busy}
-                    />
-                  </>
-                ) : null}
-              </CardContent>
-            </Card>
-          )}
-        </div>
+                </div>
+              )}
+
+              {!analise && !resultadoSalvo ? (
+                <EmptyState
+                  icon={FileSpreadsheet}
+                  title="Nenhuma análise carregada"
+                  description="Envie uma planilha para visualizar os resultados por secretaria."
+                />
+              ) : analise && analiseSummary ? (
+                <>
+                  <IrpAnaliseSummary
+                    totalUnidades={analiseSummary.totalUnidades}
+                    comItens={analiseSummary.comItens}
+                    totalItens={analiseSummary.totalItens}
+                    totalQuantidade={analiseSummary.totalQuantidade}
+                    totalValor={analiseSummary.totalValor}
+                  />
+                  <IrpBulkActionsBar
+                    title="Planilhas analisadas"
+                    selectedCount={importRows.selectedImportRows.length}
+                    totalCount={importRows.importableRows.length}
+                    missingCount={importRows.rowsMissingM2A.length}
+                    onBaixarZip={() => void downloads.baixarZip()}
+                    baixarZipDisabled={busy}
+                  />
+                  <IrpSecretariasTable
+                    rows={analiseTableRows}
+                    selectedKeys={importRows.selectedIrpImportIds}
+                    allSelected={importRows.allImportRowsSelected}
+                    showQuantidade
+                    onToggleRow={importRows.toggleIrpImportSelection}
+                    onToggleAll={importRows.toggleAllIrpImportSelection}
+                    onDownload={handleAnaliseDownload}
+                    downloadDisabled={busy}
+                  />
+                </>
+              ) : resultadoSalvo ? (
+                <>
+                  <IrpResultadoSalvoCard
+                    job={resultadoSalvo.job}
+                    temZip={!!resultadoSalvo.zipFile}
+                  />
+                  <IrpBulkActionsBar
+                    title="Resultado salvo"
+                    selectedCount={importRows.selectedImportRows.length}
+                    totalCount={importRows.importableRows.length}
+                    missingCount={importRows.rowsMissingM2A.length}
+                    onBaixarZip={() => void downloads.baixarZip()}
+                    baixarZipDisabled={busy || !resultadoSalvo.zipFile}
+                  />
+                  <IrpSecretariasTable
+                    rows={salvoTableRows}
+                    selectedKeys={importRows.selectedIrpImportIds}
+                    allSelected={importRows.allImportRowsSelected}
+                    showCabecalho
+                    onToggleRow={importRows.toggleIrpImportSelection}
+                    onToggleAll={importRows.toggleAllIrpImportSelection}
+                    onDownload={handleSalvoDownload}
+                    downloadDisabled={busy}
+                  />
+                </>
+              ) : null}
+            </CardContent>
+          </Card>
+        )}
       </div>
+
 
       <IrpConfirmacaoProcessoModal
         open={enviarM2A.m2aConfirmOpen}
