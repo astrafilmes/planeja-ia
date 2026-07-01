@@ -68,12 +68,12 @@ export function ReminderDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-md w-full rounded-lg border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <DialogContent className="max-w-md w-full rounded-lg border border-border bg-card p-6 shadow-sm">
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold tracking-tight">
             Novo Lembrete
           </DialogTitle>
-          <DialogDescription className="text-sm text-slate-500">
+          <DialogDescription className="text-sm text-muted-foreground">
             {formattedCapitalized}
           </DialogDescription>
         </DialogHeader>
