@@ -179,12 +179,18 @@ export function groupRows(
         sortedRows.map((row) => row.m2a_gestor_codigo).filter(Boolean),
       );
 
+      const title = unidade?.nome ?? principal.nome;
+      const dotacoesLabel = `${sortedRows.length} dotação(ões)`;
+      const subtitle = unidade
+        ? principal.sigla
+          ? `${principal.sigla} · ${dotacoesLabel}`
+          : dotacoesLabel
+        : "Unidade Gestora não vinculada";
+
       return {
         key,
-        title: unidade?.nome ?? principal.nome,
-        subtitle: unidade
-          ? (unidade.nome ?? principal.nome)
-          : "Unidade Gestora não vinculada",
+        title,
+        subtitle,
         unidadeM2AId: unidade?.m2a_id ?? principal.m2a_orgao_id ?? null,
         rows: sortedRows,
         principal,
