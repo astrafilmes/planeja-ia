@@ -19,3 +19,15 @@ export {
   SecretariaGroupTable,
   type SecretariaGroupTableProps,
 } from "./SecretariaGroupTable";
+export {
+  SecretariaEditDialog,
+  type SecretariaEditDialogProps,
+} from "./SecretariaEditDialog";
+export {
+  SecretariaGroupEditDialog,
+  type SecretariaGroupEditDialogProps,
+} from "./SecretariaGroupEditDialog";
+export {
+  SecretariaDeleteDialog,
+  type SecretariaDeleteDialogProps,
+} from "./SecretariaDeleteDialog";
