@@ -28,7 +28,7 @@ export const ContratoKPICard = memo(function ContratoKPICard({
         <div className="flex flex-col gap-2 p-4">
           <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px]">
             <div className="rounded-lg border border-border/60 bg-muted/40 p-3 dark:bg-muted/30">
-              <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <p className="text-[12px] font-medium uppercase tracking-wider text-muted-foreground">
                 Número do contrato
               </p>
               <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -48,7 +48,7 @@ export const ContratoKPICard = memo(function ContratoKPICard({
               </div>
             </div>
             <div className="rounded-lg border border-border/60 bg-muted/40 p-3 dark:bg-muted/30">
-              <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <p className="text-[12px] font-medium uppercase tracking-wider text-muted-foreground">
                 Início vigência
               </p>
               <p className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
@@ -66,7 +66,7 @@ export const ContratoKPICard = memo(function ContratoKPICard({
         </div>
         <div className="grid grid-cols-3 border-t border-border/60 bg-muted/40 dark:bg-muted/30 lg:grid-cols-3 lg:border-l lg:border-t-0">
           <div className="border-r border-border/60 px-4 py-3">
-            <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <p className="text-[12px] font-medium uppercase tracking-wider text-muted-foreground">
               Valor
             </p>
             <p className="text-base font-semibold tabular-nums">
@@ -74,13 +74,13 @@ export const ContratoKPICard = memo(function ContratoKPICard({
             </p>
           </div>
           <div className="border-r border-border/60 px-4 py-3">
-            <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <p className="text-[12px] font-medium uppercase tracking-wider text-muted-foreground">
               Itens
             </p>
             <p className="text-base font-semibold tabular-nums">{itensCount}</p>
           </div>
           <div className="px-4 py-3">
-            <p className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <p className="text-[12px] font-medium uppercase tracking-wider text-muted-foreground">
               Anexos
             </p>
             <p className="text-base font-semibold tabular-nums">

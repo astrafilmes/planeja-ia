@@ -147,7 +147,7 @@ function SecretariaEditDialogImpl({
           />
 
           <div className="rounded-lg border border-border/60 bg-muted/40 p-3 dark:bg-muted/30">
-            <div className="mb-3 flex items-center gap-2 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <div className="mb-3 flex items-center gap-2 text-[12px] font-medium uppercase tracking-wider text-muted-foreground">
               <Layers3 className="size-3.5" />
               Parâmetros externos
             </div>

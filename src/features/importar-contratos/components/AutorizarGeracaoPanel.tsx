@@ -93,7 +93,7 @@ export const AutorizarGeracaoPanel = memo(function AutorizarGeracaoPanel({
           <>
             {/* Processo vinculado (somente leitura) */}
             <div className="flex flex-col gap-2 rounded-lg border border-border/60 bg-muted/40 p-3 dark:bg-muted/30">
-              <div className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <div className="text-[12px] font-medium uppercase tracking-wider text-muted-foreground">
                 Processo vinculado
               </div>
               {processoVinculado ? (
@@ -125,7 +125,7 @@ export const AutorizarGeracaoPanel = memo(function AutorizarGeracaoPanel({
 
             {/* Prepostos por fornecedor */}
             <div className="rounded-lg border border-border/60 bg-card p-3">
-              <div className="mb-2 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <div className="mb-2 text-[12px] font-medium uppercase tracking-wider text-muted-foreground">
                 Preposto por fornecedor
               </div>
               {fornecedoresPrepostoTargets.length === 0 ? (

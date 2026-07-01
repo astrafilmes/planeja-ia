@@ -406,7 +406,7 @@ function Page() {
  <div className="flex max-h-[70vh] flex-col gap-6 overflow-y-auto px-6 py-5">
  {/* Identificação */}
  <section className="flex flex-col gap-3">
- <h3 className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
+ <h3 className="text-[12px] font-medium uppercase tracking-wider text-muted-foreground">
  Identificação
  </h3>
  <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_220px]">
@@ -450,7 +450,7 @@ function Page() {
  </section>
 
  <section className="flex flex-col gap-3">
- <h3 className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
+ <h3 className="text-[12px] font-medium uppercase tracking-wider text-muted-foreground">
  Complementos
  </h3>
  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -473,7 +473,7 @@ function Page() {
  </section>
 
  <section className="flex flex-col gap-3">
- <h3 className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
+ <h3 className="text-[12px] font-medium uppercase tracking-wider text-muted-foreground">
  Integração externa
  </h3>
  <div className="flex flex-col gap-1.5">
