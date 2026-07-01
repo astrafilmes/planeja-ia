@@ -25,7 +25,7 @@ import {
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { HandCoins, Search, Plus, Save, Trash2 } from "lucide-react";
 
-export const Route = createFileRoute("/fornecedores")({
+export const Route = createFileRoute("/_authenticated/fornecedores")({
   component: Page,
   head: () =>
     routeHead({

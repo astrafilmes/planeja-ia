@@ -9,7 +9,7 @@ import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { formatBRL, formatNumber } from "@/lib/utils/normalize";
 import { Eye, History } from "lucide-react";
 
-export const Route = createFileRoute("/historico")({
+export const Route = createFileRoute("/_authenticated/historico")({
   component: Page,
   head: () =>
     routeHead({

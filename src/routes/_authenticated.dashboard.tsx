@@ -32,7 +32,7 @@ import { BentoKPI } from "@/components/dashboard/BentoKPI";
 import { AgendaPanel, AgendaItem } from "@/components/dashboard/AgendaPanel";
 import { ChartCard, ChartTooltip } from "@/components/dashboard/ChartCard";
 
-export const Route = createFileRoute("/dashboard")({
+export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
   head: () =>
     routeHead({

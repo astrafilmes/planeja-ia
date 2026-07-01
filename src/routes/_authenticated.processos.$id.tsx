@@ -39,7 +39,7 @@ import {
   ProcessoVisaoGeralTab,
 } from "@/features/processo-detalhe/components";
 
-export const Route = createFileRoute("/processos/$id")({
+export const Route = createFileRoute("/_authenticated/processos/$id")({
   component: Page,
   head: ({ params }) =>
     routeHead({

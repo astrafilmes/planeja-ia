@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ServidoresCatalogPage } from "@/components/m2a/ServidoresCatalogPage";
 import { routeHead } from "@/lib/utils/route-head";
 
-export const Route = createFileRoute("/gestores")({
+export const Route = createFileRoute("/_authenticated/gestores")({
   component: Page,
   head: () =>
     routeHead({

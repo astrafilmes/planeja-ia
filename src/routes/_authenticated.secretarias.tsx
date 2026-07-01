@@ -25,7 +25,7 @@ import {
 } from "@/features/secretarias/hooks";
 import type { EnrichedSec } from "@/features/secretarias/lib";
 
-export const Route = createFileRoute("/secretarias")({
+export const Route = createFileRoute("/_authenticated/secretarias")({
   component: Page,
   head: () =>
     routeHead({

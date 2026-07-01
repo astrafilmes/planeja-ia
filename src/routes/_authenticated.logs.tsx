@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { ScrollText } from "lucide-react";
 
-export const Route = createFileRoute("/logs")({
+export const Route = createFileRoute("/_authenticated/logs")({
   component: Page,
   head: () =>
     routeHead({

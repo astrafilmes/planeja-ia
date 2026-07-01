@@ -33,7 +33,7 @@ import {
   type IrpSecretariaTableRow,
 } from "@/features/irp/components";
 
-export const Route = createFileRoute("/irp")({
+export const Route = createFileRoute("/_authenticated/irp")({
   validateSearch: (search: Record<string, unknown>) => ({
     job: typeof search.job === "string" ? search.job : undefined,
   }),
