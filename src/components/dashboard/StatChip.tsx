@@ -8,29 +8,29 @@ const toneMap: Record<
   { surface: string; icon: string; ring: string }
 > = {
   indigo: {
-    surface: "bg-[#DDF4F4] dark:bg-[#0e3a3b]",
-    icon: "text-[#00a7a8] dark:text-[#5ee2e3]",
-    ring: "ring-[#00a7a8]/20",
+    surface: "bg-chip-teal",
+    icon: "text-chip-teal-foreground",
+    ring: "ring-chip-teal-foreground/20",
   },
   pink: {
-    surface: "bg-[#FCE7F0] dark:bg-[#4a1f36]",
-    icon: "text-[#D6336C] dark:text-[#f7a8c8]",
-    ring: "ring-[#D6336C]/15",
+    surface: "bg-chip-pink",
+    icon: "text-chip-pink-foreground",
+    ring: "ring-chip-pink-foreground/15",
   },
   blue: {
-    surface: "bg-[#E3F0FF] dark:bg-[#172a48]",
-    icon: "text-[#2563EB] dark:text-[#8fb8ff]",
-    ring: "ring-[#2563EB]/15",
+    surface: "bg-chip-blue",
+    icon: "text-chip-blue-foreground",
+    ring: "ring-chip-blue-foreground/15",
   },
   green: {
-    surface: "bg-[#DCF6E6] dark:bg-[#0f3b2a]",
-    icon: "text-[#16A34A] dark:text-[#7be0a4]",
-    ring: "ring-[#16A34A]/15",
+    surface: "bg-chip-green",
+    icon: "text-chip-green-foreground",
+    ring: "ring-chip-green-foreground/15",
   },
   amber: {
-    surface: "bg-[#FFF1D6] dark:bg-[#3d2f10]",
-    icon: "text-[#D97706] dark:text-[#f7c277]",
-    ring: "ring-[#D97706]/15",
+    surface: "bg-chip-amber",
+    icon: "text-chip-amber-foreground",
+    ring: "ring-chip-amber-foreground/15",
   },
   slate: {
     surface: "bg-muted",

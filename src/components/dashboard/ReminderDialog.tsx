@@ -68,12 +68,12 @@ export function ReminderDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-md w-full rounded-lg border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <DialogContent className="max-w-md w-full rounded-lg border border-border bg-card p-6 shadow-sm">
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold tracking-tight">
             Novo Lembrete
           </DialogTitle>
-          <DialogDescription className="text-sm text-slate-500">
+          <DialogDescription className="text-sm text-muted-foreground">
             {formattedCapitalized}
           </DialogDescription>
         </DialogHeader>
@@ -81,7 +81,7 @@ export function ReminderDialog({
         <div className="grid gap-4 py-2">
           <div className="grid gap-1.5">
             <Label htmlFor="reminder-title" className="flex items-center gap-1.5 normal-case tracking-normal text-[13px] font-medium text-foreground">
-              <Type className="size-3.5 text-slate-400" />
+              <Type className="size-3.5 text-muted-foreground" />
               Título
             </Label>
             <Input
@@ -95,7 +95,7 @@ export function ReminderDialog({
 
           <div className="grid gap-1.5">
             <Label htmlFor="reminder-time" className="flex items-center gap-1.5 normal-case tracking-normal text-[13px] font-medium text-foreground">
-              <Clock className="size-3.5 text-slate-400" />
+              <Clock className="size-3.5 text-muted-foreground" />
               Horário
             </Label>
             <Input
@@ -109,7 +109,7 @@ export function ReminderDialog({
 
           <div className="grid gap-1.5">
             <Label htmlFor="reminder-description" className="flex items-center gap-1.5 normal-case tracking-normal text-[13px] font-medium text-foreground">
-              <AlignLeft className="size-3.5 text-slate-400" />
+              <AlignLeft className="size-3.5 text-muted-foreground" />
               Descrição
             </Label>
             <Textarea
