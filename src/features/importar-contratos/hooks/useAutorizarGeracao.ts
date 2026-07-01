@@ -27,33 +27,25 @@ type JobDetail = {
 };
 
 /**
- * Fluxo completo de autorização/geração de contratos em lote a partir de um
- * `contrato_import_job` em preview. Preserva 100% da lógica original:
- *  - Todas as validações (fornecedores sem preposto, contratos sem ata, cadastro incompleto)
- *  - Numeração automática atômica via `getNextContratoNumbers`
- *  - Upsert de prepostos por fornecedor
- *  - Rollback manual em caso de falha na persistência
- *  - Auditoria e invalidações de cache
- *  - Redirecionamento final para /processos/$id
- *  - Telemetria completa (console.group/time/table)
+ * Autorização/geração de contratos a partir de um job em preview.
+ * O processo vinculado (definido no upload) é a fonte de verdade para
+ * numeroBase, objeto e data. Não há mais criação de processo aqui.
  */
 export function useAutorizarGeracao(options: {
   jobDetail: JobDetail | undefined;
   activeJobId: string | null;
   contratosSelecionados: ContratoPreliminar[];
   contratosSemAtaM2A: ContratoPreliminar[];
-  contratosSemCadastroM2A: Array<{ contrato: ContratoPreliminar; secretaria?: SecretariaM2A | null }>;
+  contratosSemCadastroM2A: Array<{
+    contrato: ContratoPreliminar;
+    secretaria?: SecretariaM2A | null;
+  }>;
   contratosDesmarcados: Set<string>;
   fornecedoresPrepostoTargets: FornecedorPrepostoTarget[];
   fornecedoresSemPreposto: FornecedorPrepostoTarget[];
   prepostosByFornecedor: Record<string, string>;
   secretariasM2A: SecretariaM2A[];
   m2aItens: M2AItemRow[];
-  numeroProcessoBase: string;
-  objetoBatch: string;
-  dataBatch: string;
-  criarProcesso: boolean;
-  processoId: string;
   setBusy: (value: boolean) => void;
 }) {
   const {
@@ -68,11 +60,6 @@ export function useAutorizarGeracao(options: {
     prepostosByFornecedor,
     secretariasM2A,
     m2aItens,
-    numeroProcessoBase,
-    objetoBatch,
-    dataBatch,
-    criarProcesso,
-    processoId,
     setBusy,
   } = options;
 
@@ -85,37 +72,59 @@ export function useAutorizarGeracao(options: {
     console.group("M2A: Geração de Contratos em Lote");
     console.time("ProcessoGeracaoLote");
 
-    // Validações de UI antes de prosseguir
-    console.log("Passo 1: Validando informações do lote...");
-    const numeroBaseContrato = normalizeContratoBase(numeroProcessoBase);
+    const processoIdFinal: string | null =
+      ((jobDetail.job as any).processo_id as string | null) || null;
+    if (!processoIdFinal) {
+      console.timeEnd("ProcessoGeracaoLote");
+      console.groupEnd();
+      return notify.error(
+        "Este job não está vinculado a um processo. Reimporte a planilha.",
+      );
+    }
+
+    // Buscar processo — fonte de verdade para nº base, objeto, data
+    const { data: procRow, error: procErr } = await supabase
+      .from("processos")
+      .select("id, numero_processo, objeto, data_abertura, m2a_url, m2a_processo_id")
+      .eq("id", processoIdFinal)
+      .is("deleted_at", null)
+      .single();
+    if (procErr || !procRow) {
+      console.timeEnd("ProcessoGeracaoLote");
+      console.groupEnd();
+      return notify.error("Falha ao carregar processo vinculado.");
+    }
+
+    const numeroBaseContrato = normalizeContratoBase(
+      procRow.numero_processo ?? "",
+    );
     if (!numeroBaseContrato) {
       console.timeEnd("ProcessoGeracaoLote");
       console.groupEnd();
-      return notify.error("Informe o nº base do processo (ex.: 026/2025)");
-    }
-    if (fornecedoresSemPreposto.length > 0) {
-      console.table(
-        fornecedoresSemPreposto.map((target) => ({
-          fornecedor: target.fornecedorNome,
-          contratos: target.contratos,
-        })),
+      return notify.error(
+        "Processo sem nº base válido (ex.: 026/2025). Edite-o em /processos.",
       );
+    }
+    const objetoBatch = procRow.objeto?.trim() ?? "";
+    if (!objetoBatch) {
+      console.timeEnd("ProcessoGeracaoLote");
+      console.groupEnd();
+      return notify.error("Processo sem objeto definido.");
+    }
+    const dataBatch = procRow.data_abertura;
+    if (!dataBatch || !/^\d{4}-\d{2}-\d{2}$/.test(String(dataBatch))) {
+      console.timeEnd("ProcessoGeracaoLote");
+      console.groupEnd();
+      return notify.error("Processo sem data de abertura definida.");
+    }
+
+    if (fornecedoresSemPreposto.length > 0) {
       console.timeEnd("ProcessoGeracaoLote");
       console.groupEnd();
       return notify.error("Preposto pendente por fornecedor.", {
         description:
-          "Preencha o nome do preposto para cada fornecedor listado na aba Autorizar geração.",
+          "Preencha o nome do preposto para cada fornecedor listado.",
       });
-    }
-    if (!objetoBatch.trim()) {
-      console.timeEnd("ProcessoGeracaoLote");
-      console.groupEnd();
-      return notify.error("Informe o objeto desta geração de contratos");
-    }
-    if (!dataBatch || !/^\d{4}-\d{2}-\d{2}$/.test(dataBatch)) {
-      console.timeEnd("ProcessoGeracaoLote");
-      console.groupEnd();
-      return notify.error("Informe a data dos contratos.");
     }
     if (contratosSelecionados.length === 0) {
       console.timeEnd("ProcessoGeracaoLote");
@@ -123,14 +132,6 @@ export function useAutorizarGeracao(options: {
       return notify.error("Nenhum contrato a gerar (todos desmarcados).");
     }
     if (contratosSemAtaM2A.length > 0) {
-      console.table(
-        contratosSemAtaM2A.map((contrato) => ({
-          fornecedor: contrato.empresa,
-          secretaria: contrato.secretariaSigla,
-          dotacao: contrato.dotacao,
-          itens: contrato.itens.map((item) => item.numeroItem).join(","),
-        })),
-      );
       console.timeEnd("ProcessoGeracaoLote");
       console.groupEnd();
       return notify.error("Há contratos sem ata definida.", {
@@ -139,32 +140,13 @@ export function useAutorizarGeracao(options: {
       });
     }
     if (contratosSemCadastroM2A.length > 0) {
-      console.table(
-        contratosSemCadastroM2A.map(({ contrato, secretaria }) => ({
-          sigla: contrato.secretariaSigla,
-          dotacao: contrato.dotacao,
-          secretaria: secretaria?.nome ?? "não encontrada",
-          unidade_gestora: secretaria?.m2a_orgao_id,
-          orgao_dotacao: secretaria?.m2a_dot_orgao_id,
-          unidade_orcamentaria: secretaria?.m2a_uo_id,
-          despesa_projeto_atividade: secretaria?.m2a_dot_id,
-          fiscal_id: secretaria?.m2a_fiscal_codigo,
-          gestor_id: secretaria?.m2a_gestor_codigo,
-        })),
-      );
       console.timeEnd("ProcessoGeracaoLote");
       console.groupEnd();
       return notify.error("Cadastro externo incompleto", {
         description:
-          "Complete Unidade Gestora, Órgão da Dotação, UO, Dotação, Fiscal e Gestor em /secretarias antes de gerar os contratos.",
+          "Complete Unidade Gestora, Órgão da Dotação, UO, Dotação, Fiscal e Gestor em /secretarias.",
       });
     }
-
-    console.log("Dados validados:", {
-      objeto: objetoBatch,
-      qtdContratos: contratosSelecionados.length,
-      desmarcados: contratosDesmarcados.size,
-    });
 
     startTask(
       "Gerando contratos",
@@ -172,65 +154,6 @@ export function useAutorizarGeracao(options: {
     );
     setBusy(true);
     try {
-      // Resolve processo: usar selecionado OU criar um novo agrupando o lote.
-      let processoIdFinal: string | null =
-        ((jobDetail.job as any).processo_id as string | null) ||
-        processoId ||
-        null;
-      let processoCriadoNestaGeracao = false;
-      if (!processoIdFinal && criarProcesso) {
-        updateProgress(8, "Criando processo administrativo...");
-        console.log(
-          "Passo 2: Criando novo processo administrativo para o lote...",
-        );
-        const { data: novoProc, error: procErr } = await supabase
-          .from("processos")
-          .insert({
-            numero_processo: numeroProcessoBase || null,
-            objeto: objetoBatch,
-            data_abertura: dataBatch,
-            status: "em_andamento",
-            m2a_url: (jobDetail.job as any).m2a_url ?? null,
-            m2a_processo_id: (jobDetail.job as any).m2a_processo_id ?? null,
-          })
-          .select("id")
-          .single();
-
-        if (procErr) {
-          console.error("Falha ao criar processo:", procErr);
-          throw procErr;
-        }
-        processoIdFinal = novoProc.id;
-        processoCriadoNestaGeracao = true;
-        console.log("Processo criado com ID:", novoProc.id);
-        await logAudit({
-          action: "create",
-          entityType: "processo",
-          entityId: novoProc.id,
-          payload: { origem: "importar-contratos", objeto: objetoBatch },
-        });
-      } else {
-        updateProgress(8, "Vinculando processo administrativo existente...");
-        console.log(
-          "Passo 2: Utilizando processo administrativo existente. ID:",
-          processoIdFinal,
-        );
-        if (processoIdFinal) {
-          await supabase
-            .from("processos")
-            .update({
-              numero_processo: numeroProcessoBase || null,
-              objeto: objetoBatch,
-              status: "em_andamento",
-              m2a_url: (jobDetail.job as any).m2a_url ?? null,
-              m2a_processo_id: (jobDetail.job as any).m2a_processo_id ?? null,
-            })
-            .eq("id", processoIdFinal);
-        }
-      }
-
-      // Para cada contrato preliminar, alocar nº na secretaria de forma ATÔMICA via RPC em lote.
-      console.log("Passo 3: Reservando numeração sequencial automática...");
       updateProgress(18, "Reservando numeração automática...");
       const preliminaresResolvidos = contratosSelecionados.map((contrato) => ({
         contrato,
@@ -241,34 +164,14 @@ export function useAutorizarGeracao(options: {
         ({ secretaria }) => !secretaria,
       );
       if (semSecretaria.length > 0) {
-        console.table(
-          semSecretaria.map(({ contrato }) => ({
-            sigla: contrato.secretariaSigla,
-            dotacao: contrato.dotacao,
-          })),
-        );
         throw new Error(
-          "Há contratos sem secretaria correspondente. Confira sigla + dotação no cadastro de secretarias.",
+          "Há contratos sem secretaria correspondente. Confira sigla + dotação no cadastro.",
         );
       }
-
       const semM2A = preliminaresResolvidos.filter(
         ({ secretaria }) => !hasM2AActors(secretaria),
       );
       if (semM2A.length > 0) {
-        console.table(
-          semM2A.map(({ contrato, secretaria }) => ({
-            sigla: contrato.secretariaSigla,
-            dotacao: contrato.dotacao,
-            secretaria: secretaria?.nome,
-            unidade_gestora: secretaria?.m2a_orgao_id,
-            orgao_dotacao: secretaria?.m2a_dot_orgao_id,
-            unidade_orcamentaria: secretaria?.m2a_uo_id,
-            despesa_projeto_atividade: secretaria?.m2a_dot_id,
-            fiscal_id: secretaria?.m2a_fiscal_codigo,
-            gestor_id: secretaria?.m2a_gestor_codigo,
-          })),
-        );
         throw new Error(
           "Há secretarias sem Unidade Gestora, Órgão da Dotação, UO, Dotação, Fiscal ou Gestor cadastrados.",
         );
@@ -291,10 +194,6 @@ export function useAutorizarGeracao(options: {
         Awaited<ReturnType<typeof getNextContratoNumbers>>
       >();
       for (const [secKey, { secretaria: sec, qtd }] of porSecretaria) {
-        console.log(
-          `[Numeracao] Reservando bloco de ${qtd} números para ${sec.sigla} / ${sec.nome}...`,
-        );
-
         const numeros = await getNextContratoNumbers(supabase, {
           numeroBase: numeroBaseContrato,
           secretariaSigla: sec.sigla,
@@ -304,7 +203,6 @@ export function useAutorizarGeracao(options: {
         if (!ultimoNumero) {
           throw new Error(`Falha ao reservar numeração para ${sec.sigla}.`);
         }
-
         const { error: numeracaoError } = await supabase
           .from("numeracao")
           .upsert(
@@ -321,9 +219,6 @@ export function useAutorizarGeracao(options: {
           );
         }
         proximoPorSec.set(secKey, numeros);
-        console.log(
-          `Reserva para ${sec.sigla} OK. Bloco: ${numeros.map((item) => item.numeroContrato).join(",")}`,
-        );
       }
 
       const fornecedoresPersistiveis = fornecedoresPrepostoTargets
@@ -350,7 +245,6 @@ export function useAutorizarGeracao(options: {
         qc.invalidateQueries({ queryKey: ["fornecedores-prepostos-ativos"] });
       }
 
-      console.log("Passo 4: Preparando payload de inserção massiva...");
       updateProgress(40, "Preparando contratos para gravação...");
       const inserts: any[] = [];
       const preliminarPorIndex: ContratoPreliminar[] = [];
@@ -369,9 +263,8 @@ export function useAutorizarGeracao(options: {
         const nextNumber = proximoPorSec.get(secKey)?.shift();
         if (!nextNumber) continue;
 
-        const numero = nextNumber.numeroContrato;
         inserts.push({
-          numero_contrato: numero,
+          numero_contrato: nextNumber.numeroContrato,
           secretaria_num: sec.numero,
           secretaria_id: sec.id,
           secretaria_nome: sec.nome,
@@ -392,35 +285,19 @@ export function useAutorizarGeracao(options: {
         preliminarPorIndex.push(c);
       }
 
-      // Rastreia o que foi inserido para rollback em caso de falha posterior.
       let contratosInseridosIds: string[] = [];
-      const processoCriadoId: string | null = processoCriadoNestaGeracao
-        ? processoIdFinal
-        : null;
 
       try {
-        console.log(
-          `Passo 5: Persistindo ${inserts.length} cabeçalhos de contratos...`,
-        );
         updateProgress(50, `Criando ${inserts.length} contrato(s)...`);
         const { data: contratosInseridos, error: insErr } = await supabase
           .from("contratos")
           .insert(inserts)
           .select("id");
-
-        if (insErr) {
-          console.error("Falha na inserção massiva de cabeçalhos:", insErr);
-          throw insErr;
-        }
+        if (insErr) throw insErr;
         contratosInseridosIds = (contratosInseridos ?? []).map(
           (r: any) => r.id,
         );
-        console.log("Cabeçalhos criados.");
 
-        // Para cada contrato inserido, criar contrato_itens + contrato_item_dotacoes
-        console.log(
-          "Passo 6: Gerando itens e dotações subordinadas (sequencial)...",
-        );
         for (let i = 0; i < contratosInseridosIds.length; i++) {
           updateProgress(
             55 + ((i + 1) / Math.max(contratosInseridosIds.length, 1)) * 35,
@@ -430,9 +307,6 @@ export function useAutorizarGeracao(options: {
           const c = preliminarPorIndex[i];
           const m2aNumeroItemById = new Map(
             m2aItens.map((item) => [item.m2a_item_id, item.numero_item]),
-          );
-          console.log(
-            `[Contrato ${i + 1}/${contratosInseridosIds.length}] Gerando itens para ID ${contratoId}...`,
           );
 
           const itensPayload = c.itens.map((it, idx) => ({
@@ -457,14 +331,8 @@ export function useAutorizarGeracao(options: {
             .from("contrato_itens")
             .insert(itensPayload)
             .select("id");
+          if (itensErr) throw itensErr;
 
-          if (itensErr) {
-            console.error(
-              `Erro nos itens do contrato ${contratoId}:`,
-              itensErr,
-            );
-            throw itensErr;
-          }
           const dotPayload = (itensIns ?? []).map((row) => ({
             item_id: row.id,
             secretaria_sigla: c.secretariaSigla,
@@ -478,23 +346,11 @@ export function useAutorizarGeracao(options: {
           const { error: dotErr } = await supabase
             .from("contrato_item_dotacoes")
             .insert(dotPayload);
-
-          if (dotErr) {
-            console.error(
-              `Erro nas dotações do contrato ${contratoId}:`,
-              dotErr,
-            );
-            throw dotErr;
-          }
+          if (dotErr) throw dotErr;
         }
-        console.log("Geração de itens subordinados finalizada.");
       } catch (innerErr) {
-        // Rollback: apaga contratos parcialmente inseridos.
-        console.error(
-          "FALHA CRÍTICA DURANTE PERSISTÊNCIA. Iniciando Rollback manual...",
-        );
+        console.error("FALHA CRÍTICA. Rollback manual...");
         if (contratosInseridosIds.length > 0) {
-          console.log("[Rollback] Removendo dotações...");
           await supabase
             .from("contrato_item_dotacoes")
             .delete()
@@ -509,33 +365,18 @@ export function useAutorizarGeracao(options: {
                 ).data ?? []
               ).map((r: any) => r.id),
             );
-          console.log("[Rollback] Removendo itens...");
           await supabase
             .from("contrato_itens")
             .delete()
             .in("contrato_id", contratosInseridosIds);
-          const rollbackDeletedAt = new Date().toISOString();
-          console.log("[Rollback] Ocultando cabeçalhos...");
           await supabase
             .from("contratos")
-            .update({ deleted_at: rollbackDeletedAt })
+            .update({ deleted_at: new Date().toISOString() })
             .in("id", contratosInseridosIds);
         }
-        if (processoCriadoId) {
-          console.log(
-            "[Rollback] Ocultando processo criado. ID:",
-            processoCriadoId,
-          );
-          await supabase
-            .from("processos")
-            .update({ deleted_at: new Date().toISOString() })
-            .eq("id", processoCriadoId);
-        }
-        console.log("[Rollback] Limpeza finalizada.");
         throw innerErr;
       }
 
-      console.log("Passo 7: Finalizando Job de importação...");
       updateProgress(94, "Finalizando lote de contratos...");
       await supabase
         .from("contrato_import_jobs")
@@ -545,7 +386,6 @@ export function useAutorizarGeracao(options: {
         })
         .eq("id", jobDetail.job.id);
 
-      console.log("Passo 8: Registrando auditoria final...");
       await logAudit({
         action: "contrato_import_autorizar",
         entityType: "contrato_import_job",
@@ -557,9 +397,7 @@ export function useAutorizarGeracao(options: {
         },
       });
 
-      notify.success(
-        `${inserts.length} contratos gerados${processoIdFinal && !processoId ? " e processo criado" : ""}`,
-      );
+      notify.success(`${inserts.length} contratos gerados`);
       finishTask(`${inserts.length} contrato(s) gerado(s) com sucesso.`);
       qc.invalidateQueries({ queryKey: ["cij-detail", activeJobId] });
       qc.invalidateQueries({ queryKey: ["cij-list"] });
@@ -567,10 +405,7 @@ export function useAutorizarGeracao(options: {
       qc.invalidateQueries({ queryKey: ["processos"] });
       qc.invalidateQueries({ queryKey: ["processos-min"] });
       qc.invalidateQueries({ queryKey: ["numeracao"] });
-      console.log("Lote processado com sucesso.");
-      if (processoIdFinal) {
-        navigate({ to: "/processos/$id", params: { id: processoIdFinal } });
-      }
+      navigate({ to: "/processos/$id", params: { id: processoIdFinal } });
     } catch (e: any) {
       console.error("ERRO NO PROCESSO DE GERAÇÃO:", e);
       failTask(e?.message ?? "Falha ao gerar contratos.");
@@ -594,11 +429,6 @@ export function useAutorizarGeracao(options: {
     prepostosByFornecedor,
     secretariasM2A,
     m2aItens,
-    numeroProcessoBase,
-    objetoBatch,
-    dataBatch,
-    criarProcesso,
-    processoId,
     qc,
     navigate,
     startTask,

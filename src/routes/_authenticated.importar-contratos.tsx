@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { routeHead } from "@/lib/utils/route-head";
 import { AppShell } from "@/components/layout/AppShell";
 import { EmptyState } from "@/components/layout/EmptyState";
@@ -30,6 +30,11 @@ import {
   ItensReviewTable,
   UploadCard,
 } from "@/features/importar-contratos/components";
+import type {
+  ImportMode,
+  NovoProcessoState,
+} from "@/features/importar-contratos/components/UploadCard";
+import type { ImportSubmitPayload } from "@/features/importar-contratos/hooks/useImportarPlanilha";
 
 export const Route = createFileRoute("/_authenticated/importar-contratos")({
   component: Page,
@@ -44,17 +49,17 @@ export const Route = createFileRoute("/_authenticated/importar-contratos")({
 });
 
 function Page() {
-  /* --------------------------- Estado local da página --------------------------- */
+  /* --------------------------- Estado do UploadCard --------------------------- */
   const [file, setFile] = useState<File | null>(null);
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
-  const [m2aProcessoUrl, setM2aProcessoUrl] = useState("");
-  const [numeroProcessoBase, setNumeroProcessoBase] = useState("");
-  const [processoId, setProcessoId] = useState<string>("");
-  const [objetoBatch, setObjetoBatch] = useState("");
-  const [dataBatch, setDataBatch] = useState<string>(
-    () => new Date().toISOString().slice(0, 10),
-  );
-  const [criarProcesso, setCriarProcesso] = useState(true);
+  const [mode, setMode] = useState<ImportMode>("existing");
+  const [existingProcessoId, setExistingProcessoId] = useState<string>("");
+  const [novo, setNovo] = useState<NovoProcessoState>({
+    codigoM2A: "",
+    numeroProcesso: "",
+    objeto: "",
+    dataAbertura: new Date().toISOString().slice(0, 10),
+  });
   const [contratosDesmarcados, setContratosDesmarcados] = useState<Set<string>>(
     new Set(),
   );
@@ -103,12 +108,27 @@ function Page() {
     fornecedoresSemPreposto,
   } = prepostos;
 
+  const processoVinculado = useMemo(() => {
+    const pid = (jobDetail?.job as any)?.processo_id as string | null;
+    if (!pid) return null;
+    return processos.find((p) => p.id === pid) ?? null;
+  }, [jobDetail, processos]);
+
   /* -------------------------------- Actions -------------------------------- */
+  const onImportDone = useCallback(() => {
+    setFile(null);
+    setNovo({
+      codigoM2A: "",
+      numeroProcesso: "",
+      objeto: "",
+      dataAbertura: new Date().toISOString().slice(0, 10),
+    });
+  }, []);
+
   const importar = useImportarPlanilha({
     secretarias: secretariasM2A,
     setActiveJobId,
-    setFile,
-    setM2aProcessoUrl,
+    onImportDone,
   });
   const { busy, setBusy, handleImportar } = importar;
 
@@ -124,11 +144,6 @@ function Page() {
     prepostosByFornecedor,
     secretariasM2A,
     m2aItens,
-    numeroProcessoBase,
-    objetoBatch,
-    dataBatch,
-    criarProcesso,
-    processoId,
     setBusy,
   });
 
@@ -140,22 +155,6 @@ function Page() {
 
   const { excluirJob } = useDeleteImportJob({ activeJobId, setActiveJobId });
 
-  /* --------------------- Efeitos de UI (não relacionados a IO) --------------------- */
-
-  // Auto-preenche Nº base e Objeto quando um processo existente é vinculado.
-  useEffect(() => {
-    if (!processoId) return;
-    const p = processos.find((x) => x.id === processoId);
-    if (!p) return;
-    if (p.numero_processo) setNumeroProcessoBase(p.numero_processo);
-    if (p.objeto) setObjetoBatch(p.objeto);
-  }, [processoId, processos]);
-
-  // Reset desmarcações ao trocar de job
-  useEffect(() => {
-    setContratosDesmarcados(new Set());
-  }, [activeJobId]);
-
   /* ------------------------------- Handlers ------------------------------- */
   const toggleContratoDesmarcado = useCallback((key: string) => {
     setContratosDesmarcados((current) => {
@@ -166,9 +165,19 @@ function Page() {
     });
   }, []);
 
-  const onSubmitImport = useCallback(
-    () => handleImportar(file, m2aProcessoUrl),
-    [handleImportar, file, m2aProcessoUrl],
+  const onSubmitImport = useCallback(() => {
+    if (!file) return;
+    const payload: ImportSubmitPayload =
+      mode === "existing"
+        ? { mode: "existing", file, processoId: existingProcessoId }
+        : { mode: "new", file, novo };
+    return handleImportar(payload);
+  }, [handleImportar, file, mode, existingProcessoId, novo]);
+
+  const onNovoChange = useCallback(
+    (patch: Partial<NovoProcessoState>) =>
+      setNovo((current) => ({ ...current, ...patch })),
+    [],
   );
 
   const onChangePreposto = useCallback(
@@ -215,13 +224,17 @@ function Page() {
       />
 
       <div className="grid gap-5 xl:grid-cols-[360px_1fr]">
-        {/* Sidebar: upload + histórico */}
         <div className="flex flex-col gap-4">
           <UploadCard
             file={file}
             onFileChange={setFile}
-            m2aProcessoUrl={m2aProcessoUrl}
-            onM2aProcessoUrlChange={setM2aProcessoUrl}
+            mode={mode}
+            onModeChange={setMode}
+            processos={processos}
+            existingProcessoId={existingProcessoId}
+            onExistingProcessoIdChange={setExistingProcessoId}
+            novo={novo}
+            onNovoChange={onNovoChange}
             busy={busy}
             onSubmit={onSubmitImport}
           />
@@ -233,7 +246,6 @@ function Page() {
           />
         </div>
 
-        {/* Principal: revisão */}
         <div className="min-w-0">
           {!activeJobId && (
             <Card className="border-dashed border-border/60">
@@ -316,17 +328,7 @@ function Page() {
                     fornecedorMapFromDb={fornecedorMapFromDb}
                     prepostosByFornecedor={prepostosByFornecedor}
                     onChangePreposto={onChangePreposto}
-                    processos={processos}
-                    processoId={processoId}
-                    onChangeProcessoId={setProcessoId}
-                    criarProcesso={criarProcesso}
-                    onChangeCriarProcesso={setCriarProcesso}
-                    numeroProcessoBase={numeroProcessoBase}
-                    onChangeNumeroProcessoBase={setNumeroProcessoBase}
-                    dataBatch={dataBatch}
-                    onChangeDataBatch={setDataBatch}
-                    objetoBatch={objetoBatch}
-                    onChangeObjetoBatch={setObjetoBatch}
+                    processoVinculado={processoVinculado}
                     totalValor={totalValor}
                     totalItens={totalItens}
                     busy={busy}
