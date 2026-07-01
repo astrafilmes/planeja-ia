@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedSecretariasRouteImport } from './routes/_authenticated.secretarias'
 import { Route as AuthenticatedProcessosRouteImport } from './routes/_authenticated.processos'
@@ -38,6 +39,10 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -45,71 +50,71 @@ const IndexRoute = IndexRouteImport.update({
 } as any)
 const AuthenticatedSecretariasRoute =
   AuthenticatedSecretariasRouteImport.update({
-    id: '/_authenticated/secretarias',
+    id: '/secretarias',
     path: '/secretarias',
-    getParentRoute: () => rootRouteImport,
+    getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedProcessosRoute = AuthenticatedProcessosRouteImport.update({
-  id: '/_authenticated/processos',
+  id: '/processos',
   path: '/processos',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedNumeracaoRoute = AuthenticatedNumeracaoRouteImport.update({
-  id: '/_authenticated/numeracao',
+  id: '/numeracao',
   path: '/numeracao',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedLogsRoute = AuthenticatedLogsRouteImport.update({
-  id: '/_authenticated/logs',
+  id: '/logs',
   path: '/logs',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedIrpColunasRoute = AuthenticatedIrpColunasRouteImport.update({
-  id: '/_authenticated/irp-colunas',
+  id: '/irp-colunas',
   path: '/irp-colunas',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedIrpRoute = AuthenticatedIrpRouteImport.update({
-  id: '/_authenticated/irp',
+  id: '/irp',
   path: '/irp',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedImportarContratosRoute =
   AuthenticatedImportarContratosRouteImport.update({
-    id: '/_authenticated/importar-contratos',
+    id: '/importar-contratos',
     path: '/importar-contratos',
-    getParentRoute: () => rootRouteImport,
+    getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedHistoricoRoute = AuthenticatedHistoricoRouteImport.update({
-  id: '/_authenticated/historico',
+  id: '/historico',
   path: '/historico',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedGestoresRoute = AuthenticatedGestoresRouteImport.update({
-  id: '/_authenticated/gestores',
+  id: '/gestores',
   path: '/gestores',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedFornecedoresRoute =
   AuthenticatedFornecedoresRouteImport.update({
-    id: '/_authenticated/fornecedores',
+    id: '/fornecedores',
     path: '/fornecedores',
-    getParentRoute: () => rootRouteImport,
+    getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedFiscaisRoute = AuthenticatedFiscaisRouteImport.update({
-  id: '/_authenticated/fiscais',
+  id: '/fiscais',
   path: '/fiscais',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
-  id: '/_authenticated/dashboard',
+  id: '/dashboard',
   path: '/dashboard',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedContratosRoute = AuthenticatedContratosRouteImport.update({
-  id: '/_authenticated/contratos',
+  id: '/contratos',
   path: '/contratos',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedProcessosIdRoute =
   AuthenticatedProcessosIdRouteImport.update({
@@ -167,6 +172,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/contratos': typeof AuthenticatedContratosRouteWithChildren
@@ -229,6 +235,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/_authenticated'
     | '/login'
     | '/reset-password'
     | '/_authenticated/contratos'
@@ -250,21 +257,9 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   LoginRoute: typeof LoginRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
-  AuthenticatedContratosRoute: typeof AuthenticatedContratosRouteWithChildren
-  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
-  AuthenticatedFiscaisRoute: typeof AuthenticatedFiscaisRoute
-  AuthenticatedFornecedoresRoute: typeof AuthenticatedFornecedoresRoute
-  AuthenticatedGestoresRoute: typeof AuthenticatedGestoresRoute
-  AuthenticatedHistoricoRoute: typeof AuthenticatedHistoricoRoute
-  AuthenticatedImportarContratosRoute: typeof AuthenticatedImportarContratosRoute
-  AuthenticatedIrpRoute: typeof AuthenticatedIrpRoute
-  AuthenticatedIrpColunasRoute: typeof AuthenticatedIrpColunasRoute
-  AuthenticatedLogsRoute: typeof AuthenticatedLogsRoute
-  AuthenticatedNumeracaoRoute: typeof AuthenticatedNumeracaoRoute
-  AuthenticatedProcessosRoute: typeof AuthenticatedProcessosRouteWithChildren
-  AuthenticatedSecretariasRoute: typeof AuthenticatedSecretariasRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -283,6 +278,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -295,91 +297,91 @@ declare module '@tanstack/react-router' {
       path: '/secretarias'
       fullPath: '/secretarias'
       preLoaderRoute: typeof AuthenticatedSecretariasRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/processos': {
       id: '/_authenticated/processos'
       path: '/processos'
       fullPath: '/processos'
       preLoaderRoute: typeof AuthenticatedProcessosRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/numeracao': {
       id: '/_authenticated/numeracao'
       path: '/numeracao'
       fullPath: '/numeracao'
       preLoaderRoute: typeof AuthenticatedNumeracaoRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/logs': {
       id: '/_authenticated/logs'
       path: '/logs'
       fullPath: '/logs'
       preLoaderRoute: typeof AuthenticatedLogsRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/irp-colunas': {
       id: '/_authenticated/irp-colunas'
       path: '/irp-colunas'
       fullPath: '/irp-colunas'
       preLoaderRoute: typeof AuthenticatedIrpColunasRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/irp': {
       id: '/_authenticated/irp'
       path: '/irp'
       fullPath: '/irp'
       preLoaderRoute: typeof AuthenticatedIrpRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/importar-contratos': {
       id: '/_authenticated/importar-contratos'
       path: '/importar-contratos'
       fullPath: '/importar-contratos'
       preLoaderRoute: typeof AuthenticatedImportarContratosRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/historico': {
       id: '/_authenticated/historico'
       path: '/historico'
       fullPath: '/historico'
       preLoaderRoute: typeof AuthenticatedHistoricoRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/gestores': {
       id: '/_authenticated/gestores'
       path: '/gestores'
       fullPath: '/gestores'
       preLoaderRoute: typeof AuthenticatedGestoresRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/fornecedores': {
       id: '/_authenticated/fornecedores'
       path: '/fornecedores'
       fullPath: '/fornecedores'
       preLoaderRoute: typeof AuthenticatedFornecedoresRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/fiscais': {
       id: '/_authenticated/fiscais'
       path: '/fiscais'
       fullPath: '/fiscais'
       preLoaderRoute: typeof AuthenticatedFiscaisRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/contratos': {
       id: '/_authenticated/contratos'
       path: '/contratos'
       fullPath: '/contratos'
       preLoaderRoute: typeof AuthenticatedContratosRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/processos/$id': {
       id: '/_authenticated/processos/$id'
@@ -426,10 +428,23 @@ const AuthenticatedProcessosRouteWithChildren =
     AuthenticatedProcessosRouteChildren,
   )
 
-const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  LoginRoute: LoginRoute,
-  ResetPasswordRoute: ResetPasswordRoute,
+interface AuthenticatedRouteChildren {
+  AuthenticatedContratosRoute: typeof AuthenticatedContratosRouteWithChildren
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedFiscaisRoute: typeof AuthenticatedFiscaisRoute
+  AuthenticatedFornecedoresRoute: typeof AuthenticatedFornecedoresRoute
+  AuthenticatedGestoresRoute: typeof AuthenticatedGestoresRoute
+  AuthenticatedHistoricoRoute: typeof AuthenticatedHistoricoRoute
+  AuthenticatedImportarContratosRoute: typeof AuthenticatedImportarContratosRoute
+  AuthenticatedIrpRoute: typeof AuthenticatedIrpRoute
+  AuthenticatedIrpColunasRoute: typeof AuthenticatedIrpColunasRoute
+  AuthenticatedLogsRoute: typeof AuthenticatedLogsRoute
+  AuthenticatedNumeracaoRoute: typeof AuthenticatedNumeracaoRoute
+  AuthenticatedProcessosRoute: typeof AuthenticatedProcessosRouteWithChildren
+  AuthenticatedSecretariasRoute: typeof AuthenticatedSecretariasRoute
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedContratosRoute: AuthenticatedContratosRouteWithChildren,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedFiscaisRoute: AuthenticatedFiscaisRoute,
@@ -443,6 +458,17 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedNumeracaoRoute: AuthenticatedNumeracaoRoute,
   AuthenticatedProcessosRoute: AuthenticatedProcessosRouteWithChildren,
   AuthenticatedSecretariasRoute: AuthenticatedSecretariasRoute,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
+
+const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  LoginRoute: LoginRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
