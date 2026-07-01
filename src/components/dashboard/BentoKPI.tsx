@@ -44,7 +44,7 @@ export function BentoKPI({
   return (
     <div
       className={cn(
-        "group relative flex flex-col justify-between overflow-hidden rounded-3xl border p-5 shadow-[var(--shadow-card)] transition-all hover:-translate-y-0.5",
+        "group relative flex flex-col justify-between overflow-hidden rounded-lg border p-5 shadow-[var(--shadow-card)] transition-all hover:-translate-y-0.5",
         surface,
         size === "lg" ? "min-h-[180px]" : "min-h-[128px]",
         className,

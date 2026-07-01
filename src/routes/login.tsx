@@ -200,7 +200,7 @@ function Login() {
         />
 
         <div className="relative flex items-center gap-3 animate-fade-in">
-          <div className="grid size-11 place-items-center rounded-xl bg-gradient-to-br from-accent-strong to-accent font-semibold text-white">
+          <div className="grid size-11 place-items-center rounded-lg bg-gradient-to-br from-accent-strong to-accent font-semibold text-white">
             P
           </div>
           <div className="leading-tight">
@@ -238,7 +238,7 @@ function Login() {
             ].map((s, i) => (
               <div
                 key={s.l}
-                className={`rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 backdrop-blur transition-all hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.07] animate-fade-in stagger-${i + 1}`}
+                className={`rounded-lg border border-white/10 bg-white/[0.04] px-3 py-3 backdrop-blur transition-all hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.07] animate-fade-in stagger-${i + 1}`}
               >
                 <div
                   className="text-2xl tracking-tight"
@@ -308,9 +308,9 @@ function Login() {
                 </p>
               </header>
 
-              <div className="rounded-2xl border border-border/70 bg-card/80 p-1.5 shadow-[var(--shadow-card)] backdrop-blur-xl">
+              <div className="rounded-lg border border-border/70 bg-card/80 p-1.5 shadow-[var(--shadow-card)] backdrop-blur-xl">
                 <Tabs defaultValue="login">
-                  <TabsList className="grid w-full grid-cols-2 rounded-xl bg-muted/60 p-1">
+                  <TabsList className="grid w-full grid-cols-2 rounded-lg bg-muted/60 p-1">
                     <TabsTrigger value="login" className="rounded-lg">
                       Entrar
                     </TabsTrigger>
@@ -668,7 +668,7 @@ function RecoverPanel({
         </p>
       </header>
 
-      <div className="rounded-2xl border border-border/70 bg-card/80 p-6 shadow-[var(--shadow-card)] backdrop-blur-xl">
+      <div className="rounded-lg border border-border/70 bg-card/80 p-6 shadow-[var(--shadow-card)] backdrop-blur-xl">
         <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
           <Field
             id="rc-email"

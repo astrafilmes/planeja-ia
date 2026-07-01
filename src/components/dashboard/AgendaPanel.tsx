@@ -57,7 +57,7 @@ export function AgendaPanel({
   };
 
   return (
-    <div className="flex h-full flex-col gap-5 rounded-3xl border border-border/50 bg-surface-elevated p-5 shadow-[var(--shadow-card)]">
+    <div className="flex h-full flex-col gap-5 rounded-lg border border-border/50 bg-surface-elevated p-5 shadow-[var(--shadow-card)]">
       <MiniCalendar
         markedDates={markedDates}
         onDayClick={(dayDate) => {
@@ -83,7 +83,7 @@ export function AgendaPanel({
             {[0, 1, 2].map((i) => (
               <div
                 key={i}
-                className="ml-8 h-16 animate-pulse rounded-2xl bg-muted"
+                className="ml-8 h-16 animate-pulse rounded-lg bg-muted"
               />
             ))}
           </div>
@@ -106,14 +106,14 @@ export function AgendaPanel({
                   />
                   <div
                     className={cn(
-                      "flex items-center gap-3 rounded-2xl px-3.5 py-3 ring-1",
+                      "flex items-center gap-3 rounded-lg px-3.5 py-3 ring-1",
                       t.bg,
                       t.ring,
                     )}
                   >
                     <div
                       className={cn(
-                        "grid size-8 shrink-0 place-items-center rounded-xl",
+                        "grid size-8 shrink-0 place-items-center rounded-lg",
                         t.iconBg,
                       )}
                     >

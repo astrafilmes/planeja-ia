@@ -33,7 +33,7 @@ export function M2ASyncReport({ syncData }: { syncData: any }) {
  if (!resumo) return null;
 
  return (
- <div className="flex flex-col gap-3 rounded-xl border border-emerald-500/20 bg-emerald-50/40 p-3 dark:bg-emerald-500/5">
+ <div className="flex flex-col gap-3 rounded-lg border border-emerald-500/20 bg-emerald-50/40 p-3 dark:bg-emerald-500/5">
  <div className="flex items-center justify-between">
  <div className="flex items-center gap-2 text-[11px] font-semibold uppercase text-emerald-600 dark:text-emerald-400">
  <CheckCircle2 className="size-3.5" />
@@ -73,7 +73,7 @@ export function M2ASyncReport({ syncData }: { syncData: any }) {
  <div className="px-1 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
  Último número por Secretaria:
  </div>
- <div className="max-h-32 overflow-auto rounded-xl border border-border/60 bg-card dark:bg-foreground">
+ <div className="max-h-32 overflow-auto rounded-lg border border-border/60 bg-card dark:bg-foreground">
  <Table>
  <TableBody>
  {Object.entries(resumo.ultimo_numero_por_secretaria || {}).map(

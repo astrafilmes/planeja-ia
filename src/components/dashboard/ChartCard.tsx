@@ -84,7 +84,7 @@ export function ChartTooltip({
 }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="animate-scale-in rounded-xl border border-border/60 bg-popover px-3 py-2 text-[12px] shadow-[var(--shadow-elevated)]">
+    <div className="animate-scale-in rounded-lg border border-border/60 bg-popover px-3 py-2 text-[12px] shadow-[var(--shadow-elevated)]">
       {label && (
         <div className="mb-1 font-semibold text-foreground">{label}</div>
       )}

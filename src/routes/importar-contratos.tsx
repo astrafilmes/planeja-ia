@@ -2135,7 +2135,7 @@ function Page() {
  </CardHeader>
  <CardContent className="flex flex-col gap-3">
  {isAutorizado ? (
- <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2.5 text-[13px] text-emerald-900 dark:text-emerald-200">
+ <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2.5 text-[13px] text-emerald-900 dark:text-emerald-200">
  <strong>{contratosPreliminares.length}</strong>{""}
  contratos já foram gerados a partir desta importação.
  Veja-os em <strong>/contratos</strong>.
@@ -2143,7 +2143,7 @@ function Page() {
  ) : (
  <>
  {/* 1) Vínculo de processo — vem ANTES dos dados do lote */}
- <div className="flex flex-col gap-3 rounded-xl border border-border/60 p-3 ">
+ <div className="flex flex-col gap-3 rounded-lg border border-border/60 p-3 ">
  <div className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
  Processo
  </div>
@@ -2195,7 +2195,7 @@ function Page() {
  </div>
 
  {/* 2) Dados do lote */}
- <div className="flex flex-col gap-3 rounded-xl border border-border/60 bg-muted/40 p-3 dark:bg-muted/30">
+ <div className="flex flex-col gap-3 rounded-lg border border-border/60 bg-muted/40 p-3 dark:bg-muted/30">
  <div className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
  Dados do lote (aplicados a todos os contratos)
  </div>
@@ -2243,7 +2243,7 @@ function Page() {
  secretaria/dotação detectada na planilha.
  </p>
 
- <div className="rounded-xl border border-border/60 bg-card p-3 dark:bg-foreground">
+ <div className="rounded-lg border border-border/60 bg-card p-3 dark:bg-foreground">
  <div className="mb-2 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
  Preposto por fornecedor
  </div>
@@ -2263,7 +2263,7 @@ function Page() {
  return (
  <div
  key={target.key}
- className="grid gap-2 rounded-xl border border-border/60 bg-card px-2.5 py-2 md:grid-cols-[1fr_260px]"
+ className="grid gap-2 rounded-lg border border-border/60 bg-card px-2.5 py-2 md:grid-cols-[1fr_260px]"
  >
  <div className="min-w-0">
  <div
@@ -2302,7 +2302,7 @@ function Page() {
 
  <Separator className="my-2" />
 
- <div className="rounded-xl border border-border/60 bg-card p-3 text-[13px] text-muted-foreground ">
+ <div className="rounded-lg border border-border/60 bg-card p-3 text-[13px] text-muted-foreground ">
  <div className="font-medium text-slate-800 ">
  Pré-checagem
  </div>
@@ -2347,7 +2347,7 @@ function Page() {
 
  <Separator />
 
- <div className="flex flex-col gap-1 rounded-xl bg-muted/40 p-3 text-[13px] text-muted-foreground dark:bg-muted/30 ">
+ <div className="flex flex-col gap-1 rounded-lg bg-muted/40 p-3 text-[13px] text-muted-foreground dark:bg-muted/30 ">
   <div>
  Serão criados{""}
  <strong>{contratosSelecionados.length}</strong>{""}

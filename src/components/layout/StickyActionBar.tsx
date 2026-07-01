@@ -15,7 +15,7 @@ export function StickyActionBar({ children, status, className }: StickyActionBar
   return (
     <div
       className={cn(
-        "sticky bottom-4 z-30 mt-6 flex items-center justify-between gap-3 rounded-2xl border border-border/70 bg-card/95 px-4 py-3 shadow-elevated backdrop-blur-xl supports-[backdrop-filter]:bg-card/80",
+        "sticky bottom-4 z-30 mt-6 flex items-center justify-between gap-3 rounded-lg border border-border/70 bg-card/95 px-4 py-3 shadow-elevated backdrop-blur-xl supports-[backdrop-filter]:bg-card/80",
         className,
       )}
       role="region"

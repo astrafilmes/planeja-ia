@@ -56,11 +56,11 @@ export function StatChip({
 }) {
   const t = toneMap[tone];
   return (
-    <div className="group relative flex flex-col gap-4 rounded-2xl border border-border/60 bg-surface-elevated p-5 transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-card)]">
+    <div className="group relative flex flex-col gap-4 rounded-lg border border-border/60 bg-surface-elevated p-5 transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-card)]">
       <div className="flex items-center justify-between">
         <div
           className={cn(
-            "grid size-10 place-items-center rounded-xl ring-1",
+            "grid size-10 place-items-center rounded-lg ring-1",
             t.surface,
             t.icon,
             t.ring,

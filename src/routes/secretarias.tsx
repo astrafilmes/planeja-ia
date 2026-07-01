@@ -992,7 +992,7 @@ function Page() {
  <DialogTitle>Editar grupo de secretarias</DialogTitle>
  </DialogHeader>
  <div className="flex flex-col gap-4">
- <div className="rounded-xl border border-border/60 bg-muted/40 p-3 text-sm dark:bg-muted/30">
+ <div className="rounded-lg border border-border/60 bg-muted/40 p-3 text-sm dark:bg-muted/30">
  <div className="font-medium">{groupEditing?.title}</div>
  <div className="mt-1 text-[13px] text-muted-foreground">
  Esta ação atualiza {groupEditing?.rows.length ?? 0} dotação(ões)
@@ -1156,7 +1156,7 @@ function Page() {
 
  {field("nome","Nome *")}
 
- <div className="rounded-xl border border-border/60 bg-muted/40 p-3 dark:bg-muted/30">
+ <div className="rounded-lg border border-border/60 bg-muted/40 p-3 dark:bg-muted/30">
  <div className="mb-3 flex items-center gap-2 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
  <Layers3 className="size-3.5" />
  Parâmetros externos

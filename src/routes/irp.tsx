@@ -1163,7 +1163,7 @@ function Page() {
  </p>
  </div>
  {file && (
- <div className="rounded-xl border border-border/60 bg-muted/40 p-3 text-[13px] dark:bg-muted/30">
+ <div className="rounded-lg border border-border/60 bg-muted/40 p-3 text-[13px] dark:bg-muted/30">
  <div className="flex items-center gap-2">
  <FileSpreadsheet className="size-3.5 text-primary" />
  <span className="font-medium truncate">{file.name}</span>
@@ -1357,7 +1357,7 @@ function Page() {
  )}
  />
  </div>
- <div className="overflow-hidden rounded-xl border border-border/60">
+ <div className="overflow-hidden rounded-lg border border-border/60">
  <Table>
  <TableHeader>
  <TableRow>
@@ -1457,7 +1457,7 @@ function Page() {
  value={formatBRL(Number(resultadoSalvo.job.total_valor))}
  />
  </div>
- <div className="overflow-hidden rounded-xl border border-border/60">
+ <div className="overflow-hidden rounded-lg border border-border/60">
  <Table>
  <TableHeader>
  <TableRow>
@@ -1562,7 +1562,7 @@ function Page() {
 
 function Metric({ label, value }: { label: string; value: string }) {
  return (
- <div className="rounded-xl border border-border/60 bg-muted/40 p-3 dark:bg-muted/30">
+ <div className="rounded-lg border border-border/60 bg-muted/40 p-3 dark:bg-muted/30">
  <div className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
  {label}
  </div>
