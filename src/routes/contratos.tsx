@@ -5,7 +5,7 @@ import {
  useNavigate,
  useRouterState,
 } from"@tanstack/react-router";
-import { routeHead } from"@/lib/route-head";
+import { routeHead } from"@/lib/utils/route-head";
 import { useQuery, useQueryClient } from"@tanstack/react-query";
 import { useEffect, useMemo, useState } from"react";
 import { useForm } from"react-hook-form";
@@ -86,14 +86,14 @@ import {
 } from"lucide-react";
 import { toast } from"sonner";
 import { logAudit } from"@/lib/audit";
-import { normalizeContratoBase } from"@/lib/normalize";
+import { normalizeContratoBase } from"@/lib/utils/normalize";
 import { getNextContratoNumbers } from"@/lib/contrato-numbering";
 import { downloadCSV } from"@/lib/export";
 import { Skeleton } from"@/components/ui/skeleton";
 import {
  type M2ADocumentoGerado,
 } from"@/lib/m2a";
-import { downloadM2ADocuments } from"@/lib/m2a-documents";
+import { downloadM2ADocuments } from"@/lib/m2a";
 import { ContractReportGenerator } from"@/components/contratos/ContractReportGenerator";
 import { PautaConsolidadaExporter } from"@/components/contratos/PautaConsolidadaExporter";
 

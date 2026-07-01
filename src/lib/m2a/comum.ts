@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type {
   M2ASrpItemIRP,
   M2ASrpSecretariaParticipante,
-} from "./m2a-srp";
+} from "./srp";
 
 export type M2AComumProgressEvent =
   | { type: "start"; mensagem: string }

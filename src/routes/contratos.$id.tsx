@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from"@tanstack/react-router";
-import { routeHead } from"@/lib/route-head";
+import { routeHead } from"@/lib/utils/route-head";
 import { useQuery, useQueryClient } from"@tanstack/react-query";
 import { useEffect, useMemo, useState } from"react";
 import { AppShell } from"@/components/layout/AppShell";
@@ -82,7 +82,7 @@ import {
 } from"@/lib/m2a";
 import { useM2AConnection } from"@/contexts/M2AConnectionProvider";
 import { useM2APreferences } from"@/hooks/useM2APreferences";
-import { buildM2AContractPayload, isNumericM2AId } from"@/lib/m2a-payload";
+import { buildM2AContractPayload, isNumericM2AId } from"@/lib/m2a";
 import {
  AtoresEditor,
  type DefaultServidor,

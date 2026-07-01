@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from"@tanstack/react-router";
-import { routeHead } from"@/lib/route-head";
+import { routeHead } from"@/lib/utils/route-head";
 import { useQuery, useQueryClient, useMutation } from"@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from"react";
 import { AppShell } from"@/components/layout/AppShell";
@@ -81,14 +81,14 @@ import {
  sendToM2A,
  type M2ADocumentoGerado,
 } from"@/lib/m2a";
-import { downloadM2ADocuments } from"@/lib/m2a-documents";
+import { downloadM2ADocuments } from"@/lib/m2a";
 import { useM2AConnection } from"@/contexts/M2AConnectionProvider";
 import { useM2APreferences } from"@/hooks/useM2APreferences";
 import {
  buildM2AContractPayload,
  formatM2AQuantity,
  isNumericM2AId,
-} from"@/lib/m2a-payload";
+} from"@/lib/m2a";
 import {
  Dialog,
  DialogContent,
@@ -491,10 +491,13 @@ function Page() {
  if (data?.processo) setForm(data.processo);
  }, [data?.processo]);
 
- const SECTIONS = [
+ const SECTIONS = useMemo(
+ () => [
  { id:"dados-administrativos", label:"Dados administrativos" },
  { id:"metadados", label:"Metadados" },
- ];
+ ],
+ [],
+ );
  const [activeSection, setActiveSection] = useState<string>(SECTIONS[0].id);
  useEffect(() => {
  const els = SECTIONS.map((s) => document.getElementById(s.id)).filter(
@@ -512,7 +515,7 @@ function Page() {
  );
  els.forEach((el) => io.observe(el));
  return () => io.disconnect();
- }, [data?.processo?.id]);
+ }, [data?.processo?.id, SECTIONS]);
 
  useEffect(() => {
  const off = listenAllM2AProgress(async (event) => {

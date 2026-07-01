@@ -1,5 +1,5 @@
 import { createFileRoute } from"@tanstack/react-router";
-import { routeHead } from"@/lib/route-head";
+import { routeHead } from"@/lib/utils/route-head";
 import { useQuery } from"@tanstack/react-query";
 import { AppShell } from"@/components/layout/AppShell";
 import { EmptyState } from"@/components/layout/EmptyState";

@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from"@tanstack/react-router";
-import { routeHead } from"@/lib/route-head";
+import { routeHead } from"@/lib/utils/route-head";
 import { useCallback, useEffect, useMemo, useRef, useState } from"react";
 import { useQuery, useQueryClient } from"@tanstack/react-query";
 import { Badge } from"@/components/ui/badge";
@@ -60,7 +60,7 @@ import {
  type AnaliseIRP,
  type UnidadeProcessamento,
 } from"@/lib/irp";
-import { formatBRL, formatNumber, safeFileName } from"@/lib/normalize";
+import { formatBRL, formatNumber, safeFileName } from"@/lib/utils/normalize";
 import JSZip from"jszip";
 import * as FileSaver from"file-saver";
 const saveAs =
@@ -69,11 +69,11 @@ const saveAs =
  (FileSaver as any).default;
 import { logAudit } from"@/lib/audit";
 import { IrpCabecalhoCard } from"@/components/irp/IrpCabecalhoCard";
-import { findIrpUnidadeCanonicaByRefColuna } from"@/lib/m2a-orgaos-mapping";
+import { findIrpUnidadeCanonicaByRefColuna } from"@/lib/m2a";
 
 import { IrpConfirmacaoProcessoModal } from"@/components/irp/IrpConfirmacaoProcessoModal";
-import { criarProcessoSrpM2A, blobToBase64, type M2ASrpPayload } from"@/lib/m2a-srp";
-import { criarProcessoComumM2A, type M2AComumPayload } from"@/lib/m2a-comum";
+import { criarProcessoSrpM2A, blobToBase64, type M2ASrpPayload } from"@/lib/m2a";
+import { criarProcessoComumM2A, type M2AComumPayload } from"@/lib/m2a";
 
 type AppFile = Database["public"]["Tables"]["app_files"]["Row"];
 type IrpJob = Database["public"]["Tables"]["irp_jobs"]["Row"];

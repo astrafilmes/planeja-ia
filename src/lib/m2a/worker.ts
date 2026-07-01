@@ -2,7 +2,7 @@
 // O navegador nunca fala direto com a VPS nem com o portal M2A.
 
 import { supabase } from "@/integrations/supabase/client";
-import type { M2aSyncPayload } from "@/lib/m2a-sync";
+import type { M2aSyncPayload } from "@/lib/m2a";
 
 interface ProxyArgs {
   path: string;

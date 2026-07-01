@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { routeHead } from "@/lib/route-head";
+import { routeHead } from "@/lib/utils/route-head";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/layout/AppShell";
 import { WorkflowGuide } from "@/components/layout/WorkflowGuide";
@@ -17,7 +17,7 @@ import {
   AlertTriangle,
   Activity,
 } from "lucide-react";
-import { formatNumber } from "@/lib/normalize";
+import { formatNumber } from "@/lib/utils/normalize";
 import {
   Bar,
   BarChart,

@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { FileText, Download, Loader2, FileSpreadsheet } from "lucide-react";
-import { formatBRL, formatNumber } from "@/lib/normalize";
+import { formatBRL, formatNumber } from "@/lib/utils/normalize";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { exportarRelatorioContratoExcel, ContractGroupedData, ContractReportData, groupContractData } from "@/lib/excel-export";

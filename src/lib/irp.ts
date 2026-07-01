@@ -1,5 +1,5 @@
 // Cliente IRP: análise e geração de planilhas por secretaria.
-import { normalizeText, safeFileName } from "./normalize";
+import { normalizeText, safeFileName } from "./utils/normalize";
 import { readXlsxMatrix } from "./workbook";
 
 export interface UnidadeProcessamento {

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { routeHead } from "@/lib/route-head";
+import { routeHead } from "@/lib/utils/route-head";
 import { AppShell } from "@/components/layout/AppShell";
 import { Card } from "@/components/ui/card";
 import {
@@ -11,7 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { M2A_IRP_UNIDADES_CANONICAS, M2A_ORGAOS_MAPPING } from "@/lib/m2a-orgaos-mapping";
+import { M2A_IRP_UNIDADES_CANONICAS, M2A_ORGAOS_MAPPING } from "@/lib/m2a";
 
 export const Route = createFileRoute("/irp-colunas")({
   head: () =>

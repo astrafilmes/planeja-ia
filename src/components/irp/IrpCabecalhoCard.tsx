@@ -17,7 +17,7 @@ import {
   listarOrgaosOrdenados,
   getOrgaoMapping,
   findOrgaoByUO,
-} from "@/lib/m2a-orgaos-mapping";
+} from "@/lib/m2a";
 
 type IrpJob = Database["public"]["Tables"]["irp_jobs"]["Row"];
 

@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { routeHead } from "@/lib/route-head";
+import { routeHead } from "@/lib/utils/route-head";
 
 export const Route = createFileRoute("/")({
   component: Index,
