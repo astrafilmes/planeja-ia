@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import {
   Building2,
   Eye,
@@ -125,7 +125,7 @@ function Login() {
     const { error } = await supabase.auth.signInWithPassword(v);
     if (error) {
       setSubmitting(false);
-      return toast.error("Falha no login", { description: error.message });
+      return notify.error("Falha no login", { description: error.message });
     }
     if (trustDevice) {
       try {
@@ -136,7 +136,7 @@ function Login() {
       }
     }
     setSubmitting(false);
-    toast.success("Bem-vindo de volta");
+    notify.success("Bem-vindo de volta");
     navigate({ to: "/dashboard" });
   }
 
@@ -153,8 +153,8 @@ function Login() {
     });
     setSubmitting(false);
     if (error)
-      return toast.error("Falha no cadastro", { description: error.message });
-    toast.success("Conta criada com sucesso", {
+      return notify.error("Falha no cadastro", { description: error.message });
+    notify.success("Conta criada com sucesso", {
       description:
         "Se a confirmação por e-mail estiver ativa, verifique sua caixa de entrada.",
     });
@@ -167,10 +167,10 @@ function Login() {
     });
     setSubmitting(false);
     if (error)
-      return toast.error("Não foi possível enviar o e-mail", {
+      return notify.error("Não foi possível enviar o e-mail", {
         description: error.message,
       });
-    toast.success("Verifique seu e-mail", {
+    notify.success("Verifique seu e-mail", {
       description: "Enviamos um link para redefinir sua senha.",
     });
     setMode("auth");

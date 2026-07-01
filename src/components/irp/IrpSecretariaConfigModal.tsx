@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 
 interface Props {
   open: boolean;
@@ -76,7 +76,7 @@ export function IrpSecretariaConfigModal({
       .then(({ data, error }) => {
         if (cancelled) return;
         if (error) {
-          toast.error("Falha ao carregar configuração", {
+          notify.error("Falha ao carregar configuração", {
             description: error.message,
           });
           return;
@@ -111,11 +111,11 @@ export function IrpSecretariaConfigModal({
         })
         .eq("id", secretariaRowId);
       if (error) throw error;
-      toast.success("Configuração salva");
+      notify.success("Configuração salva");
       onSaved?.();
       onOpenChange(false);
     } catch (e: any) {
-      toast.error("Falha ao salvar", { description: e?.message });
+      notify.error("Falha ao salvar", { description: e?.message });
     } finally {
       setSaving(false);
     }

@@ -23,7 +23,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -304,30 +304,30 @@ export function AppShell({
 
   async function handleExportSystem() {
     if (!isGestor) {
-      toast.error("Exportação restrita", {
+      notify.error("Exportação restrita", {
         description: "Apenas gestores e administradores podem exportar o banco completo.",
       });
       return;
     }
     setExportingSystem(true);
     setExportStep("Iniciando...");
-    const toastId = toast.loading("Exportando sistema...", {
+    const toastId = notify.loading("Exportando sistema...", {
       description: "Coletando dados em prioridade (base → processos → contratos → m2a → logs)",
     });
     try {
       const result = await exportFullSystem((step, current, total) => {
         setExportStep(`${step} (${current}/${total})`);
-        toast.loading(`Exportando sistema (${current}/${total})`, {
+        notify.loading(`Exportando sistema (${current}/${total})`, {
           id: toastId,
           description: step,
         });
       });
-      toast.success("Exportação concluída", {
+      notify.success("Exportação concluída", {
         id: toastId,
         description: `${result.files} arquivos${result.databaseIncluded ? " + banco" : ""}${result.warnings.length ? ` (${result.warnings.length} aviso(s))` : ""}.`,
       });
     } catch (error) {
-      toast.error("Falha ao exportar sistema", {
+      notify.error("Falha ao exportar sistema", {
         id: toastId,
         description: error instanceof Error ? error.message : String(error),
       });
@@ -340,11 +340,11 @@ export function AppShell({
   async function handleSetupDailyBackup() {
     try {
       await setupDailyBackup();
-      toast.success("Backup diário agendado", {
+      notify.success("Backup diário agendado", {
         description: "Será executado todos os dias às 23:55 (UTC).",
       });
     } catch (error) {
-      toast.error("Falha ao agendar backup diário", {
+      notify.error("Falha ao agendar backup diário", {
         description: error instanceof Error ? error.message : String(error),
       });
     }

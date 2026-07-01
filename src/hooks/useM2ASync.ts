@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import { useQueryClient } from "@tanstack/react-query";
 import { persistM2ASnapshot } from "@/lib/m2a";
 import { fetchProcessoFromWorker } from "@/lib/m2a";
@@ -25,12 +25,12 @@ export function useM2ASync({
 
   const sync = useCallback(async () => {
     if (!m2aProcessoUrl) {
-      toast.error("Configure a URL do processo no portal antes de sincronizar.");
+      notify.error("Configure a URL do processo no portal antes de sincronizar.");
       return;
     }
 
     setIsSyncing(true);
-    toastIdRef.current = toast.loading(
+    toastIdRef.current = notify.loading(
       "Conectando ao portal M2A pelo worker…",
     );
     const LOG = "[m2a-sync]";
@@ -57,7 +57,7 @@ export function useM2ASync({
         console.groupEnd();
       }
 
-      toast.loading("Salvando atas, itens e contratos…", {
+      notify.loading("Salvando atas, itens e contratos…", {
         id: toastIdRef.current ?? undefined,
       });
 
@@ -89,12 +89,12 @@ export function useM2ASync({
       }
       const base = `Sincronização concluída. ${partes.join(" · ")}.`;
       if (summary.itens_ambiguos.length > 0) {
-        toast.warning(
+        notify.warning(
           `${base} Atenção: ${summary.itens_ambiguos.length} ite${summary.itens_ambiguos.length === 1 ? "m" : "ns"} de contrato sem vínculo claro com o portal — revise manualmente.`,
           { id: toastIdRef.current ?? undefined, duration: 10000 },
         );
       } else {
-        toast.success(base, { id: toastIdRef.current ?? undefined });
+        notify.success(base, { id: toastIdRef.current ?? undefined });
       }
 
       console.log(
@@ -106,7 +106,7 @@ export function useM2ASync({
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       console.error(`${LOG} ❌ falhou:`, e);
-      toast.error(`Falha ao sincronizar: ${msg}`, {
+      notify.error(`Falha ao sincronizar: ${msg}`, {
         id: toastIdRef.current ?? undefined,
       });
     } finally {

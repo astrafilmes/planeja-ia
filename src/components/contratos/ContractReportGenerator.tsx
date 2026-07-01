@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import { FileText, Download, Loader2, FileSpreadsheet } from "lucide-react";
 import { formatBRL, formatNumber } from "@/lib/utils/normalize";
 import jsPDF from "jspdf";
@@ -113,13 +113,13 @@ export function ContractReportGenerator({ contractIds, isBatch = false, buttonCl
         throw error;
       }
       if (!data || data.length === 0) {
-        toast.info("Nenhum dado encontrado para os contratos selecionados.");
+        notify.info("Nenhum dado encontrado para os contratos selecionados.");
         return [];
       }
 
       return groupContractData(data);
     } catch (e: any) {
-      toast.error("Erro ao buscar dados do contrato", { description: e.message });
+      notify.error("Erro ao buscar dados do contrato", { description: e.message });
       return [];
     }
   };
@@ -134,9 +134,9 @@ export function ContractReportGenerator({ contractIds, isBatch = false, buttonCl
 
     try {
       await exportarRelatorioContratoExcel(contracts, isBatch);
-      toast.success(`Relatório Excel gerado com sucesso!`);
+      notify.success(`Relatório Excel gerado com sucesso!`);
     } catch (e: any) {
-      toast.error("Erro ao exportar Excel", { description: e.message });
+      notify.error("Erro ao exportar Excel", { description: e.message });
     } finally {
       setLoadingXls(false);
     }
@@ -166,7 +166,7 @@ export function ContractReportGenerator({ contractIds, isBatch = false, buttonCl
       : `contrato_${contracts[0].header.numero_contrato?.replace(/[\\/*?:[\]]/g, '_') || 'relatorio'}.pdf`;
 
     doc.save(fileName);
-    toast.success("Relatório PDF gerado com sucesso!");
+    notify.success("Relatório PDF gerado com sucesso!");
     setLoadingPdf(false);
   };
 

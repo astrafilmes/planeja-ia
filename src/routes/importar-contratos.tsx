@@ -53,7 +53,7 @@ import {
  FileText,
  Send,
 } from"lucide-react";
-import { toast } from"sonner";
+import { notify } from"@/lib/notify";
 import {
  readWorkbook,
  parseContratoXlsx,
@@ -574,7 +574,7 @@ function Page() {
  const m2aUrl = m2aProcessoUrl.trim();
  const m2aProcessoId = extractM2AProcessoId(m2aUrl);
  if (!m2aProcessoId) {
- return toast.error("Informe o link válido do processo no portal.");
+ return notify.error("Informe o link válido do processo no portal.");
  }
 
  console.group("M2A: Iniciando Importação de Planilha");
@@ -596,7 +596,7 @@ function Page() {
  if (allowedRefs.size === 0) {
  console.warn("Abortando: Nenhuma secretaria configurada com ref_coluna e dotação default.",
  );
- return toast.error("Nenhuma secretaria cadastrada com ref. coluna + dotação. Cadastre em /secretarias antes de importar.",
+ return notify.error("Nenhuma secretaria cadastrada com ref. coluna + dotação. Cadastre em /secretarias antes de importar.",
  );
  }
  console.log(`Secretarias aptas encontradas: ${allowedRefs.size}`);
@@ -620,7 +620,7 @@ function Page() {
  console.warn("Colunas ignoradas por falta de vínculo no cadastro:",
  parsed.refsIgnoradas,
  );
- toast.warning(
+ notify.warning(
  `Aviso: ${parsed.refsIgnoradas.length} coluna(s) da planilha foram ignoradas pois as secretarias/unidades não foram encontradas no cadastro.`,
  {
  description: `Colunas ignoradas: ${parsed.refsIgnoradas.join(",")}`,
@@ -662,7 +662,7 @@ function Page() {
  }
  updateProgress(48,"Sincronizando atas e itens no portal...");
  console.log("Passo 4: Sincronizando atas/itens/contratos no portal...");
- toast.loading("Varrendo atas e itens do processo no portal...", {
+ notify.loading("Varrendo atas e itens do processo no portal...", {
  id:"m2a-import-sync",
  });
  const snapshot = await (async () => {
@@ -695,7 +695,7 @@ function Page() {
  console.groupEnd();
  }
  })();
- toast.success(
+ notify.success(
  `Base externa sincronizada: ${snapshot.atas.length} ata(s), ${snapshot.itens.length} item(ns).`,
  { id:"m2a-import-sync" },
  );
@@ -852,7 +852,7 @@ function Page() {
  },
  });
 
- toast.success(
+ notify.success(
  `Planilha importada — ${parsed.itens.length} itens, ${totalContratosComAta} contratos previstos`,
  );
  finishTask("Planilha analisada com sucesso.");
@@ -864,7 +864,7 @@ function Page() {
  } catch (e: any) {
  console.error("ERRO CRÍTICO NA IMPORTAÇÃO:", e);
  failTask(e?.message ??"Falha ao importar planilha.");
- toast.error("Falha ao importar planilha", { description: e?.message });
+ notify.error("Falha ao importar planilha", { description: e?.message });
  } finally {
  console.timeEnd("TempoTotalImportacao");
  console.groupEnd();
@@ -895,7 +895,7 @@ function Page() {
  .eq("id", id);
  if (error) {
  console.error("Erro ao atualizar item:", error);
- return toast.error(error.message);
+ return notify.error(error.message);
  }
  qc.invalidateQueries({ queryKey: ["cij-detail", activeJobId] });
  }
@@ -953,7 +953,7 @@ function Page() {
  .eq("id", id);
  if (error) {
  console.error("Erro ao alternar dotação:", error);
- return toast.error(error.message);
+ return notify.error(error.message);
  }
  qc.invalidateQueries({ queryKey: ["cij-detail", activeJobId] });
  }
@@ -964,19 +964,19 @@ function Page() {
  .from("contrato_import_dotacoes")
  .delete()
  .eq("job_id", id);
- if (dErr) return toast.error(dErr.message);
+ if (dErr) return notify.error(dErr.message);
  const { error: iErr } = await supabase
  .from("contrato_import_itens")
  .delete()
  .eq("job_id", id);
- if (iErr) return toast.error(iErr.message);
+ if (iErr) return notify.error(iErr.message);
  const { error: jErr } = await supabase
  .from("contrato_import_jobs")
  .delete()
  .eq("id", id);
- if (jErr) return toast.error(jErr.message);
+ if (jErr) return notify.error(jErr.message);
  if (activeJobId === id) setActiveJobId(null);
- toast.success("Importação excluída");
+ notify.success("Importação excluída");
  qc.invalidateQueries({ queryKey: ["cij-list"] });
  }
 
@@ -989,7 +989,7 @@ function Page() {
  console.log("Passo 1: Validando informações do lote...");
  const numeroBaseContrato = normalizeContratoBase(numeroProcessoBase);
  if (!numeroBaseContrato)
- return toast.error("Informe o nº base do processo (ex.: 026/2025)");
+ return notify.error("Informe o nº base do processo (ex.: 026/2025)");
  if (fornecedoresSemPreposto.length > 0) {
  console.table(
  fornecedoresSemPreposto.map((target) => ({
@@ -997,16 +997,16 @@ function Page() {
  contratos: target.contratos,
  })),
  );
- return toast.error("Preposto pendente por fornecedor.", {
+ return notify.error("Preposto pendente por fornecedor.", {
  description:"Preencha o nome do preposto para cada fornecedor listado na aba Autorizar geração.",
  });
  }
     if (!objetoBatch.trim())
-      return toast.error("Informe o objeto desta geração de contratos");
+      return notify.error("Informe o objeto desta geração de contratos");
     if (!dataBatch || !/^\d{4}-\d{2}-\d{2}$/.test(dataBatch))
-      return toast.error("Informe a data dos contratos.");
+      return notify.error("Informe a data dos contratos.");
     if (contratosSelecionados.length === 0)
-      return toast.error("Nenhum contrato a gerar (todos desmarcados).");
+      return notify.error("Nenhum contrato a gerar (todos desmarcados).");
  if (contratosSemAtaM2A.length > 0) {
  console.table(
  contratosSemAtaM2A.map((contrato) => ({
@@ -1016,7 +1016,7 @@ function Page() {
  itens: contrato.itens.map((item) => item.numeroItem).join(","),
  })),
  );
- return toast.error("Há contratos sem ata definida.", {
+ return notify.error("Há contratos sem ata definida.", {
  description:"Revise a aba Itens e selecione a ata correta para os itens sem vínculo.",
  });
  }
@@ -1034,7 +1034,7 @@ function Page() {
  gestor_id: secretaria?.m2a_gestor_codigo,
  })),
  );
- return toast.error("Cadastro externo incompleto", {
+ return notify.error("Cadastro externo incompleto", {
  description:"Complete Unidade Gestora, Órgão da Dotação, UO, Dotação, Fiscal e Gestor em /secretarias antes de gerar os contratos.",
  });
  }
@@ -1428,7 +1428,7 @@ function Page() {
  },
  });
 
- toast.success(
+ notify.success(
  `${inserts.length} contratos gerados${processoIdFinal && !processoId ?" e processo criado" :""}`,
  );
  finishTask(`${inserts.length} contrato(s) gerado(s) com sucesso.`);
@@ -1445,7 +1445,7 @@ function Page() {
  } catch (e: any) {
  console.error("ERRO NO PROCESSO DE GERAÇÃO:", e);
  failTask(e?.message ??"Falha ao gerar contratos.");
- toast.error("Falha ao gerar contratos (alterações revertidas)", {
+ notify.error("Falha ao gerar contratos (alterações revertidas)", {
  description: e?.message,
  });
  } finally {
