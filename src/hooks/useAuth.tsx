@@ -7,6 +7,7 @@ import {
 } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
+import { queryClient } from "@/lib/query-client";
 
 import {
   clearTrustedToken,
