@@ -491,10 +491,13 @@ function Page() {
  if (data?.processo) setForm(data.processo);
  }, [data?.processo]);
 
- const SECTIONS = [
+ const SECTIONS = useMemo(
+ () => [
  { id:"dados-administrativos", label:"Dados administrativos" },
  { id:"metadados", label:"Metadados" },
- ];
+ ],
+ [],
+ );
  const [activeSection, setActiveSection] = useState<string>(SECTIONS[0].id);
  useEffect(() => {
  const els = SECTIONS.map((s) => document.getElementById(s.id)).filter(
@@ -512,7 +515,7 @@ function Page() {
  );
  els.forEach((el) => io.observe(el));
  return () => io.disconnect();
- }, [data?.processo?.id]);
+ }, [data?.processo?.id, SECTIONS]);
 
  useEffect(() => {
  const off = listenAllM2AProgress(async (event) => {
