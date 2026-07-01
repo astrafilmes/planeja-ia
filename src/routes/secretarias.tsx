@@ -13,7 +13,7 @@ import {
  UsersRound,
  X,
 } from"lucide-react";
-import { toast } from"sonner";
+import { notify } from"@/lib/notify";
 import { AppShell } from"@/components/layout/AppShell";
 import { EmptyState } from"@/components/layout/EmptyState";
 import { supabase } from"@/integrations/supabase/client";
@@ -481,7 +481,7 @@ function Page() {
 
  function validateSecretaria(sec: Sec) {
  if (!sec.sigla || !sec.nome || !sec.numero) {
- toast.error("Número, sigla e nome são obrigatórios.");
+ notify.error("Número, sigla e nome são obrigatórios.");
  return false;
  }
 
@@ -495,7 +495,7 @@ function Page() {
  ].filter(Boolean);
 
  if (invalidFields.length > 0) {
- toast.error("Use apenas IDs numéricos.", {
+ notify.error("Use apenas IDs numéricos.", {
  description: invalidFields.join(","),
  });
  return false;
@@ -511,14 +511,14 @@ function Page() {
  let secretariaId = editing.id ?? null;
  if (editing.id) {
  const { error } = await supabase.from("secretarias").update(payload).eq("id", editing.id);
- if (error) return toast.error(error.message);
+ if (error) return notify.error(error.message);
  } else {
  const { data, error } = await supabase
  .from("secretarias")
  .insert(payload)
  .select("id")
  .single();
- if (error) return toast.error(error.message);
+ if (error) return notify.error(error.message);
  secretariaId = data?.id ?? null;
  }
 
@@ -529,7 +529,7 @@ function Page() {
  gestor: trimOrNull(editing.m2a_gestor_cpf),
  });
  } catch (e) {
- toast.error("Secretaria salva, mas CPFs não foram atualizados.", {
+ notify.error("Secretaria salva, mas CPFs não foram atualizados.", {
  description: (e as Error).message,
  });
  }
@@ -542,7 +542,7 @@ function Page() {
  payload,
  });
 
- toast.success("Secretaria salva.");
+ notify.success("Secretaria salva.");
  setOpen(false);
  invalidateSecretarias();
  }
@@ -550,14 +550,14 @@ function Page() {
  async function saveGroup() {
  if (!groupEditing) return;
  if (groupForm.unidadeM2AId === EMPTY_SELECT_VALUE) {
- return toast.error("Selecione a Unidade Gestora do grupo.");
+ return notify.error("Selecione a Unidade Gestora do grupo.");
  }
  if (
  groupForm.dotacaoOrgaoM2AId !== KEEP_SELECT_VALUE &&
  groupForm.dotacaoOrgaoM2AId !== EMPTY_SELECT_VALUE &&
  !isNumericM2AId(groupForm.dotacaoOrgaoM2AId)
  ) {
- return toast.error("Órgão da Dotação deve ser numérico.");
+ return notify.error("Órgão da Dotação deve ser numérico.");
  }
 
  const fiscal = fiscais.find(
@@ -572,14 +572,14 @@ function Page() {
  groupForm.fiscalM2AId !== EMPTY_SELECT_VALUE &&
  !fiscal
  ) {
- return toast.error("Fiscal inválido para esta Unidade Gestora.");
+ return notify.error("Fiscal inválido para esta Unidade Gestora.");
  }
  if (
  groupForm.gestorM2AId !== KEEP_SELECT_VALUE &&
  groupForm.gestorM2AId !== EMPTY_SELECT_VALUE &&
  !gestor
  ) {
- return toast.error("Gestor inválido para esta Unidade Gestora.");
+ return notify.error("Gestor inválido para esta Unidade Gestora.");
  }
 
  const ids = groupEditing.rows
@@ -608,7 +608,7 @@ function Page() {
  .update(payload)
  .in("id", ids);
 
- if (error) return toast.error(error.message);
+ if (error) return notify.error(error.message);
 
  // Propaga CPFs (fora da tabela secretarias) para cada id quando o usuário trocou o ator
  if (groupForm.fiscalM2AId !== KEEP_SELECT_VALUE || groupForm.gestorM2AId !== KEEP_SELECT_VALUE) {
@@ -626,7 +626,7 @@ function Page() {
  ),
  );
  } catch (e) {
- toast.error("Grupo salvo, mas CPFs não foram atualizados.", {
+ notify.error("Grupo salvo, mas CPFs não foram atualizados.", {
  description: (e as Error).message,
  });
  }
@@ -639,7 +639,7 @@ function Page() {
  payload: { ...payload, registros: ids.length },
  });
 
- toast.success(
+ notify.success(
  `${ids.length} dotação(ões) atualizada(s) para ${groupEditing.title}.`,
  );
  setGroupEditing(null);
@@ -653,7 +653,7 @@ function Page() {
  .delete()
  .eq("id", deleting.id);
 
- if (error) return toast.error(error.message);
+ if (error) return notify.error(error.message);
 
  await logAudit({
  action:"delete",
@@ -662,7 +662,7 @@ function Page() {
  payload: { sigla: deleting.sigla, nome: deleting.nome },
  });
 
- toast.success("Secretaria excluída.");
+ notify.success("Secretaria excluída.");
  setDeleting(null);
  invalidateSecretarias();
  }
