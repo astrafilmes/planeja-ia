@@ -59,11 +59,15 @@ export const AutorizarGeracaoPanel = memo(function AutorizarGeracaoPanel({
   totalValor,
   totalItens,
   busy,
+  dataBatch,
+  onChangeDataBatch,
   onAutorizar,
 }: Props) {
+  const dataValida = /^\d{4}-\d{2}-\d{2}$/.test(dataBatch);
   const disableBtn =
     busy ||
     !processoVinculado ||
+    !dataValida ||
     contratosSelecionados.length === 0 ||
     contratosSemCadastroM2A.length > 0 ||
     fornecedoresSemPreposto.length > 0 ||
