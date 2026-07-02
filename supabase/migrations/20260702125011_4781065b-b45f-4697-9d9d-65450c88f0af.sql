@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.sync_m2a_atas_fornecedor_from_snapshot(uuid) TO authenticated;
