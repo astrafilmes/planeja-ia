@@ -120,6 +120,15 @@ function Page() {
     return processos.find((p) => p.id === pid) ?? null;
   }, [jobDetail, processos]);
 
+  // Pré-preenche a data base a partir do processo vinculado; o usuário pode ajustar.
+  useEffect(() => {
+    if (dataBatchOverride) return;
+    const iso = processoVinculado?.data_abertura ?? "";
+    if (iso && /^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+      setDataBatchOverride(iso);
+    }
+  }, [processoVinculado, dataBatchOverride]);
+
   /* -------------------------------- Actions -------------------------------- */
   const onImportDone = useCallback(() => {
     setFile(null);
