@@ -12,7 +12,7 @@ import type {
 const PAGE_SIZE = 1000;
 
 async function fetchAllPages<T>(
-  runPage: (from: number, to: number) => Promise<{ data: T[] | null; error: any }>,
+  runPage: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: any }>,
 ) {
   const rows: T[] = [];
 
