@@ -159,6 +159,30 @@ function traceStep(trace, event) {
   const selected = step.selecionado ? " selecionado=true" : "";
   const blocked = step.bloqueado ? " bloqueado=true" : "";
   console.log(`[m2a-trace] #${step.seq} ${step.fase || ""} ${step.label || ""} ${step.url || ""}${status}${counts}${selected}${blocked}`);
+  const detalhes = { ...step };
+  delete detalhes.seq;
+  delete detalhes.ts;
+  delete detalhes.fase;
+  delete detalhes.label;
+  delete detalhes.url;
+  delete detalhes.status;
+  delete detalhes.encontrados;
+  delete detalhes.selecionado;
+  delete detalhes.bloqueado;
+  const detailKeys = Object.keys(detalhes).filter((key) => detalhes[key] !== undefined && detalhes[key] !== null);
+  if (detailKeys.length) {
+    console.dir({ traceSeq: step.seq, detalhes }, { depth: 8, maxArrayLength: 200 });
+  }
+}
+
+function logTable(label, rows, limit = 500) {
+  const list = Array.isArray(rows) ? rows : [];
+  console.log(`[m2a-vps] ${label}: ${list.length} registro(s)`);
+  if (!list.length) return;
+  console.table(list.slice(0, limit));
+  if (list.length > limit) {
+    console.log(`[m2a-vps] ${label}: ${list.length - limit} registro(s) omitidos no console.table`);
+  }
 }
 
 async function fetchDocDetailed(path, extraHeaders) {
@@ -812,6 +836,19 @@ async function fetchTabelaMestraItens(processoId, trace) {
   traceStep(trace, { fase: "itens_mestre", label: "tabela mestra de itens", processo_id: processoId, url });
   const doc = await fetchDocDetailed(url);
   const itens = extractTabelaMestraItens(doc.$, processoId);
+  logTable(
+    `processo ${processoId} / tabela mestra completa`,
+    itens.map((i) => ({
+      ordem: i.ordem,
+      lote: i.lote,
+      id_item_mestre: i.id_item_mestre,
+      unidade: i.unidade,
+      qtd_total: i.quantidade_total,
+      valor_unitario: i.valor_unitario,
+      descricao: cleanTextValue(i.descricao).slice(0, 160),
+      especificacao: cleanTextValue(i.especificacao).slice(0, 160),
+    })),
+  );
   traceStep(trace, {
     fase: "itens_mestre",
     label: "tabela mestra extraída",
@@ -822,6 +859,20 @@ async function fetchTabelaMestraItens(processoId, trace) {
     decodedBytes: doc.decodedBytes,
     encontrados: { itens_mestre: itens.length },
     amostra: itens.slice(0, 5).map((i) => ({ ordem: i.ordem, descricao: i.descricao.slice(0, 80) })),
+    por_lote: itens.reduce((acc, item) => {
+      const lote = item.lote || "SEM_LOTE";
+      acc[lote] = (acc[lote] || 0) + 1;
+      return acc;
+    }, {}),
+    itens: itens.map((i) => ({
+      ordem: i.ordem,
+      lote: i.lote,
+      id_item_mestre: i.id_item_mestre,
+      unidade: i.unidade,
+      qtd_total: i.quantidade_total,
+      valor_unitario: i.valor_unitario,
+      descricao: cleanTextValue(i.descricao).slice(0, 220),
+    })),
     selecionado: itens.length > 0,
   });
   return itens;
@@ -891,6 +942,17 @@ async function fetchAtasValidasDoProcesso(processoId, trace) {
   traceStep(trace, { fase: "atas", label: "tabela licitacao_ata_contrato", processo_id: processoId, url });
   const doc = await fetchDocDetailed(url);
   const { atas, ignoradas } = extractAtasValidasFromDoc(doc.$);
+  logTable(
+    `processo ${processoId} / atas válidas extraídas`,
+    atas.map((a) => ({
+      id_ata: a.id_ata,
+      id_lic: a.id_licitacao_ata_contrato,
+      numero_ata: a.numero_ata,
+      fornecedor: a.fornecedor?.nome,
+      detail_url: a.detail_url,
+    })),
+  );
+  logTable(`processo ${processoId} / atas ignoradas por status na tabela`, ignoradas);
   traceStep(trace, {
     fase: "atas",
     label: "atas válidas filtradas",
@@ -994,7 +1056,24 @@ async function fetchVinculosDaAta(ata, mapaMestraPorOrdem, trace) {
       decodedBytes: doc.decodedBytes,
       encontrados: { vinculos: vinculos.length },
       amostra: vinculos.slice(0, 5).map((v) => ({ ordem: v.ordem, qtd: v.quantidade })),
+      vinculos: vinculos.map((v) => ({
+        ordem: v.ordem,
+        id_item_mestre: v.id_item_mestre,
+        qtd: v.quantidade,
+        valor_unitario_contratado: v.valor_unitario_contratado,
+        descricao_linha: cleanTextValue(v.descricao_linha).slice(0, 160),
+      })),
     });
+    logTable(
+      `ata ${ata.numero_ata} (${ata.id_ata}) / vínculos extraídos`,
+      vinculos.map((v) => ({
+        ordem: v.ordem,
+        id_item_mestre: v.id_item_mestre,
+        qtd: v.quantidade,
+        valor_unitario_contratado: v.valor_unitario_contratado,
+        descricao_linha: cleanTextValue(v.descricao_linha).slice(0, 160),
+      })),
+    );
     return vinculos;
   } catch (err) {
     traceStep(trace, {
@@ -1057,6 +1136,57 @@ async function runCascata(processoId) {
     return { ata, vinculos, contratos };
   });
 
+  const vinculosValidosPorOrdem = new Map();
+  for (const { ata, vinculos } of resultados) {
+    if (ata.cancelada) continue;
+    for (const v of vinculos) {
+      const list = vinculosValidosPorOrdem.get(v.ordem) || [];
+      list.push({
+        id_ata: ata.id_ata,
+        numero_ata: ata.numero_ata,
+        id_lic: ata.id_licitacao_ata_contrato,
+        fornecedor: ata.fornecedor?.nome || "",
+        qtd: v.quantidade,
+        valor_unitario_contratado: v.valor_unitario_contratado,
+      });
+      vinculosValidosPorOrdem.set(v.ordem, list);
+    }
+  }
+
+  const diagnosticoDistribuicao = resultados.map(({ ata, vinculos, contratos }) => ({
+    id_ata: ata.id_ata,
+    id_lic: ata.id_licitacao_ata_contrato,
+    numero_ata: ata.numero_ata,
+    situacao: ata.situacao || "",
+    cancelada: !!ata.cancelada,
+    fornecedor: ata.fornecedor?.nome || "",
+    contratos: contratos.length,
+    vinculos_considerados: ata.cancelada ? 0 : vinculos.length,
+    vinculos_lidos: vinculos.length,
+    ordens: vinculos.map((v) => v.ordem).join(", "),
+  }));
+  const itensSemVinculo = itensMestre
+    .filter((m) => !vinculosValidosPorOrdem.has(m.ordem))
+    .map((m) => ({
+      ordem: m.ordem,
+      lote: m.lote,
+      id_item_mestre: m.id_item_mestre,
+      descricao: cleanTextValue(m.descricao).slice(0, 180),
+    }));
+  const itensComMultiplasAtas = Array.from(vinculosValidosPorOrdem.entries())
+    .filter(([, list]) => list.length > 1)
+    .map(([ordem, list]) => ({
+      ordem,
+      atas: list.map((v) => v.numero_ata || v.id_ata).join(" | "),
+      detalhes: list,
+    }));
+
+  console.group(`[m2a-vps] diagnóstico de distribuição processo ${processoId}`);
+  logTable("distribuição por ata", diagnosticoDistribuicao);
+  logTable("itens da mestra sem vínculo em ata válida", itensSemVinculo);
+  logTable("itens da mestra presentes em mais de uma ata válida", itensComMultiplasAtas);
+  console.groupEnd();
+
   // Enriquecimento adicional de fornecedor (herda para contratos sem coluna própria).
   for (const r of resultados) {
     const nomeFinal = (r.ata.fornecedor?.nome || "").trim();
@@ -1112,6 +1242,22 @@ async function runCascata(processoId) {
       };
     });
 
+  const itensPayloadDiagnostico = itens.map((item) => {
+    const mestra = mapaMestraPorOrdem.get(String(item.numero_item));
+    const ata = atas.find((a) => a.id_ata === item.id_ata);
+    return {
+      ordem: item.numero_item,
+      lote: mestra?.lote || "",
+      id_item: item.id_item,
+      id_ata: item.id_ata,
+      numero_ata: ata?.numero_ata || "",
+      fornecedor: ata?.fornecedor?.nome || "",
+      valor_unitario: item.valor_unitario,
+      descricao: cleanTextValue(item.descricao).slice(0, 180),
+    };
+  });
+  logTable(`processo ${processoId} / payload final de itens enviado ao app`, itensPayloadDiagnostico);
+
   const contratos = resultados.flatMap((r) => r.contratos);
 
   const resumo = {
@@ -1136,6 +1282,12 @@ async function runCascata(processoId) {
       atas_validas: atas.length,
       itens_vinculados: itens.length,
       contratos: contratos.length,
+    },
+    diagnostico: {
+      distribuicao_por_ata: diagnosticoDistribuicao,
+      itens_sem_vinculo: itensSemVinculo,
+      itens_com_multiplas_atas: itensComMultiplasAtas,
+      itens_payload: itensPayloadDiagnostico,
     },
   });
 

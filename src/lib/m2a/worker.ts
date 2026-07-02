@@ -32,10 +32,12 @@ export interface WorkerProcessoResponse extends M2aSyncPayload {
   trace?: Array<Record<string, unknown>>;
   resumo?: {
     qtd_atas: number;
+    qtd_itens_mestre?: number;
     qtd_itens: number;
     qtd_contratos: number;
     ultimo_numero_por_secretaria: Record<string, number>;
   };
+  itens_mestre?: Array<Record<string, unknown>>;
 }
 
 /** Espelho do POST /processos/sync da VPS. */

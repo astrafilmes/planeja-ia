@@ -16,6 +16,23 @@ type JobDetail = {
   dotacoes: any[];
 };
 
+function traceText(value: unknown, max = 140) {
+  return String(value ?? "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, max);
+}
+
+function traceTable(label: string, rows: unknown[], limit = 500) {
+  const list = Array.isArray(rows) ? rows : [];
+  console.log(`${label}: ${list.length} registro(s)`);
+  if (!list.length) return;
+  console.table(list.slice(0, limit));
+  if (list.length > limit) {
+    console.log(`${label}: ${list.length - limit} registro(s) omitidos`);
+  }
+}
+
 /**
  * Deriva todas as coleções memoizadas usadas na UI a partir do jobDetail bruto
  * e do cadastro de secretarias. Sincroniza `contratosDesmarcados` quando o
@@ -52,6 +69,54 @@ export function useContratosDerivados(options: {
       return next.size === current.size ? current : next;
     });
   }, [contratosPreliminares, setContratosDesmarcados]);
+
+  useEffect(() => {
+    if (!jobDetail) return;
+    console.groupCollapsed(
+      `[m2a-preview] contratos derivados do job ${jobDetail.job?.id ?? ""}`,
+    );
+    console.log("Job:", {
+      id: jobDetail.job?.id,
+      status: jobDetail.job?.status,
+      totalItensJob: jobDetail.itens?.length ?? 0,
+      totalDotacoesJob: jobDetail.dotacoes?.length ?? 0,
+      contratosPreliminares: contratosPreliminares.length,
+    });
+    traceTable(
+      "[m2a-preview] contratos previstos",
+      contratosPreliminares.map((contrato) => ({
+        key: contrato.key,
+        ata: contrato.m2aAtaNumero ?? contrato.m2aAtaId ?? "SEM_ATA",
+        m2aAtaId: contrato.m2aAtaId,
+        secretaria: contrato.secretariaSigla,
+        dotacao: contrato.dotacao,
+        fornecedor: traceText(resolveFornecedorNome(contrato), 70),
+        itens: contrato.itens.length,
+        totalValor: contrato.totalValor,
+      })),
+    );
+    traceTable(
+      "[m2a-preview] distribuição item→contrato",
+      contratosPreliminares.flatMap((contrato) =>
+        contrato.itens.map((item) => ({
+          contratoKey: contrato.key,
+          ata: contrato.m2aAtaNumero ?? contrato.m2aAtaId ?? "SEM_ATA",
+          secretaria: contrato.secretariaSigla,
+          dotacao: contrato.dotacao,
+          itemId: item.itemId,
+          m2aItemId: item.m2aItemId,
+          ordemItem: item.ordemItem,
+          numeroItem: item.numeroItem,
+          lote: item.lote,
+          quantidade: item.quantidade,
+          valorUnitario: item.valorUnitario,
+          subtotal: item.subtotal,
+          descricao: traceText(item.descricao, 160),
+        })),
+      ),
+    );
+    console.groupEnd();
+  }, [jobDetail, contratosPreliminares]);
 
   const contratosSelecionados = useMemo(
     () =>
