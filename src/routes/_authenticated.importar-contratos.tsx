@@ -363,6 +363,8 @@ function Page() {
                     totalValor={totalValor}
                     totalItens={totalItens}
                     busy={busy}
+                    dataBatch={dataBatchOverride}
+                    onChangeDataBatch={setDataBatchOverride}
                     onAutorizar={autorizarGeracao}
                   />
                 </TabsContent>
