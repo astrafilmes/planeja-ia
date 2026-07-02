@@ -72,6 +72,7 @@ export function useAutorizarGeracao(options: {
   secretariasM2A: SecretariaM2A[];
   m2aItens: M2AItemRow[];
   setBusy: (value: boolean) => void;
+  dataBatchOverride?: string;
 }) {
   const {
     jobDetail,
@@ -86,6 +87,7 @@ export function useAutorizarGeracao(options: {
     secretariasM2A,
     m2aItens,
     setBusy,
+    dataBatchOverride,
   } = options;
 
   const qc = useQueryClient();
