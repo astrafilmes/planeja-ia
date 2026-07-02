@@ -64,6 +64,7 @@ export type ProcessoMin = {
   id: string;
   numero_processo: string | null;
   objeto: string | null;
+  data_abertura: string | null;
   m2a_url: string | null;
   m2a_processo_id: string | null;
   m2a_sync_at: string | null;

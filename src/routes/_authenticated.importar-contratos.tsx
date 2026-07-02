@@ -63,9 +63,11 @@ function Page() {
   const [contratosDesmarcados, setContratosDesmarcados] = useState<Set<string>>(
     new Set(),
   );
+  const [dataBatchOverride, setDataBatchOverride] = useState<string>("");
 
   useEffect(() => {
     setContratosDesmarcados(new Set());
+    setDataBatchOverride("");
   }, [activeJobId]);
 
   /* -------------------------------- Queries -------------------------------- */
@@ -118,6 +120,15 @@ function Page() {
     return processos.find((p) => p.id === pid) ?? null;
   }, [jobDetail, processos]);
 
+  // Pré-preenche a data base a partir do processo vinculado; o usuário pode ajustar.
+  useEffect(() => {
+    if (dataBatchOverride) return;
+    const iso = processoVinculado?.data_abertura ?? "";
+    if (iso && /^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+      setDataBatchOverride(iso);
+    }
+  }, [processoVinculado, dataBatchOverride]);
+
   /* -------------------------------- Actions -------------------------------- */
   const onImportDone = useCallback(() => {
     setFile(null);
@@ -149,6 +160,7 @@ function Page() {
     secretariasM2A,
     m2aItens,
     setBusy,
+    dataBatchOverride,
   });
 
   const { atualizarItem, atualizarAtaItem, alternarDotacao } = useItemMutations({
@@ -351,6 +363,8 @@ function Page() {
                     totalValor={totalValor}
                     totalItens={totalItens}
                     busy={busy}
+                    dataBatch={dataBatchOverride}
+                    onChangeDataBatch={setDataBatchOverride}
                     onAutorizar={autorizarGeracao}
                   />
                 </TabsContent>

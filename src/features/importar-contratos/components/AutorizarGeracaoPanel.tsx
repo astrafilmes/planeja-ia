@@ -3,6 +3,7 @@ import { CheckCircle2, Loader2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { formatBRL } from "@/lib/utils/normalize";
 import type { ContratoPreliminar } from "@/lib/contratoImport";
@@ -31,6 +32,8 @@ type Props = {
   totalValor: number;
   totalItens: number;
   busy: boolean;
+  dataBatch: string;
+  onChangeDataBatch: (value: string) => void;
   onAutorizar: () => void;
 };
 
@@ -56,11 +59,15 @@ export const AutorizarGeracaoPanel = memo(function AutorizarGeracaoPanel({
   totalValor,
   totalItens,
   busy,
+  dataBatch,
+  onChangeDataBatch,
   onAutorizar,
 }: Props) {
+  const dataValida = /^\d{4}-\d{2}-\d{2}$/.test(dataBatch);
   const disableBtn =
     busy ||
     !processoVinculado ||
+    !dataValida ||
     contratosSelecionados.length === 0 ||
     contratosSemCadastroM2A.length > 0 ||
     fornecedoresSemPreposto.length > 0 ||
@@ -120,6 +127,28 @@ export const AutorizarGeracaoPanel = memo(function AutorizarGeracaoPanel({
                   Este job não está vinculado a um processo. Faça uma nova
                   importação para vincular um processo válido.
                 </div>
+              )}
+            </div>
+
+            {/* Data base do lote */}
+            <div className="flex flex-col gap-1.5 rounded-lg border border-border/60 bg-card p-3">
+              <Label htmlFor="autorizar-data-base" className="text-[12px] font-medium uppercase tracking-wider text-muted-foreground">
+                Data base do lote *
+              </Label>
+              <Input
+                id="autorizar-data-base"
+                type="date"
+                value={dataBatch}
+                onChange={(event) => onChangeDataBatch(event.target.value)}
+                className="h-9 text-[13px]"
+              />
+              <p className="text-[12px] text-muted-foreground">
+                Será usada como data de todos os contratos gerados neste lote.
+              </p>
+              {!dataValida && (
+                <p className="text-[12px] text-destructive">
+                  Informe uma data válida (AAAA-MM-DD).
+                </p>
               )}
             </div>
 

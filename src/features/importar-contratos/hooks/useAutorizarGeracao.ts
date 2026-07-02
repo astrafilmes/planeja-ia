@@ -72,6 +72,7 @@ export function useAutorizarGeracao(options: {
   secretariasM2A: SecretariaM2A[];
   m2aItens: M2AItemRow[];
   setBusy: (value: boolean) => void;
+  dataBatchOverride?: string;
 }) {
   const {
     jobDetail,
@@ -86,6 +87,7 @@ export function useAutorizarGeracao(options: {
     secretariasM2A,
     m2aItens,
     setBusy,
+    dataBatchOverride,
   } = options;
 
   const qc = useQueryClient();
@@ -136,11 +138,13 @@ export function useAutorizarGeracao(options: {
       console.groupEnd();
       return notify.error("Processo sem objeto definido.");
     }
-    const dataBatch = procRow.data_abertura;
+    const dataBatch =
+      (dataBatchOverride && dataBatchOverride.trim()) ||
+      procRow.data_abertura;
     if (!dataBatch || !/^\d{4}-\d{2}-\d{2}$/.test(String(dataBatch))) {
       console.timeEnd("ProcessoGeracaoLote");
       console.groupEnd();
-      return notify.error("Processo sem data de abertura definida.");
+      return notify.error("Informe a data base do lote (formato AAAA-MM-DD).");
     }
 
     if (fornecedoresSemPreposto.length > 0) {
@@ -665,6 +669,7 @@ export function useAutorizarGeracao(options: {
     finishTask,
     failTask,
     setBusy,
+    dataBatchOverride,
   ]);
 
   return { autorizarGeracao };
