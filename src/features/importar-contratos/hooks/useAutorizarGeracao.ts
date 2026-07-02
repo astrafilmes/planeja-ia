@@ -26,6 +26,31 @@ type JobDetail = {
   dotacoes: any[];
 };
 
+function traceText(value: unknown, max = 140) {
+  return String(value ?? "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, max);
+}
+
+function traceTable(label: string, rows: unknown[], limit = 500) {
+  const list = Array.isArray(rows) ? rows : [];
+  console.log(`${label}: ${list.length} registro(s)`);
+  if (!list.length) return;
+  console.table(list.slice(0, limit));
+  if (list.length > limit) {
+    console.log(`${label}: ${list.length - limit} registro(s) omitidos`);
+  }
+}
+
+function countBy<T>(rows: T[], getKey: (row: T) => string | null | undefined) {
+  return rows.reduce<Record<string, number>>((acc, row) => {
+    const key = getKey(row) || "NÃO_IDENTIFICADO";
+    acc[key] = (acc[key] ?? 0) + 1;
+    return acc;
+  }, {});
+}
+
 /**
  * Autorização/geração de contratos a partir de um job em preview.
  * O processo vinculado (definido no upload) é a fonte de verdade para
@@ -154,6 +179,66 @@ export function useAutorizarGeracao(options: {
     );
     setBusy(true);
     try {
+      console.groupCollapsed("[m2a-geracao] entrada da geração");
+      console.log("Job/processo:", {
+        activeJobId,
+        jobId: jobDetail.job.id,
+        processoIdFinal,
+        statusJob: jobDetail.job.status,
+        numeroBaseContrato,
+        dataBatch,
+      });
+      traceTable(
+        "[m2a-geracao] contratos selecionados pela UI",
+        contratosSelecionados.map((c) => ({
+          key: c.key,
+          ata: c.m2aAtaNumero ?? c.m2aAtaId ?? "SEM_ATA",
+          m2aAtaId: c.m2aAtaId,
+          secretaria: c.secretariaSigla,
+          dotacao: c.dotacao,
+          fornecedor: traceText(resolveFornecedorNome(c), 70),
+          itens: c.itens.length,
+          totalValor: c.totalValor,
+        })),
+      );
+      if (contratosDesmarcados.size > 0) {
+        console.warn(
+          "[m2a-geracao] contratos desmarcados na UI:",
+          Array.from(contratosDesmarcados),
+        );
+      }
+      traceTable(
+        "[m2a-geracao] itens brutos do job",
+        (jobDetail.itens ?? []).map((item: any) => ({
+          id: item.id,
+          linha: item.source_row,
+          lote: item.lote,
+          numero_item: item.numero_item,
+          ordem_item: item.ordem_item,
+          m2a_ata_numero: item.m2a_ata_numero,
+          m2a_ata_id: item.m2a_ata_id,
+          m2a_item_id: item.m2a_item_id,
+          match_status: item.m2a_match_status,
+          match_score: item.m2a_match_score,
+          excluido: item.excluido,
+          valor_unitario: item.valor_unitario,
+          empresa: traceText(item.empresa, 50),
+          descricao: traceText(item.descricao, 160),
+        })),
+      );
+      traceTable(
+        "[m2a-geracao] dotações brutas do job",
+        (jobDetail.dotacoes ?? []).map((dot: any) => ({
+          item_id: dot.item_id,
+          secretaria_sigla: dot.secretaria_sigla,
+          dotacao: dot.dotacao,
+          ref_coluna: dot.ref_coluna,
+          quantidade: dot.quantidade,
+          ignorado: dot.ignorado,
+        })),
+      );
+      console.groupEnd();
+
       updateProgress(18, "Reservando numeração automática...");
       const preliminaresResolvidos = contratosSelecionados.map((contrato) => ({
         contrato,
@@ -178,6 +263,37 @@ export function useAutorizarGeracao(options: {
         )} item(ns)`,
       );
       console.table(Array.from(planoPorAta.values()));
+      traceTable(
+        "[m2a-geracao] itens que serão distribuídos por contrato",
+        preliminaresResolvidos.flatMap(({ contrato }) =>
+          contrato.itens.map((item) => ({
+            contratoKey: contrato.key,
+            ata: contrato.m2aAtaNumero ?? contrato.m2aAtaId ?? "SEM_ATA",
+            m2aAtaId: contrato.m2aAtaId,
+            secretaria: contrato.secretariaSigla,
+            dotacao: contrato.dotacao,
+            fornecedor: traceText(resolveFornecedorNome(contrato), 70),
+            itemId: item.itemId,
+            m2aItemId: item.m2aItemId,
+            ordemItem: item.ordemItem,
+            numeroItem: item.numeroItem,
+            lote: item.lote,
+            quantidade: item.quantidade,
+            valorUnitario: item.valorUnitario,
+            subtotal: item.subtotal,
+            descricao: traceText(item.descricao, 160),
+          })),
+        ),
+      );
+      console.log(
+        "[m2a-geracao] itens por ata/secretaria:",
+        countBy(
+          preliminaresResolvidos.flatMap(({ contrato }) =>
+            contrato.itens.map((item) => ({ contrato, item })),
+          ),
+          ({ contrato }) => `${contrato.m2aAtaNumero ?? contrato.m2aAtaId ?? "SEM_ATA"} / ${contrato.secretariaSigla}`,
+        ),
+      );
       console.groupEnd();
 
       const semSecretaria = preliminaresResolvidos.filter(
@@ -305,6 +421,22 @@ export function useAutorizarGeracao(options: {
         preliminarPorIndex.push(c);
       }
 
+      traceTable(
+        "[m2a-geracao] payload contratos antes do insert",
+        inserts.map((row, index) => ({
+          index,
+          numero_contrato: row.numero_contrato,
+          secretaria_sigla: row.secretaria_sigla,
+          secretaria_num: row.secretaria_num,
+          dotacao: row.dotacao,
+          m2a_ata_numero: row.m2a_ata_numero,
+          m2a_ata_id: row.m2a_ata_id,
+          fornecedor_nome: traceText(row.fornecedor_nome, 70),
+          itens_previstos: preliminarPorIndex[index]?.itens.length ?? 0,
+          data: row.data,
+        })),
+      );
+
       if (inserts.length !== contratosSelecionados.length) {
         throw new Error(
           `Falha ao preparar todos os contratos: ${inserts.length}/${contratosSelecionados.length} preparados.`,
@@ -374,7 +506,40 @@ export function useAutorizarGeracao(options: {
             };
           });
 
-          if (itensPayload.length === 0) continue;
+          console.groupCollapsed(
+            `[m2a-geracao] contrato ${i + 1}/${contratosInseridosIds.length} ${inserts[i]?.numero_contrato} → ${itensPayload.length} item(ns)`,
+          );
+          console.log("Contrato origem:", {
+            contratoId,
+            contratoKey: c.key,
+            ata: c.m2aAtaNumero ?? c.m2aAtaId,
+            m2aAtaId: c.m2aAtaId,
+            secretaria: c.secretariaSigla,
+            dotacao: c.dotacao,
+            fornecedor: resolveFornecedorNome(c),
+          });
+          traceTable(
+            "[m2a-geracao] contrato_itens payload",
+            itensPayload.map((item) => ({
+              ordem_item: item.ordem_item,
+              numero_item: item.numero_item,
+              lote: item.lote,
+              quantidade: item.quantidade,
+              valor_unitario: item.valor_unitario,
+              valor_total: item.valor_total,
+              m2a_item_id: item.m2a_item_id,
+              descricao: traceText(item.descricao, 160),
+            })),
+          );
+
+          if (itensPayload.length === 0) {
+            console.warn("[m2a-geracao] contrato sem itensPayload; pulando insert", {
+              contratoId,
+              contratoKey: c.key,
+            });
+            console.groupEnd();
+            continue;
+          }
           const { data: itensIns, error: itensErr } = await supabase
             .from("contrato_itens")
             .insert(itensPayload)
@@ -387,6 +552,7 @@ export function useAutorizarGeracao(options: {
             );
           }
           totalItensInseridos += itensIns?.length ?? 0;
+          console.log("[m2a-geracao] contrato_itens inseridos:", itensIns?.length ?? 0);
 
           const dotPayload = (itensIns ?? []).map((row) => ({
             item_id: row.id,
@@ -402,6 +568,8 @@ export function useAutorizarGeracao(options: {
             .from("contrato_item_dotacoes")
             .insert(dotPayload);
           if (dotErr) throw dotErr;
+          traceTable("[m2a-geracao] contrato_item_dotacoes payload", dotPayload);
+          console.groupEnd();
         }
 
         if (totalItensInseridos !== expectedItensGerados) {
