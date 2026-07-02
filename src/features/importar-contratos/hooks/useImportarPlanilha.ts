@@ -22,6 +22,31 @@ import {
   type SyncedAtaItem,
 } from "../lib";
 
+function traceText(value: unknown, max = 140) {
+  return String(value ?? "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, max);
+}
+
+function traceTable(label: string, rows: unknown[], limit = 500) {
+  const list = Array.isArray(rows) ? rows : [];
+  console.log(`${label}: ${list.length} registro(s)`);
+  if (!list.length) return;
+  console.table(list.slice(0, limit));
+  if (list.length > limit) {
+    console.log(`${label}: ${list.length - limit} registro(s) omitidos`);
+  }
+}
+
+function countBy<T>(rows: T[], getKey: (row: T) => string | null | undefined) {
+  return rows.reduce<Record<string, number>>((acc, row) => {
+    const key = getKey(row) || "NÃO_IDENTIFICADO";
+    acc[key] = (acc[key] ?? 0) + 1;
+    return acc;
+  }, {});
+}
+
 export type ImportSubmitPayload =
   | {
       mode: "existing";
@@ -171,6 +196,35 @@ export function useImportarPlanilha(options: {
 
         updateProgress(18, "Extraindo itens, dotações e fornecedores...");
         const parsed = parseContratoXlsx(matrix, allowedRefs);
+        console.groupCollapsed(
+          `[m2a-import] planilha lida (${parsed.itens.length} item(ns), ${parsed.colunasDotacao.length} coluna(s) de dotação)`,
+        );
+        console.log("Cabeçalho/refs:", {
+          linhaCabecalho: parsed.linhaCabecalho,
+          empresa: parsed.empresa,
+          refsIgnoradas: parsed.refsIgnoradas,
+          colunasDotacao: parsed.colunasDotacao,
+          totalContratosPrevistosSemAta: parsed.totalContratosPrevistos,
+          totalValor: parsed.totalValor,
+        });
+        traceTable(
+          "[m2a-import] itens extraídos da planilha",
+          parsed.itens.map((item) => ({
+            linha: item.sourceRow,
+            lote: item.lote,
+            numeroItem: item.numeroItem,
+            ordemItem: item.ordemItem,
+            empresa: traceText(item.empresa, 50),
+            unidade: item.unidade,
+            valorUnitario: item.valorUnitario,
+            dotacoes: item.dotacoes
+              .map((d) => `${d.secretariaSigla}/${d.dotacao}: ${d.quantidade}`)
+              .join(" | "),
+            descricao: traceText(item.descricao, 180),
+          })),
+        );
+        console.log("[m2a-import] itens por lote na planilha:", countBy(parsed.itens, (i) => i.lote || "SEM_LOTE"));
+        console.groupEnd();
 
         if (parsed.refsIgnoradas.length > 0) {
           notify.warning(
@@ -195,9 +249,74 @@ export function useImportarPlanilha(options: {
           {
             atas: workerSnapshot.atas?.length ?? 0,
             itens: workerSnapshot.itens?.length ?? 0,
+            itens_mestre: (workerSnapshot as any).itens_mestre?.length ?? 0,
             contratos: workerSnapshot.contratos_existentes?.length ?? 0,
+            resumo: workerSnapshot.resumo,
           },
         );
+        console.groupCollapsed("[m2a-import] snapshot detalhado vindo do VPS");
+        traceTable(
+          "[m2a-import] atas no snapshot",
+          (workerSnapshot.atas ?? []).map((ata: any) => ({
+            id_ata: ata.id_ata,
+            id_lic: ata.id_licitacao_ata_contrato,
+            numero_ata: ata.numero_ata,
+            situacao: ata.situacao,
+            cancelada: ata.cancelada,
+            fornecedor: traceText(ata.fornecedor?.nome, 70),
+          })),
+        );
+        traceTable(
+          "[m2a-import] tabela mestra vinda do VPS",
+          ((workerSnapshot as any).itens_mestre ?? []).map((item: any) => ({
+            ordem: item.ordem,
+            lote: item.lote,
+            id_item_mestre: item.id_item_mestre,
+            unidade: item.unidade,
+            qtd_total: item.quantidade_total,
+            valor_unitario: item.valor_unitario,
+            descricao: traceText(item.descricao, 180),
+          })),
+        );
+        traceTable(
+          "[m2a-import] itens vinculados finais vindos do VPS",
+          (workerSnapshot.itens ?? []).map((item: any) => ({
+            id_item: item.id_item,
+            numero_item: item.numero_item,
+            id_ata: item.id_ata,
+            valor_unitario: item.valor_unitario,
+            unidade: item.unidade,
+            descricao: traceText(item.descricao, 180),
+          })),
+        );
+        if (Array.isArray(workerSnapshot.trace) && workerSnapshot.trace.length > 0) {
+          traceTable(
+            "[m2a-import] trace resumido do VPS",
+            workerSnapshot.trace.map((step: any) => ({
+              seq: step.seq,
+              fase: step.fase,
+              label: step.label,
+              id_ata: step.id_ata,
+              numero_ata: step.numero_ata,
+              status: step.status,
+              encontrados: JSON.stringify(step.encontrados ?? {}),
+              erro: traceText(step.erro, 120),
+            })),
+          );
+          const finalStep = [...workerSnapshot.trace]
+            .reverse()
+            .find((step: any) => step?.fase === "fim" && step?.diagnostico);
+          const diagnostico = (finalStep as any)?.diagnostico;
+          if (diagnostico) {
+            console.groupCollapsed("[m2a-import] diagnóstico final do VPS");
+            traceTable("distribuição por ata", diagnostico.distribuicao_por_ata ?? []);
+            traceTable("itens da mestra sem vínculo", diagnostico.itens_sem_vinculo ?? []);
+            traceTable("itens em múltiplas atas", diagnostico.itens_com_multiplas_atas ?? []);
+            traceTable("payload final de itens", diagnostico.itens_payload ?? []);
+            console.groupEnd();
+          }
+        }
+        console.groupEnd();
         await persistM2ASnapshot(processoImportId!, workerSnapshot, {
           expectedM2aProcessoId: m2aProcessoId,
         });
@@ -228,6 +347,7 @@ export function useImportarPlanilha(options: {
           sem_match: 0,
           por_ata: {} as Record<string, number>,
         };
+        const matchDetalhe: any[] = [];
         const semMatchDetalhe: any[] = [];
         for (const item of parsed.itens) {
           let debugInfo: any = null;
@@ -249,6 +369,24 @@ export function useImportarPlanilha(options: {
             const ataNum = match.item.ata?.numero_ata ?? match.item.id_ata;
             matchStats.por_ata[ataNum] = (matchStats.por_ata[ataNum] ?? 0) + 1;
           }
+          matchDetalhe.push({
+            linha: item.sourceRow,
+            lote: item.lote,
+            numeroItem: item.numeroItem,
+            ordemItem: item.ordemItem,
+            status,
+            score: match?.score ?? 0,
+            ata: match?.item.ata?.numero_ata ?? match?.item.id_ata ?? null,
+            idAta: match?.item.id_ata ?? null,
+            idItemPortal: match?.item.id_item ?? null,
+            fornecedorAta: traceText(match?.item.ata?.fornecedor?.nome, 50),
+            empresa: traceText(item.empresa, 50),
+            top1: debugInfo?.topScored?.[0]
+              ? `${debugInfo.topScored[0].score} ${debugInfo.topScored[0].ataId} ${debugInfo.topScored[0].reasons?.join("+")}`
+              : "",
+            descricaoPlanilha: traceText(item.descricao, 160),
+            descricaoPortal: traceText(match?.item.descricao, 160),
+          });
           if (!match || match.status !== "auto") {
             semMatchDetalhe.push({
               linha: item.sourceRow,
@@ -262,6 +400,8 @@ export function useImportarPlanilha(options: {
           }
         }
         console.log("[m2a-import] resumo do match:", matchStats);
+        traceTable("[m2a-import] distribuição item→ata (todos os itens)", matchDetalhe);
+        console.log("[m2a-import] match por lote:", countBy(matchDetalhe, (i) => `${i.lote || "SEM_LOTE"} / ${i.status}`));
         if (semMatchDetalhe.length > 0) {
           console.warn(
             `[m2a-import] ⚠ ${semMatchDetalhe.length} item(ns) da planilha SEM match automático:`,
@@ -346,12 +486,31 @@ export function useImportarPlanilha(options: {
               ? i.valorUnitario
               : (Number(itemMatches.get(i.sourceRow)?.item.valor_unitario ?? 0) || 0),
         }));
+        console.groupCollapsed("[m2a-import] gravação da prévia no banco");
+        traceTable(
+          "[m2a-import] contrato_import_itens payload",
+          itensInsert.map((item) => ({
+            linha: item.source_row,
+            lote: item.lote,
+            numero_item: item.numero_item,
+            ordem_item: item.ordem_item,
+            m2a_ata_numero: item.m2a_ata_numero,
+            m2a_ata_id: item.m2a_ata_id,
+            m2a_item_id: item.m2a_item_id,
+            m2a_match_status: item.m2a_match_status,
+            m2a_match_score: item.m2a_match_score,
+            valor_unitario: item.valor_unitario,
+            empresa: traceText(item.empresa, 50),
+            descricao: traceText(item.descricao, 160),
+          })),
+        );
         const { data: insertedItens, error: itErr } = await supabase
           .from("contrato_import_itens")
           .insert(itensInsert)
           .select("id, source_row");
 
         if (itErr) throw itErr;
+        console.log("[m2a-import] itens inseridos:", insertedItens?.length ?? 0);
 
         const rowToId = new Map(insertedItens.map((r) => [r.source_row, r.id]));
         const dotInsert = parsed.itens.flatMap((i) =>
@@ -364,6 +523,16 @@ export function useImportarPlanilha(options: {
             quantidade: d.quantidade,
           })),
         );
+        traceTable(
+          "[m2a-import] contrato_import_dotacoes payload",
+          dotInsert.map((dot) => ({
+            item_id: dot.item_id,
+            secretaria_sigla: dot.secretaria_sigla,
+            dotacao: dot.dotacao,
+            ref_coluna: dot.ref_coluna,
+            quantidade: dot.quantidade,
+          })),
+        );
         if (dotInsert.length) {
           updateProgress(90, "Salvando dotações e quantidades...");
           const { error: dErr } = await supabase
@@ -371,6 +540,8 @@ export function useImportarPlanilha(options: {
             .insert(dotInsert);
           if (dErr) throw dErr;
         }
+        console.log("[m2a-import] dotações inseridas:", dotInsert.length);
+        console.groupEnd();
 
         await logAudit({
           action: "contrato_import",
