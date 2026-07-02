@@ -669,6 +669,7 @@ export function useAutorizarGeracao(options: {
     finishTask,
     failTask,
     setBusy,
+    dataBatchOverride,
   ]);
 
   return { autorizarGeracao };
