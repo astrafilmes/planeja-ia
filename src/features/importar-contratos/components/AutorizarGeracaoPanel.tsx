@@ -32,6 +32,8 @@ type Props = {
   totalValor: number;
   totalItens: number;
   busy: boolean;
+  dataBatch: string;
+  onChangeDataBatch: (value: string) => void;
   onAutorizar: () => void;
 };
 
