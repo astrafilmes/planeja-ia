@@ -130,6 +130,28 @@ export const AutorizarGeracaoPanel = memo(function AutorizarGeracaoPanel({
               )}
             </div>
 
+            {/* Data base do lote */}
+            <div className="flex flex-col gap-1.5 rounded-lg border border-border/60 bg-card p-3">
+              <Label htmlFor="autorizar-data-base" className="text-[12px] font-medium uppercase tracking-wider text-muted-foreground">
+                Data base do lote *
+              </Label>
+              <Input
+                id="autorizar-data-base"
+                type="date"
+                value={dataBatch}
+                onChange={(event) => onChangeDataBatch(event.target.value)}
+                className="h-9 text-[13px]"
+              />
+              <p className="text-[12px] text-muted-foreground">
+                Será usada como data de todos os contratos gerados neste lote.
+              </p>
+              {!dataValida && (
+                <p className="text-[12px] text-destructive">
+                  Informe uma data válida (AAAA-MM-DD).
+                </p>
+              )}
+            </div>
+
             {/* Prepostos por fornecedor */}
             <div className="rounded-lg border border-border/60 bg-card p-3">
               <div className="mb-2 text-[12px] font-medium uppercase tracking-wider text-muted-foreground">
