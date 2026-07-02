@@ -63,9 +63,11 @@ function Page() {
   const [contratosDesmarcados, setContratosDesmarcados] = useState<Set<string>>(
     new Set(),
   );
+  const [dataBatchOverride, setDataBatchOverride] = useState<string>("");
 
   useEffect(() => {
     setContratosDesmarcados(new Set());
+    setDataBatchOverride("");
   }, [activeJobId]);
 
   /* -------------------------------- Queries -------------------------------- */
