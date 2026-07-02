@@ -9,9 +9,53 @@ import {
   incluirDotacao, configurarDocumentos,
 } from "./contrato.js";
 
+function logTable(label, rows, limit = 500) {
+  const list = Array.isArray(rows) ? rows : [];
+  console.log(`[m2a-orq-contrato] ${label}: ${list.length} registro(s)`);
+  if (!list.length) return;
+  console.table(list.slice(0, limit));
+  if (list.length > limit) {
+    console.log(`[m2a-orq-contrato] ${label}: ${list.length - limit} registro(s) omitidos`);
+  }
+}
+
+function shortText(value, max = 160) {
+  return String(value ?? "").replace(/\s+/g, " ").trim().slice(0, max);
+}
+
 export async function processarContratoCompleto(payload, onProgress = () => {}) {
   const { contratoId, m2aProcessoUrl, m2aAtaId, contrato, dadosM2A, itens, dadosDotacao } = payload;
   const numeroContrato = contrato?.numero_contrato || contrato?.numero;
+
+  console.group(`[m2a-orq-contrato] iniciar contrato local=${contratoId} número=${numeroContrato}`);
+  console.log("[m2a-orq-contrato] payload recebido:", {
+    contratoId,
+    numeroContrato,
+    m2aProcessoUrl,
+    m2aAtaId,
+    m2a_contrato_id: contrato?.m2a_contrato_id,
+    data: contrato?.data,
+    data_fim: contrato?.data_fim,
+    unidade_gestora: dadosM2A?.unidade_gestora,
+    fiscal_id: dadosM2A?.fiscal_id,
+    gestor_id: dadosM2A?.gestor_id,
+    preposto_id: dadosM2A?.preposto_id,
+    preposto_nome: dadosM2A?.preposto_nome ?? contrato?.preposto,
+    dotacao: dadosDotacao ?? dadosM2A?.dotacao ?? null,
+    totalItens: (itens ?? dadosM2A?.itens ?? []).length,
+  });
+  logTable(
+    "itens recebidos para envio ao portal",
+    (itens ?? dadosM2A?.itens ?? []).map((item, index) => ({
+      index,
+      numero: item?.numero ?? item?.numero_item,
+      ordem_item: item?.ordem_item,
+      m2a_item_id: item?.m2a_item_id,
+      ata_item_id: item?.ata_item_id ?? item?.m2a_ata_item_id ?? item?.ataItemId,
+      quantidade: item?.quantidade,
+      descricao: shortText(item?.descricao ?? item?.especificacao, 180),
+    })),
+  );
 
   const progress = (etapa, mensagem, extra = {}) =>
     onProgress({ contratoId, etapa, mensagem, ...extra });
@@ -98,5 +142,13 @@ export async function processarContratoCompleto(payload, onProgress = () => {}) 
     avisos,
   });
 
+  console.log("[m2a-orq-contrato] concluído", {
+    contratoId,
+    numeroContrato,
+    m2a_contrato_id: m2aInternalId,
+    documentos: documentosResult.documentosM2A?.length ?? 0,
+    avisos,
+  });
+  console.groupEnd();
   return { m2a_contrato_id: m2aInternalId, documentosM2A: documentosResult.documentosM2A ?? [], avisos };
 }
