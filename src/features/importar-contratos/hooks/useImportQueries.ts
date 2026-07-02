@@ -9,6 +9,26 @@ import type {
   SecretariaM2A,
 } from "../lib";
 
+const PAGE_SIZE = 1000;
+
+async function fetchAllPages<T>(
+  runPage: (from: number, to: number) => Promise<{ data: T[] | null; error: any }>,
+) {
+  const rows: T[] = [];
+
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const to = from + PAGE_SIZE - 1;
+    const { data, error } = await runPage(from, to);
+    if (error) throw error;
+
+    const page = data ?? [];
+    rows.push(...page);
+    if (page.length < PAGE_SIZE) break;
+  }
+
+  return rows;
+}
+
 /**
  * Reúne todas as queries do módulo `importar-contratos` num único hook.
  * Cada seção mantém sua queryKey original para preservar cache e invalidations
@@ -108,21 +128,41 @@ export function useImportQueries(options: { activeJobId: string | null }) {
           .select("*")
           .eq("id", activeJobId!)
           .single(),
-        supabase
-          .from("contrato_import_itens")
-          .select("*")
-          .eq("job_id", activeJobId!)
-          .order("source_row"),
-        supabase
-          .from("contrato_import_dotacoes")
-          .select("*")
-          .eq("job_id", activeJobId!),
+        fetchAllPages<any>((from, to) =>
+          supabase
+            .from("contrato_import_itens")
+            .select("*")
+            .eq("job_id", activeJobId!)
+            .order("source_row")
+            .range(from, to),
+        ),
+        fetchAllPages<any>((from, to) =>
+          supabase
+            .from("contrato_import_dotacoes")
+            .select("*")
+            .eq("job_id", activeJobId!)
+            .order("id")
+            .range(from, to),
+        ),
       ]);
       if (job.error) throw job.error;
+      const expectedItens = Number((job.data as any)?.total_itens ?? 0);
+      if (expectedItens && itens.length !== expectedItens) {
+        console.warn("[m2a-import] divergência ao carregar itens do job", {
+          jobId: activeJobId,
+          esperado: expectedItens,
+          carregado: itens.length,
+        });
+      }
+      console.log("[m2a-import] detalhe do job carregado", {
+        jobId: activeJobId,
+        itens: itens.length,
+        dotacoes: dotacoes.length,
+      });
       return {
         job: job.data,
-        itens: itens.data ?? [],
-        dotacoes: dotacoes.data ?? [],
+        itens,
+        dotacoes,
       };
     },
   });
@@ -150,13 +190,14 @@ export function useImportQueries(options: { activeJobId: string | null }) {
     queryKey: ["m2a-itens-import", activeJobProcessoId],
     enabled: !!activeJobProcessoId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("m2a_itens")
-        .select("m2a_ata_id, m2a_item_id, numero_item, descricao, unidade, valor_unitario")
-        .eq("processo_id", activeJobProcessoId!)
-        .order("numero_item");
-      if (error) throw error;
-      return (data ?? []) as M2AItemRow[];
+      return fetchAllPages<M2AItemRow>((from, to) =>
+        supabase
+          .from("m2a_itens")
+          .select("m2a_ata_id, m2a_item_id, numero_item, descricao, unidade, valor_unitario")
+          .eq("processo_id", activeJobProcessoId!)
+          .order("numero_item")
+          .range(from, to),
+      );
     },
   });
 
