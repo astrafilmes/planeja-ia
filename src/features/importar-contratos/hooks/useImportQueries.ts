@@ -44,7 +44,7 @@ export function useImportQueries(options: { activeJobId: string | null }) {
         await supabase
           .from("processos")
           .select(
-            "id, numero_processo, objeto, m2a_url, m2a_processo_id, m2a_sync_at",
+            "id, numero_processo, objeto, data_abertura, m2a_url, m2a_processo_id, m2a_sync_at",
           )
           .is("deleted_at", null)
           .order("created_at", { ascending: false })
