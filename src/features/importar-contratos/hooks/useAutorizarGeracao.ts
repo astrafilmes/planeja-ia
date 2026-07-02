@@ -244,10 +244,27 @@ export function useAutorizarGeracao(options: {
       console.groupEnd();
 
       updateProgress(18, "Reservando numeração automática...");
-      const preliminaresResolvidos = contratosSelecionados.map((contrato) => ({
-        contrato,
-        secretaria: resolveSecretariaForContrato(contrato, secretariasM2A),
-      }));
+      const preliminaresResolvidos = contratosSelecionados
+        .map((contrato) => ({
+          contrato,
+          secretaria: resolveSecretariaForContrato(contrato, secretariasM2A),
+        }))
+        // Ordena por secretaria → ata → fornecedor para que a numeração
+        // reservada em lote seja atribuída de forma agrupada (todos os
+        // contratos de um fornecedor recebem números consecutivos antes
+        // do próximo fornecedor da mesma secretaria).
+        .sort((a, b) => {
+          const secA = a.secretaria?.sigla ?? a.contrato.secretariaSigla ?? "";
+          const secB = b.secretaria?.sigla ?? b.contrato.secretariaSigla ?? "";
+          if (secA !== secB) return secA.localeCompare(secB);
+          const ataA = a.contrato.m2aAtaNumero ?? a.contrato.m2aAtaId ?? "";
+          const ataB = b.contrato.m2aAtaNumero ?? b.contrato.m2aAtaId ?? "";
+          if (ataA !== ataB) return ataA.localeCompare(ataB);
+          const fornA = resolveFornecedorNome(a.contrato) ?? "";
+          const fornB = resolveFornecedorNome(b.contrato) ?? "";
+          if (fornA !== fornB) return fornA.localeCompare(fornB);
+          return (a.contrato.key ?? "").localeCompare(b.contrato.key ?? "");
+        });
 
       const planoPorAta = new Map<
         string,
