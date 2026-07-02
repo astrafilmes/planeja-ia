@@ -160,6 +160,7 @@ function Page() {
     secretariasM2A,
     m2aItens,
     setBusy,
+    dataBatchOverride,
   });
 
   const { atualizarItem, atualizarAtaItem, alternarDotacao } = useItemMutations({
