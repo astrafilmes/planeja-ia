@@ -15,6 +15,20 @@ const DOC_GENERATE_SETTLE_MS = 700;
 const DOC_POST_PAUSE_MS = 75;
 
 // --- helpers locais ---
+function shortLogText(value, max = 160) {
+  return String(value ?? "").replace(/\s+/g, " ").trim().slice(0, max);
+}
+
+function logTable(label, rows, limit = 500) {
+  const list = Array.isArray(rows) ? rows : [];
+  console.log(`[m2a-contrato] ${label}: ${list.length} registro(s)`);
+  if (!list.length) return;
+  console.table(list.slice(0, limit));
+  if (list.length > limit) {
+    console.log(`[m2a-contrato] ${label}: ${list.length - limit} registro(s) omitidos`);
+  }
+}
+
 function extractContratoIdFromHref(href) {
   return href?.match(/\/contratos\/(\d+)\/?/)?.[1] ?? null;
 }
@@ -262,14 +276,41 @@ export async function adicionarItensAoContrato(contratoId, itensDesejados) {
   const itens = normalizeItensDesejados(itensDesejados);
   if (!itens.length) return { adicionados: 0 };
 
+  console.group(`[m2a-contrato] contrato ${contratoId} / módulo 4 adicionar itens`);
+  logTable(
+    "itens desejados recebidos do app",
+    itens.map((item) => ({
+      numero: item.numero,
+      ataItemId: item.ataItemId,
+      quantidade: item.quantidade,
+      descricao: shortLogText(item.descricao, 180),
+    })),
+  );
+
   const tabelaUrl = `/contratos/ata_registro_preco_contrato/tabela/${contratoId}/?page_size=1000`;
   const tabela = await m2a.get(tabelaUrl, { headers: { "X-Requested-With": "XMLHttpRequest" } });
   const $tab = loadDoc(tabela.html);
   const disponiveis = scrapeItensDisponiveis($tab);
+  logTable(
+    "itens disponíveis na tabela M2A para adicionar",
+    disponiveis.map((item) => ({
+      ataItemId: item.ataItemId,
+      numero: item.numero,
+      descricao: shortLogText(item.descricao, 180),
+    })),
+  );
   const numerosDisp = new Set(disponiveis.map((it) => it.numero));
   const comNumero = itens.filter((it) => it.numero);
   const hits = comNumero.filter((it) => numerosDisp.has(it.numero)).length;
   const preferDescription = comNumero.length ? hits / comNumero.length < 0.8 : false;
+  console.log("[m2a-contrato] estratégia de matching:", {
+    contratoId,
+    totalDesejados: itens.length,
+    totalDisponiveis: disponiveis.length,
+    itensComNumero: comNumero.length,
+    hitsPorNumero: hits,
+    preferDescription,
+  });
 
   const used = new Set();
   const matches = itens.map((item) => {
@@ -277,6 +318,18 @@ export async function adicionarItensAoContrato(contratoId, itensDesejados) {
     if (d) used.add(d.ataItemId);
     return { desejado: item, disponivel: d };
   });
+  logTable(
+    "resultado desejado → disponível",
+    matches.map((m) => ({
+      desejado_numero: m.desejado.numero,
+      desejado_ataItemId: m.desejado.ataItemId,
+      desejado_desc: shortLogText(m.desejado.descricao, 120),
+      disponivel: !!m.disponivel,
+      disponivel_ataItemId: m.disponivel?.ataItemId ?? "",
+      disponivel_numero: m.disponivel?.numero ?? "",
+      disponivel_desc: shortLogText(m.disponivel?.descricao, 120),
+    })),
+  );
   const avisos = [];
   const encontrados = matches.filter((m) => m.disponivel);
   const ausentes = matches.filter((m) => !m.disponivel).map((m) => m.desejado);
@@ -286,7 +339,12 @@ export async function adicionarItensAoContrato(contratoId, itensDesejados) {
     );
   }
   const itemIds = encontrados.map((m) => m.disponivel.ataItemId).join(" ");
-  if (!itemIds) return { adicionados: 0, avisos };
+  if (!itemIds) {
+    console.warn("[m2a-contrato] nenhum item disponível encontrado para adicionar", { avisos });
+    console.groupEnd();
+    return { adicionados: 0, avisos };
+  }
+  console.log("[m2a-contrato] ids enviados para /contratos/adicionar_item_ata:", itemIds);
 
   const csrf =
     $tab('input[name="csrfmiddlewaretoken"]').attr("value") ||
@@ -298,6 +356,8 @@ export async function adicionarItensAoContrato(contratoId, itensDesejados) {
   });
   ensureOperationAccepted(loadDoc(r.html), "adição de itens ao contrato");
   await sleep(ADD_ITEMS_SETTLE_MS);
+  console.log("[m2a-contrato] itens adicionados:", encontrados.length, { avisos });
+  console.groupEnd();
   return { adicionados: encontrados.length, avisos };
 }
 
@@ -325,11 +385,30 @@ export async function atualizarQuantidadesItens(contratoId, itensDesejados) {
   const itens = normalizeItensDesejados(itensDesejados);
   if (!itens.length) return { atualizados: 0 };
 
+  console.group(`[m2a-contrato] contrato ${contratoId} / módulo 5 atualizar quantidades`);
+  logTable(
+    "quantidades desejadas recebidas do app",
+    itens.map((item) => ({
+      numero: item.numero,
+      ataItemId: item.ataItemId,
+      quantidade: item.quantidade,
+      descricao: shortLogText(item.descricao, 180),
+    })),
+  );
+
   const tabela = await m2a.get(
     `/contratos/itens/tabela/${contratoId}/?page_size=1000`,
     { headers: { "X-Requested-With": "XMLHttpRequest" } },
   );
   const itensContrato = scrapeContratoItens(loadDoc(tabela.html));
+  logTable(
+    "itens já presentes no contrato M2A",
+    itensContrato.map((item) => ({
+      contratoItemId: item.contratoItemId,
+      numero: item.numero,
+      descricao: shortLogText(item.descricao, 180),
+    })),
+  );
   const numerosContrato = new Set(itensContrato.map((it) => it.numero));
   const comNumero = itens.filter((it) => it.numero);
   const hits = comNumero.filter((it) => numerosContrato.has(it.numero)).length;
@@ -341,6 +420,27 @@ export async function atualizarQuantidadesItens(contratoId, itensDesejados) {
     if (enc) used.add(enc.ataItemId);
     return { desejado: item, encontrado: enc ? { ...enc, contratoItemId: enc.ataItemId } : null };
   });
+  console.log("[m2a-contrato] estratégia de matching de quantidades:", {
+    contratoId,
+    totalDesejados: itens.length,
+    totalNoContrato: itensContrato.length,
+    itensComNumero: comNumero.length,
+    hitsPorNumero: hits,
+    preferDescription,
+  });
+  logTable(
+    "resultado quantidade desejada → item do contrato",
+    matches.map((m) => ({
+      desejado_numero: m.desejado.numero,
+      desejado_ataItemId: m.desejado.ataItemId,
+      desejado_qtd: m.desejado.quantidade,
+      desejado_desc: shortLogText(m.desejado.descricao, 120),
+      encontrado: !!m.encontrado,
+      contratoItemId: m.encontrado?.contratoItemId ?? "",
+      encontrado_numero: m.encontrado?.numero ?? "",
+      encontrado_desc: shortLogText(m.encontrado?.descricao, 120),
+    })),
+  );
   const avisos = [];
   const ausentes = matches.filter((m) => !m.encontrado).map((m) => m.desejado);
   for (const it of ausentes) {
@@ -368,6 +468,8 @@ export async function atualizarQuantidadesItens(contratoId, itensDesejados) {
     }
     await sleep(ITEM_POST_PAUSE_MS);
   }
+  console.log("[m2a-contrato] quantidades atualizadas:", atualizados, { avisos });
+  console.groupEnd();
   return { atualizados, avisos };
 }
 
