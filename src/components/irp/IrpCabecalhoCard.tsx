@@ -201,27 +201,7 @@ export function IrpCabecalhoCard({
         </div>
       </CardHeader>
       <CardContent className="grid gap-3 md:grid-cols-3">
-        <div className="md:col-span-3 flex items-center justify-between rounded-md border border-border/60 bg-muted/30 px-3 py-2">
-          <div>
-            <Label
-              htmlFor="e_registro_preco"
-              className="text-[13px] font-medium"
-            >
-              É Registro de Preços (SRP)?
-            </Label>
-            <p className="text-[11px] text-muted-foreground">
-              Desmarque para criar um processo comum: uma DFD por secretaria,
-              sem IRP/consolidação.
-            </p>
-          </div>
-          <input
-            id="e_registro_preco"
-            type="checkbox"
-            checked={eSRP}
-            onChange={(e) => update({ e_registro_preco: e.target.checked })}
-            className="size-4 accent-primary"
-          />
-        </div>
+
         {submitHelper && (
           <div className="md:col-span-3 rounded-md border border-amber-500/40 bg-amber-50/40 px-3 py-2 text-[12px] text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
             {submitHelper}
