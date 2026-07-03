@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { AnaliseIRP } from "@/lib/irp";
-import { findIrpUnidadeCanonicaByRefColuna } from "@/lib/m2a";
+import { findIrpUnidadeCanonicaByRefColuna, getOrgaoMapping } from "@/lib/m2a";
 import type {
   IrpImportRow,
   ProcessoM2AForm,
