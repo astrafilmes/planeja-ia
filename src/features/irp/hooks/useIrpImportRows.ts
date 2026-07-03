@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { AnaliseIRP } from "@/lib/irp";
-import { findIrpUnidadeCanonicaByRefColuna } from "@/lib/m2a";
+import { findIrpUnidadeCanonicaByRefColuna, getOrgaoMapping } from "@/lib/m2a";
 import type {
   IrpImportRow,
   ProcessoM2AForm,
@@ -205,13 +205,22 @@ export function useIrpImportRows({
     });
     if (!first) return;
     const ids = enrichRowForM2A(first);
-    setProcessoM2AForm((current) => ({
-      ...current,
-      orgao_solicitante: current.orgao_solicitante || ids.orgaoId || "",
-      unidade_orcamentaria: current.unidade_orcamentaria || ids.uoId || "",
-      unidade_orcamentaria_gerenciadora:
-        current.unidade_orcamentaria_gerenciadora || ids.uoId || "",
-    }));
+    const orgaoId = ids.orgaoId || "";
+    const uoId = ids.uoId || "";
+    setProcessoM2AForm((current) => {
+      const nextOrgao = current.orgao_solicitante || orgaoId;
+      const mapping = nextOrgao ? getOrgaoMapping(nextOrgao) : null;
+      return {
+        ...current,
+        orgao_solicitante: nextOrgao,
+        unidade_orcamentaria: current.unidade_orcamentaria || uoId,
+        unidade_orcamentaria_gerenciadora:
+          current.unidade_orcamentaria_gerenciadora || uoId,
+        responsavel_dfd:
+          current.responsavel_dfd ||
+          (mapping ? String(mapping.responsavel_dfd_id) : ""),
+      };
+    });
   }, [enrichRowForM2A, selectedImportRows, setProcessoM2AForm]);
 
   // Suprime lint sobre form não usado diretamente (mantido para futuras regras).
