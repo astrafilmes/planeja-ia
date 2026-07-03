@@ -801,7 +801,7 @@ export type Database = {
             foreignKeyName: "irp_job_secretarias_unidade_id_fkey"
             columns: ["unidade_id"]
             isOneToOne: false
-            referencedRelation: "irp_unidades_processamento"
+            referencedRelation: "secretarias"
             referencedColumns: ["id"]
           },
         ]
