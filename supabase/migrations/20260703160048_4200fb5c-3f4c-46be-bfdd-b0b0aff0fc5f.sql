@@ -1,0 +1,3 @@
+ALTER TABLE public.irp_job_secretarias DROP CONSTRAINT irp_job_secretarias_unidade_id_fkey;
+UPDATE public.irp_job_secretarias SET unidade_id = NULL WHERE unidade_id IS NOT NULL AND unidade_id NOT IN (SELECT id FROM public.secretarias);
+ALTER TABLE public.irp_job_secretarias ADD CONSTRAINT irp_job_secretarias_unidade_id_fkey FOREIGN KEY (unidade_id) REFERENCES public.secretarias(id) ON DELETE SET NULL;
