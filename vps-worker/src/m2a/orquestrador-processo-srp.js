@@ -23,6 +23,7 @@ import {
   capturarIdsProcesso,
   atualizarProcesso,
 } from "./processo-srp.js";
+import { reordenarItensProcesso } from "./processo-comum.js";
 import {
   criarItemEAdicionarNaDFD,
   gerarIntencoes,
@@ -309,6 +310,24 @@ export async function orquestrarCriacaoProcesso(payload, onProgress = () => {}) 
     console.log(
       `[irp] resumo: ${ignoradasSemMatch} sem secretaria pareada (orgao+uo), ${ignoradasSemQuantidade} sem quantidade — ignoradas silenciosamente.`,
     );
+  }
+
+  // 7.5. Reordena itens do processo conforme ordem da planilha (master list),
+  //      igual ao fluxo do processo comum. Sem isso, o portal mantém a ordem
+  //      de inclusão na DFD gerenciadora, que pode divergir da tabela original.
+  try {
+    onProgress({
+      etapa: "reordenar_itens",
+      mensagem: "Reordenando itens do processo…",
+      progresso: 97,
+    });
+    const descricoes = itens.map((i) => String(i.descricao || ""));
+    const r = await reordenarItensProcesso(processoId, descricoes);
+    console.log(`[irp] reordenados=${r.reordenados}/${descricoes.length}`);
+  } catch (err) {
+    const msg = String(err?.message ?? err);
+    console.error(`[irp] reordenar itens: ${msg}`);
+    erros.push({ etapa: "reordenar_itens", erro: msg });
   }
 
   // 8. Justificativa da Demanda — MIA! (sem Gemini). Best-effort, ao final.
