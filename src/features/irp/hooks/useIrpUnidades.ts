@@ -30,6 +30,7 @@ export function useIrpUnidades(): UseIrpUnidadesResult {
         .select(
           "id, numero, sigla, nome, m2a_ref_coluna, m2a_dotacao_default, m2a_uo_id, m2a_dot_id",
         )
+        .eq("ativa", true)
         .not("m2a_ref_coluna", "is", null)
         .order("numero")
         .order("m2a_ref_coluna");
