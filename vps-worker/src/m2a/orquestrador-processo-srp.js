@@ -23,6 +23,7 @@ import {
   capturarIdsProcesso,
   atualizarProcesso,
 } from "./processo-srp.js";
+import { reordenarItensProcesso } from "./processo-comum.js";
 import {
   criarItemEAdicionarNaDFD,
   gerarIntencoes,
