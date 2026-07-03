@@ -516,9 +516,13 @@ export async function listarItensDoProcesso(processoId) {
   $("tr.tr_processo_administrativo_item").each((_i, tr) => {
     const $tr = $(tr);
     const trId = $tr.attr("id") || "";
-    const m = trId.match(/tr_(\d+)/);
-    if (!m) return;
-    const itemId = m[1];
+    const itemId =
+      trId.match(/tr_processo_administrativo_item_(\d+)/i)?.[1] ||
+      trId.match(/tr_(\d+)$/)?.[1] ||
+      $tr.find('input[type="checkbox"][value]').first().attr("value") ||
+      $tr.find("button[id_item]").first().attr("id_item") ||
+      "";
+    if (!/^\d+$/.test(String(itemId))) return;
     let sequencialAtual = null;
     const $seqBtn = $tr.find("button[id_item]").first();
     if ($seqBtn.length) {
@@ -526,9 +530,13 @@ export async function listarItensDoProcesso(processoId) {
       const n = parseInt(txt, 10);
       if (Number.isFinite(n)) sequencialAtual = n;
     }
+    const $tds = $tr.find("td");
+    if (sequencialAtual === null && $tds.length >= 3) {
+      const n = parseInt($tds.eq(2).text().replace(/\D+/g, ""), 10);
+      if (Number.isFinite(n)) sequencialAtual = n;
+    }
     // 4ª <td> costuma ter a descrição visível; usamos um fallback robusto.
     let descricao = "";
-    const $tds = $tr.find("td");
     if ($tds.length >= 4) {
       descricao = $tds.eq(3).text().replace(/\s+/g, " ").trim();
     }
@@ -553,9 +561,17 @@ function norm(s) {
 
 export async function reordenarItensProcesso(processoId, descricoesOrdenadas) {
   const atual = await listarItensDoProcesso(processoId);
-  if (!atual.length) return { ok: true, reordenados: 0 };
+  if (!atual.length) {
+    console.warn(
+      `[reordenarItensProcesso] processo ${processoId}: nenhum item encontrado na tabela; nada foi reordenado.`,
+    );
+    return { ok: false, reordenados: 0, motivo: "nenhum item encontrado" };
+  }
   const desejada = (descricoesOrdenadas || []).map(norm).filter(Boolean);
-  if (!desejada.length) return { ok: true, reordenados: 0 };
+  if (!desejada.length) return { ok: false, reordenados: 0, motivo: "ordem desejada vazia" };
+  console.log(
+    `[reordenarItensProcesso] processo ${processoId}: ${atual.length} item(ns) no portal; ${desejada.length} posição(ões) desejada(s).`,
+  );
 
   // Para cada item desejado, na ordem, garantir que esteja na posição N+1.
   // Como o portal renumera ao mover, iteramos sempre relendo a tabela.
@@ -599,5 +615,22 @@ export async function reordenarItensProcesso(processoId, descricoesOrdenadas) {
     reordenados++;
     await sleep(120);
   }
-  return { ok: true, reordenados };
+  const final = await listarItensDoProcesso(processoId);
+  const foraDeOrdem = [];
+  for (let i = 0; i < Math.min(desejada.length, final.length); i++) {
+    const itemNaPosicao = final.find((it) => it.sequencialAtual === i + 1) || final[i];
+    if (!itemNaPosicao) continue;
+    const descFinal = norm(itemNaPosicao.descricao);
+    if (descFinal !== desejada[i] && !descFinal.startsWith(desejada[i].slice(0, 40))) {
+      foraDeOrdem.push({ posicao: i + 1, esperado: desejada[i].slice(0, 80), encontrado: descFinal.slice(0, 80) });
+    }
+  }
+  if (foraDeOrdem.length) {
+    console.warn(
+      `[reordenarItensProcesso] processo ${processoId}: ${foraDeOrdem.length} posição(ões) ainda fora da ordem desejada. amostra=${JSON.stringify(foraDeOrdem.slice(0, 5))}`,
+    );
+  } else {
+    console.log(`[reordenarItensProcesso] processo ${processoId}: ordem conferida com sucesso.`);
+  }
+  return { ok: foraDeOrdem.length === 0, reordenados, foraDeOrdem };
 }
