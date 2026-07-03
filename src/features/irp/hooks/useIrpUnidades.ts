@@ -44,17 +44,18 @@ export function useIrpUnidades(): UseIrpUnidadesResult {
         m2a_uo_id: string | null;
         m2a_dot_id: string | null;
       }>;
-      // `m2a_ref_coluna` é 1-based (convenção do parser de contratos).
-      // O parser IRP consome 0-based (matrix[row][col]), então subtraímos 1.
+      // `m2a_ref_coluna` segue a MESMA convenção usada em
+      // M2A_IRP_UNIDADES_CANONICAS (índice da coluna da planilha tal como o
+      // parser IRP consome). Não fazemos ajuste 0/1-based aqui.
       return rows
-        .filter((r) => typeof r.m2a_ref_coluna === "number" && r.m2a_ref_coluna > 0)
+        .filter((r) => typeof r.m2a_ref_coluna === "number" && r.m2a_ref_coluna >= 0)
         .map<UnidadeIrp>((r) => ({
           id: r.id,
           numero: Number(r.numero),
           nome: r.m2a_dotacao_default
             ? `${r.nome} · ${r.m2a_dotacao_default}`
             : r.nome,
-          ref_coluna: Number(r.m2a_ref_coluna) - 1,
+          ref_coluna: Number(r.m2a_ref_coluna),
           secretaria_id: r.id,
         }));
     },
