@@ -11,6 +11,8 @@ export interface IrpUploadCardProps {
   progress: number;
   onFileChange: (file: File | null) => void;
   onAnalisar: () => void;
+  eRegistroPreco: boolean;
+  onERegistroPrecoChange: (v: boolean) => void;
 }
 
 export function IrpUploadCard({
@@ -19,6 +21,8 @@ export function IrpUploadCard({
   progress,
   onFileChange,
   onAnalisar,
+  eRegistroPreco,
+  onERegistroPrecoChange,
 }: IrpUploadCardProps) {
   return (
     <Card className="border-border/60">
@@ -54,13 +58,57 @@ export function IrpUploadCard({
           </div>
         )}
 
+        {/* Toggle SRP × comum — visível logo abaixo do arquivo, antes da análise. */}
+        <div className="flex flex-col gap-1.5">
+          <Label>Modalidade</Label>
+          <div
+            role="tablist"
+            aria-label="Modalidade do processo"
+            className="grid grid-cols-2 gap-1 rounded-lg border border-border/60 bg-muted/40 p-1"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={eRegistroPreco}
+              onClick={() => onERegistroPrecoChange(true)}
+              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                eRegistroPreco
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Registro de preços
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={!eRegistroPreco}
+              onClick={() => onERegistroPrecoChange(false)}
+              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                !eRegistroPreco
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Processo comum
+            </button>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            {eRegistroPreco
+              ? "Vai gerar um processo SRP (ata + registro de preços)."
+              : "Vai gerar um processo comum — uma DFD por coluna da planilha, mesmo que compartilhem a UO."}
+          </p>
+        </div>
+
         <Button
           type="button"
           onClick={onAnalisar}
           disabled={!file || busy}
           className="w-full"
         >
-          {busy ? "Processando..." : "Analisar planilha"}
+          {busy
+            ? "Processando..."
+            : `Analisar planilha (${eRegistroPreco ? "SRP" : "comum"})`}
         </Button>
 
         {progress > 0 && <Progress value={progress} />}

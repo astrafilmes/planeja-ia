@@ -98,6 +98,14 @@ export function useEnviarProcessoM2A({
   ]);
 
   const buildM2AIrpPayload = useCallback(async () => {
+    // Chave de participante = coluna da planilha (ref_coluna). Assim, mesmo quando
+    // várias colunas caem na mesma UO (ex.: FUNDEB FF e FUNDEB FI), cada coluna
+    // vira uma DFD independente — igual ao fluxo por dotação do contrato SRP.
+    const chaveDaRow = (r: IrpImportRow): string => {
+      const refColuna = r.resultado?.unidade.ref_coluna;
+      return refColuna != null ? `col:${refColuna}` : `row:${r.key}`;
+    };
+
     const uoGerenciadora =
       processoM2AForm.unidade_orcamentaria_gerenciadora.trim() ||
       processoM2AForm.unidade_orcamentaria.trim();
@@ -109,10 +117,7 @@ export function useEnviarProcessoM2A({
       throw new Error("Secretaria gerenciadora não identificada.");
     }
     const gerenciadora_numero = rowGerenciadora.secretaria.numero;
-    const idsGerenciadora = enrichRowForM2A(rowGerenciadora);
-    const gerenciadora_chave = idsGerenciadora.uoId
-      ? `uo:${idsGerenciadora.uoId}`
-      : `ref:${rowGerenciadora.resultado?.unidade.ref_coluna ?? rowGerenciadora.key}`;
+    const gerenciadora_chave = chaveDaRow(rowGerenciadora);
 
     const secretariasParticipantes: M2ASrpPayload["secretariasParticipantes"] =
       selectedImportRows
@@ -121,11 +126,16 @@ export function useEnviarProcessoM2A({
           const ids = enrichRowForM2A(r);
           const refColuna: number | null =
             r.resultado?.unidade.ref_coluna ?? null;
+          const rotulo = r.cabecalhoColuna?.trim();
           return {
-            chave: ids.uoId ? `uo:${ids.uoId}` : `ref:${refColuna ?? r.key}`,
+            chave: chaveDaRow(r),
             numero: r.secretaria!.numero,
             sigla: r.secretaria!.sigla,
-            nome: r.secretaria!.nome,
+            // nome inclui o rótulo da coluna quando existir, para distinguir
+            // participantes que compartilham a mesma UO (ex.: "SEC EDU / FF").
+            nome: rotulo
+              ? `${r.secretaria!.nome} / ${rotulo}`
+              : r.secretaria!.nome,
             m2a_orgao_id: ids.orgaoId,
             m2a_dot_orgao_id: r.secretaria!.m2a_dot_orgao_id,
             m2a_uo_id: ids.uoId,
@@ -153,17 +163,21 @@ export function useEnviarProcessoM2A({
           };
           map.set(key, agg);
         }
-        const ids = enrichRowForM2A(row);
-        const refColuna: number | null =
-          row.resultado?.unidade.ref_coluna ?? null;
-        const chave = ids.uoId
-          ? `uo:${ids.uoId}`
-          : `ref:${refColuna ?? row.key}`;
+        const chave = chaveDaRow(row);
         agg.quantidades[chave] =
           Number(agg.quantidades[chave] ?? 0) + it.quantidade;
       }
     }
     const itens = Array.from(map.values()).map(({ _key: _k, ...rest }) => rest);
+    console.log("[irp-envio] participantes por coluna:", {
+      totalParticipantes: secretariasParticipantes.length,
+      totalLinhasSelecionadas: selectedImportRows.length,
+      chaves: secretariasParticipantes.map((s) => ({
+        chave: s.chave,
+        nome: s.nome,
+        m2a_uo_id: s.m2a_uo_id,
+      })),
+    });
     return {
       itens,
       secretariasParticipantes,

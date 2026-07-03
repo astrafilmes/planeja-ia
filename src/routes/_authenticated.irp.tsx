@@ -263,7 +263,12 @@ function Page() {
               detalhe.setResultadoSalvo(null);
             }}
             onAnalisar={() => void uploadAnalise.handleAnalisar()}
+            eRegistroPreco={processoM2AForm.e_registro_preco}
+            onERegistroPrecoChange={(v) =>
+              setProcessoM2AForm((f) => ({ ...f, e_registro_preco: v }))
+            }
           />
+
 
           <IrpJobsHistorySidebar
             jobs={jobsList.jobs}
