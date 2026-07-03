@@ -9,16 +9,54 @@ export interface UseIrpUnidadesResult {
   isLoading: boolean;
 }
 
+/**
+ * Fonte das "unidades de processamento" do IRP.
+ *
+ * Antes: `irp_unidades_processamento` (1 linha por UO) — colapsava dotações
+ * distintas (ex.: SME FUNDEB-EF e SME FUNDEB-EI) numa única DFD.
+ *
+ * Agora: reaproveitamos o cadastro de `secretarias` (a MESMA fonte usada na
+ * importação de contratos): cada linha com `m2a_ref_coluna` vira uma unidade
+ * separada, com sua própria dotação (`m2a_dot_id`) e coluna na planilha.
+ * Isso permite ao worker gerar 1 DFD por dotação no fluxo comum, replicando
+ * o comportamento já validado em contratos.
+ */
 export function useIrpUnidades(): UseIrpUnidadesResult {
   const { data: unidades, isLoading } = useQuery({
     queryKey: irpQueryKeys.unidades,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("irp_unidades_processamento")
-        .select("*")
-        .eq("ativa", true)
-        .order("ordem");
-      return (data ?? []) as UnidadeIrp[];
+      const { data, error } = await supabase
+        .from("secretarias")
+        .select(
+          "id, numero, sigla, nome, m2a_ref_coluna, m2a_dotacao_default, m2a_uo_id, m2a_dot_id",
+        )
+        .not("m2a_ref_coluna", "is", null)
+        .order("numero")
+        .order("m2a_ref_coluna");
+      if (error) throw error;
+      const rows = (data ?? []) as Array<{
+        id: string;
+        numero: number;
+        sigla: string | null;
+        nome: string;
+        m2a_ref_coluna: number | null;
+        m2a_dotacao_default: string | null;
+        m2a_uo_id: string | null;
+        m2a_dot_id: string | null;
+      }>;
+      // `m2a_ref_coluna` é 1-based (convenção do parser de contratos).
+      // O parser IRP consome 0-based (matrix[row][col]), então subtraímos 1.
+      return rows
+        .filter((r) => typeof r.m2a_ref_coluna === "number" && r.m2a_ref_coluna > 0)
+        .map<UnidadeIrp>((r) => ({
+          id: r.id,
+          numero: Number(r.numero),
+          nome: r.m2a_dotacao_default
+            ? `${r.nome} · ${r.m2a_dotacao_default}`
+            : r.nome,
+          ref_coluna: Number(r.m2a_ref_coluna) - 1,
+          secretaria_id: r.id,
+        }));
     },
   });
 
