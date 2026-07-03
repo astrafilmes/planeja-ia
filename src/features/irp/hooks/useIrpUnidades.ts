@@ -45,18 +45,20 @@ export function useIrpUnidades(): UseIrpUnidadesResult {
         m2a_uo_id: string | null;
         m2a_dot_id: string | null;
       }>;
-      // `m2a_ref_coluna` segue a MESMA convenção usada em
-      // M2A_IRP_UNIDADES_CANONICAS (índice da coluna da planilha tal como o
-      // parser IRP consome). Não fazemos ajuste 0/1-based aqui.
+      // `secretarias.m2a_ref_coluna` é armazenado 1-based (mesma convenção do
+      // parser de contratos — ver `contratoImport.ts` que faz `oneBased - 1`).
+      // O parser IRP (`src/lib/irp.ts`) consome índices 0-based sobre a matriz
+      // da planilha, então convertemos aqui. Sem essa conversão, cada coluna
+      // era lida com offset +1 (ex.: FF Fundeb caía em AD em vez de AC).
       return rows
-        .filter((r) => typeof r.m2a_ref_coluna === "number" && r.m2a_ref_coluna >= 0)
+        .filter((r) => typeof r.m2a_ref_coluna === "number" && r.m2a_ref_coluna >= 1)
         .map<UnidadeIrp>((r) => ({
           id: r.id,
           numero: Number(r.numero),
           nome: r.m2a_dotacao_default
             ? `${r.nome} · ${r.m2a_dotacao_default}`
             : r.nome,
-          ref_coluna: Number(r.m2a_ref_coluna),
+          ref_coluna: Number(r.m2a_ref_coluna) - 1,
           secretaria_id: r.id,
         }));
     },
