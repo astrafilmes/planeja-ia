@@ -7,8 +7,11 @@ export function normalizeText(value: unknown): string {
 
 export function safeFileName(value: string): string {
   let name = normalizeText(value).replace(/\s+/g, "_");
-  name = name.replace(/[<>:"/\\|?*]+/g, "_");
-  name = name.replace(/_+/g, "_").replace(/^[._]+|[._]+$/g, "");
+  // Supabase Storage aceita apenas um subconjunto ASCII em keys.
+  // Removemos qualquer coisa fora de [A-Z0-9._-] para evitar
+  // "Invalid key" (ex.: `·`, parênteses, acentos residuais).
+  name = name.replace(/[^A-Z0-9._-]+/g, "_");
+  name = name.replace(/_+/g, "_").replace(/^[._-]+|[._-]+$/g, "");
   return name || "ARQUIVO";
 }
 
