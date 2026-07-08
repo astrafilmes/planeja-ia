@@ -14,6 +14,7 @@
 
 import * as cheerio from "cheerio";
 import { m2a } from "../m2a-client.js";
+import { coerceHtmlPayload } from "./utils.js";
 
 const norm = (txt) => {
   if (!txt) return "";
@@ -33,25 +34,29 @@ const norm = (txt) => {
  * @returns {Array<{ participanteId: number, nome: string, incluido: boolean }>}
  */
 export async function listarParticipantesAta(ataId) {
-  const path = `/ata_registro_precos/${ataId}/`;
-  const res = await m2a.get(path);
+  const path = `/ata_registro_precos/unidades_participantes/tabela/${ataId}/?page_size=100`;
+  const res = await m2a.get(path, {
+    headers: { "X-Requested-With": "XMLHttpRequest", Accept: "application/json,text/html,*/*" },
+  });
   if (res.status !== 200) {
     throw new Error(`Falha ao carregar ata ${ataId}: HTTP ${res.status}`);
   }
-  const $ = cheerio.load(res.html);
+  const $ = cheerio.load(coerceHtmlPayload(res.html));
   const rows = $("tr.kt-datatable__row.tr_ata_registro_preco_unidade_participante");
   const out = [];
   rows.each((_, el) => {
     const $tr = $(el);
+    const idAttr = $tr.attr("id") || "";
+    const idFromRow = idAttr.match(/tr_(\d+)/);
     const href =
       $tr.find('a[href^="/ata_registro_precos/unidades_participantes/"]').attr("href") || "";
     const m = href.match(/\/unidades_participantes\/(\d+)\//);
-    const participanteId = m ? Number(m[1]) : null;
+    const participanteId = m ? Number(m[1]) : idFromRow ? Number(idFromRow[1]) : null;
     const nome = $tr.find("td").eq(1).text().trim();
     // Coluna "Incluído no fornecimento? Sim/Não"
-    const text = $tr.text();
-    const incluido = /\bSim\b/.test(text) && !/\bNão\b/.test(text.split("Sim")[0] || "");
-    out.push({ participanteId, nome, incluido });
+    const statusText = $tr.find("td").eq(3).text().replace(/\s+/g, " ").trim();
+    const incluido = /\bSim\b/i.test(statusText);
+    if (participanteId && nome) out.push({ participanteId, nome, incluido });
   });
   return out;
 }
