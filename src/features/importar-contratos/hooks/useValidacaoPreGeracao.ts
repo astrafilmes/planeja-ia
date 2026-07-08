@@ -271,7 +271,15 @@ export function useValidacaoPreGeracao(options: {
                 unidadeGestoraId: sec.m2a_uo_id ?? undefined,
               });
             }
-            if (alvos.size === 0) return;
+            if (alvos.size === 0) {
+              participantesDone += 1;
+              setProgress((p) => ({ ...p, participantesDone }));
+              notify.loading(
+                `Verificando participantes das atas... (${participantesDone}/${totalAtas})`,
+                { id: partToast },
+              );
+              return;
+            }
             try {
               const r = await garantirParticipantesAta(ataId, {
                 data: dataBatch,
@@ -297,8 +305,16 @@ export function useValidacaoPreGeracao(options: {
               porAta[ataId] = [fail];
               bloqueadas.push({ ...fail, ataId, ataNumero });
             }
+            participantesDone += 1;
+            setProgress((p) => ({ ...p, participantesDone }));
+            notify.loading(
+              `Verificando participantes das atas... (${participantesDone}/${totalAtas})`,
+              { id: partToast },
+            );
           }),
         );
+
+        notify.dismiss(partToast);
 
 
         const hasBlockers = saldos.bloqueados.length > 0 || bloqueadas.length > 0;
