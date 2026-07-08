@@ -915,7 +915,22 @@ function extractTabelaMestraItens($, processoId) {
 async function fetchTabelaMestraItens(processoId, trace) {
   const url = `/processo_administrativo/item/tabela/${processoId}/?page_size=1000`;
   traceStep(trace, { fase: "itens_mestre", label: "tabela mestra de itens", processo_id: processoId, url });
-  const doc = await fetchDocDetailed(url);
+  const doc = await withM2ARetry(
+    "tabela mestra de itens",
+    async () => {
+      const fetched = await fetchDocDetailed(url);
+      if (isSuspiciousEmptyAjax(fetched)) {
+        const err = new Error(
+          `M2A retornou tabela mestra vazia/instável em ${url} (status=${fetched.status}, bytes=${fetched.decodedBytes})`,
+        );
+        err.status = 502;
+        throw err;
+      }
+      return fetched;
+    },
+    trace,
+    { fase: "itens_mestre", processo_id: processoId, url },
+  );
   const itens = extractTabelaMestraItens(doc.$, processoId);
   logTable(
     `processo ${processoId} / tabela mestra completa`,
@@ -1021,7 +1036,22 @@ function extractAtasValidasFromDoc($) {
 async function fetchAtasValidasDoProcesso(processoId, trace) {
   const url = `/licitacao_ata_contrato/tabela/${processoId}/?page_size=1000`;
   traceStep(trace, { fase: "atas", label: "tabela licitacao_ata_contrato", processo_id: processoId, url });
-  const doc = await fetchDocDetailed(url);
+  const doc = await withM2ARetry(
+    "tabela de atas do processo",
+    async () => {
+      const fetched = await fetchDocDetailed(url);
+      if (isSuspiciousEmptyAjax(fetched)) {
+        const err = new Error(
+          `M2A retornou tabela de atas vazia/instável em ${url} (status=${fetched.status}, bytes=${fetched.decodedBytes})`,
+        );
+        err.status = 502;
+        throw err;
+      }
+      return fetched;
+    },
+    trace,
+    { fase: "atas", processo_id: processoId, url },
+  );
   const { atas, ignoradas } = extractAtasValidasFromDoc(doc.$);
   logTable(
     `processo ${processoId} / atas válidas extraídas`,
@@ -1124,7 +1154,22 @@ async function fetchVinculosDaAta(ata, mapaMestraPorOrdem, trace) {
   const url = `/licitacao_ata_contrato_item/subtabela/${idLic}/?page_size=1000`;
   traceStep(trace, { fase: "vinculos", label: "subtabela de itens da ata", id_ata: ata.id_ata, id_lic: idLic, url });
   try {
-    const doc = await fetchDocDetailed(url);
+    const doc = await withM2ARetry(
+      "subtabela de vínculos da ata",
+      async () => {
+        const fetched = await fetchDocDetailed(url);
+        if (isSuspiciousEmptyAjax(fetched)) {
+          const err = new Error(
+            `M2A retornou subtabela de vínculos vazia/instável para ata ${ata.numero_ata || ata.id_ata} (status=${fetched.status}, bytes=${fetched.decodedBytes})`,
+          );
+          err.status = 502;
+          throw err;
+        }
+        return fetched;
+      },
+      trace,
+      { fase: "vinculos", id_ata: ata.id_ata, numero_ata: ata.numero_ata, id_lic: idLic, url },
+    );
     const vinculos = extractVinculosSubtabela(doc.$, ata.id_ata, mapaMestraPorOrdem);
     traceStep(trace, {
       fase: "vinculos",
