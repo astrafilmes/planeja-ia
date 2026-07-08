@@ -22,6 +22,10 @@ export const PreGeracaoValidacaoPanel = memo(function PreGeracaoValidacaoPanel({
 }: Props) {
   const ataUrl = (ataId?: string | number | null) =>
     ataId ? `http://precodereferencia.m2atecnologia.com.br/ata_registro_precos/${ataId}/` : null;
+  const participanteUrl = (participanteId?: string | number | null) =>
+    participanteId
+      ? `http://precodereferencia.m2atecnologia.com.br/ata_registro_precos/unidades_participantes/unidades_gestoras/incluir/${participanteId}/`
+      : null;
   const totalAjustes = result?.saldos.ajustados.length ?? 0;
   const totalBloqueiosSaldo = result?.saldos.bloqueados.length ?? 0;
   const totalNaoVerificado = result?.saldos.naoVerificados.length ?? 0;
@@ -172,6 +176,20 @@ export const PreGeracaoValidacaoPanel = memo(function PreGeracaoValidacaoPanel({
                   ·{" "}
                   <strong>{p.nome}</strong> · {p.status}
                   {p.mensagem ? ` — ${p.mensagem}` : ""}
+                  {participanteUrl(p.participanteId) && (
+                    <>
+                      {" · "}
+                      <a
+                        href={participanteUrl(p.participanteId)!}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-primary underline-offset-2 hover:underline"
+                      >
+                        Abrir inclusão da UG
+                        <ExternalLink className="size-3" />
+                      </a>
+                    </>
+                  )}
                 </li>
               ))}
 

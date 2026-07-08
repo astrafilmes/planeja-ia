@@ -25,6 +25,13 @@ function shortText(value, max = 160) {
   return String(value ?? "").replace(/\s+/g, " ").trim().slice(0, max);
 }
 
+function extractProcessoIdFromUrl(value) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return null;
+  if (/^\d+$/.test(raw)) return raw;
+  return raw.match(/\/processo_administrativo\/(\d+)\/?/)?.[1] ?? null;
+}
+
 export async function processarContratoCompleto(payload, onProgress = () => {}) {
   const { contratoId, m2aProcessoUrl, m2aAtaId, contrato, dadosM2A, itens, dadosDotacao } = payload;
   const numeroContrato = contrato?.numero_contrato || contrato?.numero;
@@ -137,7 +144,10 @@ export async function processarContratoCompleto(payload, onProgress = () => {}) 
   if (secretariaNome && itensPayload.length > 0) {
     try {
       invalidateSaldoAtaCache(m2aAtaId);
-      const saldos = await saldosPorSecretaria(m2aAtaId, { forceRefresh: true });
+      const saldos = await saldosPorSecretaria(m2aAtaId, {
+        forceRefresh: true,
+        processoId: extractProcessoIdFromUrl(m2aProcessoUrl),
+      });
       const secKey = normSec(secretariaNome);
       const sec = saldos.secretarias.find((s) => s.secretariaKey === secKey);
       if (!sec) {
