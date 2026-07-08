@@ -38,6 +38,12 @@ export function useEnviarContratoM2A(
     const off = listenM2AProgress(id, async (e) => {
       setLogs((l) => [...l, e]);
       setEtapaAtual(e.etapa);
+      if (e.m2a_contrato_id && e.m2a_contrato_id !== contrato?.contrato.m2a_contrato_id) {
+        await supabase
+          .from("contratos")
+          .update({ m2a_contrato_id: e.m2a_contrato_id })
+          .eq("id", id);
+      }
       const etapaIndex = Math.max(ETAPAS_ORDEM.indexOf(e.etapa), 0);
       const etapaProgress =
         e.etapa === "concluido" || e.etapa === "erro"
@@ -95,7 +101,7 @@ export function useEnviarContratoM2A(
     return () => {
       off?.();
     };
-  }, [failTask, finishTask, id, refetch, updateProgress]);
+  }, [contrato?.contrato.m2a_contrato_id, failTask, finishTask, id, refetch, updateProgress]);
 
   const pct = useMemo(() => {
     const idx = etapaAtual ? ETAPAS_ORDEM.indexOf(etapaAtual) : -1;

@@ -152,7 +152,7 @@ function emitWindow(message: Record<string, unknown>) {
 interface SseCallbacks {
   onProgress?: (evt: Record<string, unknown>) => void;
   onDone?: (evt: Record<string, unknown>) => void;
-  onError?: (err: string) => void;
+  onError?: (err: string, evt?: Record<string, unknown>) => void;
 }
 
 async function callProxySse(
@@ -219,7 +219,7 @@ async function callProxySse(
       if (event === "progress") cb.onProgress?.(parsed);
       else if (event === "done") cb.onDone?.(parsed);
       else if (event === "error")
-        cb.onError?.(String(parsed.error ?? "Erro no worker"));
+        cb.onError?.(String(parsed.error ?? "Erro no worker"), parsed);
     }
   }
 }
@@ -250,6 +250,7 @@ async function callProxyJson<T = unknown>(
 
 export function sendToM2A(payload: M2AAutomationPayload): void {
   const contratoId = payload.contratoId;
+  let terminalEmitted = false;
   emitWindow({
     type: "M2A_PROGRESS",
     contratoId,
@@ -259,6 +260,9 @@ export function sendToM2A(payload: M2AAutomationPayload): void {
 
   void callProxySse("/contratos/processar", payload, {
     onProgress: (evt) => {
+      if (evt.etapa === "concluido" || evt.etapa === "erro") {
+        terminalEmitted = true;
+      }
       emitWindow({
         type: "M2A_PROGRESS",
         contratoId,
@@ -266,6 +270,8 @@ export function sendToM2A(payload: M2AAutomationPayload): void {
       });
     },
     onDone: (evt) => {
+      if (terminalEmitted) return;
+      terminalEmitted = true;
       const avisos = (evt as { avisos?: Array<{ etapa?: string; mensagem?: string } | string> })
         .avisos ?? [];
       const mensagem = avisos.length
@@ -286,13 +292,17 @@ export function sendToM2A(payload: M2AAutomationPayload): void {
         avisos,
       } satisfies M2AProgressEvent);
     },
-    onError: (err) => {
+    onError: (err, evt) => {
+      if (terminalEmitted) return;
+      terminalEmitted = true;
       emitWindow({
         type: "M2A_PROGRESS",
         contratoId,
         etapa: "erro",
         sucesso: false,
         mensagem: err,
+        m2a_contrato_id: (evt as { m2a_contrato_id?: string } | undefined)
+          ?.m2a_contrato_id,
       } satisfies M2AProgressEvent);
     },
   });

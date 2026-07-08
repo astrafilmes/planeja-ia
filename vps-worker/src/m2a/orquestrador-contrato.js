@@ -36,6 +36,10 @@ function contratoUrl(contratoId) {
   return contratoId ? `${process.env.M2A_BASE_URL?.replace(/\/+$/, "") || "http://precodereferencia.m2atecnologia.com.br"}/contratos/${contratoId}/` : null;
 }
 
+function errorMessage(err) {
+  return String(err?.message || err || "erro desconhecido");
+}
+
 export async function processarContratoCompleto(payload, onProgress = () => {}) {
   const { contratoId, m2aProcessoUrl, m2aAtaId, contrato, dadosM2A, itens, dadosDotacao } = payload;
   const numeroContrato = contrato?.numero_contrato || contrato?.numero;
@@ -107,6 +111,9 @@ export async function processarContratoCompleto(payload, onProgress = () => {}) 
         data: contrato.data,
         data_fim: contrato.data_fim,
         unidade_gestora: dadosM2A.unidade_gestora,
+      }, {
+        m2aProcessoUrl,
+        processoId: extractProcessoIdFromUrl(m2aProcessoUrl),
       });
       if (!created.ok) throw new Error("Falha ao criar cabeçalho do contrato.");
       m2aInternalId =
@@ -118,19 +125,46 @@ export async function processarContratoCompleto(payload, onProgress = () => {}) 
     }
     if (!m2aInternalId) throw new Error("Não foi possível obter o ID interno do contrato.");
 
+    const errosParciais = [];
+    const tentarEtapa = async (etapa, rotulo, fn, options = {}) => {
+      try {
+        return await fn();
+      } catch (err) {
+        const msg = errorMessage(err);
+        const item = { etapa, rotulo, mensagem: msg };
+        errosParciais.push(item);
+        progress(etapa, `Falha em ${rotulo}: ${msg}`, {
+          aviso: true,
+          m2a_contrato_id: m2aInternalId,
+        });
+        if (options.critical) throw err;
+        return null;
+      }
+    };
+
     progress("vincular_atores", "Módulo 3: Vinculando Fiscal, Gestor e Preposto...", {
       m2a_contrato_id: m2aInternalId,
     });
 
-    if (dadosM2A.fiscal_id) await vincularFiscal(m2aInternalId, dadosM2A.fiscal_id, contrato.data);
-    if (dadosM2A.gestor_id) await vincularGestor(m2aInternalId, dadosM2A.gestor_id, contrato.data);
+    if (dadosM2A.fiscal_id) {
+      await tentarEtapa("vincular_atores", "vínculo do fiscal", () =>
+        vincularFiscal(m2aInternalId, dadosM2A.fiscal_id, contrato.data),
+      );
+    }
+    if (dadosM2A.gestor_id) {
+      await tentarEtapa("vincular_atores", "vínculo do gestor", () =>
+        vincularGestor(m2aInternalId, dadosM2A.gestor_id, contrato.data),
+      );
+    }
 
     const nomePreposto = String(dadosM2A.preposto_nome ?? contrato.preposto ?? "").trim();
     if (!dadosM2A.preposto_id && !nomePreposto) {
       throw new Error("Preposto não informado no payload.");
     }
     if (dadosM2A.preposto_id || nomePreposto) {
-      await vincularPreposto(m2aInternalId, nomePreposto, contrato.data, dadosM2A.preposto_id);
+      await tentarEtapa("vincular_atores", "vínculo do preposto", () =>
+        vincularPreposto(m2aInternalId, nomePreposto, contrato.data, dadosM2A.preposto_id),
+      );
     }
 
     const itensPayload = itens ?? dadosM2A.itens ?? [];
@@ -143,7 +177,9 @@ export async function processarContratoCompleto(payload, onProgress = () => {}) 
     };
 
     progress("incluir_itens", "Módulo 4: Adicionando itens da Ata ao contrato...");
-    const addResult = await adicionarItensAoContrato(m2aInternalId, itensPayload);
+    const addResult = await tentarEtapa("incluir_itens", "inclusão de itens", () =>
+      adicionarItensAoContrato(m2aInternalId, itensPayload),
+    );
     coletarAvisos("incluir_itens", addResult?.avisos);
 
     // Revalidação de saldo em tempo real ANTES de escrever quantidades.
@@ -203,30 +239,53 @@ export async function processarContratoCompleto(payload, onProgress = () => {}) 
     }
 
     progress("atualizar_quantidades", "Módulo 5: Atualizando quantidades dos itens...");
-    const qtdResult = await atualizarQuantidadesItens(m2aInternalId, itensPayload);
+    const qtdResult = await tentarEtapa("atualizar_quantidades", "atualização de quantidades", () =>
+      atualizarQuantidadesItens(m2aInternalId, itensPayload),
+    );
     coletarAvisos("atualizar_quantidades", qtdResult?.avisos);
 
-    const itensSemQtd = (qtdResult?.avisos ?? []).filter((msg) =>
-      /Item pulado \(quantidade/i.test(String(msg)),
-    );
-    if (itensSemQtd.length > 0) {
-      const err = new Error(
-        `Falha ao atualizar quantidade de ${itensSemQtd.length} item(s) após várias tentativas. ` +
-          `Tente reenviar o contrato em alguns segundos — o portal M2A retornou erro temporário. ` +
-          `Detalhes: ${itensSemQtd.join(" | ")}`,
-      );
-      err.code = "QUANTIDADE_ITEM_FALHOU";
-      throw err;
+    const problemasQuantidade = qtdResult ? (qtdResult.avisos ?? []) : ["Atualização de quantidades não executada."];
+    const quantidadesOk = problemasQuantidade.length === 0;
+    if (!quantidadesOk) {
+      errosParciais.push({
+        etapa: "atualizar_quantidades",
+        rotulo: "quantidades dos itens",
+        mensagem:
+          `Falha ao atualizar quantidade de ${problemasQuantidade.length} item(s). ` +
+          `Detalhes: ${problemasQuantidade.join(" | ")}`,
+      });
     }
 
     invalidateSaldoAtaCache(m2aAtaId, extractProcessoIdFromUrl(m2aProcessoUrl));
 
     const dotacaoPayload = dadosDotacao ?? dadosM2A.dotacao ?? null;
-    progress("incluir_dotacoes", "Módulo 6: Incluindo dotação orçamentária...");
-    await incluirDotacao(m2aInternalId, dotacaoPayload);
+    if (quantidadesOk) {
+      progress("incluir_dotacoes", "Módulo 6: Incluindo dotação orçamentária...");
+      await tentarEtapa("incluir_dotacoes", "inclusão de dotação orçamentária", () =>
+        incluirDotacao(m2aInternalId, dotacaoPayload),
+      );
+    } else {
+      progress("incluir_dotacoes", "Dotação pulada até as quantidades dos itens serem confirmadas.", {
+        aviso: true,
+        m2a_contrato_id: m2aInternalId,
+      });
+    }
 
     progress("enviar_documentos", "Módulo 7: Configurando documentos da entidade...");
-    const documentosResult = await configurarDocumentos(m2aInternalId, contrato.data);
+    const documentosResult = await tentarEtapa("enviar_documentos", "configuração de documentos", () =>
+      configurarDocumentos(m2aInternalId, contrato.data),
+    ) ?? { documentosM2A: [] };
+
+    if (errosParciais.length > 0) {
+      const err = new Error(
+        `Contrato parcialmente processado na M2A (ID ${m2aInternalId}), mas ${errosParciais.length} etapa(s) falharam. ` +
+          `Reenvie para retomar sem recriar. Detalhes: ${errosParciais.map((e) => `${e.rotulo}: ${e.mensagem}`).join(" | ")}`,
+      );
+      err.code = "M2A_CONTRATO_PARCIAL";
+      err.m2a_contrato_id = m2aInternalId;
+      err.errosParciais = errosParciais;
+      throw err;
+    }
 
     const mensagemFinal = avisos.length
       ? `Contrato integrado com ${avisos.length} aviso(s) — verifique itens pulados.`

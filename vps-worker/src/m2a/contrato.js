@@ -13,6 +13,8 @@ const ADD_ITEMS_SETTLE_MS = 350;
 const ITEM_POST_PAUSE_MS = 75;
 const DOC_GENERATE_SETTLE_MS = 700;
 const DOC_POST_PAUSE_MS = 75;
+const TRANSIENT_ATTEMPTS = 5;
+const TRANSIENT_BACKOFF_MS = [0, 1500, 4000, 8000, 12000];
 
 // --- helpers locais ---
 function shortLogText(value, max = 160) {
@@ -31,6 +33,25 @@ function logTable(label, rows, limit = 500) {
 
 function extractContratoIdFromHref(href) {
   return href?.match(/\/contratos\/(\d+)\/?/)?.[1] ?? null;
+}
+
+function contratoUrl(contratoId) {
+  return contratoId
+    ? `${process.env.M2A_BASE_URL?.replace(/\/+$/, "") || "http://precodereferencia.m2atecnologia.com.br"}/contratos/${contratoId}/`
+    : null;
+}
+
+function isTransientM2AError(err) {
+  const status = Number(err?.response?.status ?? err?.status ?? 0);
+  if ([0, 408, 425, 429, 500, 502, 503, 504].includes(status)) return true;
+  const msg = String(err?.message || "");
+  return /timeout|ECONNRESET|ETIMEDOUT|EAI_AGAIN|socket hang up|status code 5\d\d/i.test(msg);
+}
+
+async function waitBeforeRetry(label, attempt, maxAttempts = TRANSIENT_ATTEMPTS) {
+  const wait = TRANSIENT_BACKOFF_MS[attempt] ?? TRANSIENT_BACKOFF_MS.at(-1) ?? 12000;
+  console.warn(`[m2a-contrato] ${label}; aguardando ${wait}ms para retry ${attempt + 1}/${maxAttempts}`);
+  await sleep(wait);
 }
 
 function extractContratoLinks($) {
@@ -181,37 +202,63 @@ export async function buscarIdContratoPorNumero(
 }
 
 // --- Módulo 1: criar cabeçalho ---
-export async function criarCabecalhoContrato(ataId, dados) {
+export async function criarCabecalhoContrato(ataId, dados, options = {}) {
   const url = `/ata_registro_precos/criar_contrato/${ataId}`;
-  const formPage = await m2a.get(url, { headers: { "X-Requested-With": "XMLHttpRequest" } });
-  const $form = loadDoc(formPage.html);
-  const csrf = $form('input[name="csrfmiddlewaretoken"]').attr("value");
-  if (!csrf) throw new Error(`CSRF ausente em ${url}`);
-
-  const numeroField = pickField($form, ["numero", "numero_contrato", "num_contrato", "contrato"], "numero");
-  const objetoField = pickField($form, ["objeto", "descricao", "objeto_contrato"], "objeto");
-  const dataField = pickField($form, ["data_contrato", "data", "data_assinatura"], "data_contrato");
-  const dataFimField = pickField($form, ["data_fim", "vigencia_fim", "data_termino"], "data_fim");
-  const unidadeField = pickField($form, ["unidade_gestora", "unidade", "orgao"], "unidade_gestora");
-
-  const payload = {
-    csrfmiddlewaretoken: csrf,
-    [numeroField]: dados.numero,
-    [objetoField]: dados.objeto,
-    [dataField]: dados.data,
-    [dataFimField]: dados.data_fim || "",
-    [unidadeField]: dados.unidade_gestora,
-    _salvar: "",
+  const localizarCriado = async () => {
+    await sleep(CONTRACT_CREATE_SETTLE_MS);
+    try {
+      return await buscarIdContratoPorNumero(ataId, dados.numero, options.m2aProcessoUrl, {
+        deepSearch: true,
+        processoId: options.processoId,
+      });
+    } catch (err) {
+      console.warn(`[m2a-contrato] não consegui confirmar criação de ${dados.numero}: ${err.message}`);
+      return null;
+    }
   };
 
-  const r = await m2a.postForm(url, payload);
-  const $r = loadDoc(r.html);
-  const contratoId =
-    extractContratoIdFromHref(r.finalUrl) ||
-    extractContratoIdFromHtml(r.html, dados.numero);
-  if (!contratoId) throwIfFormRejected($r, "criação do contrato");
-  await sleep(CONTRACT_CREATE_SETTLE_MS);
-  return { ok: r.status < 400, contratoId, finalUrl: r.finalUrl };
+  let lastErr = null;
+  for (let attempt = 1; attempt <= TRANSIENT_ATTEMPTS; attempt += 1) {
+    try {
+      const formPage = await m2a.get(url, { headers: { "X-Requested-With": "XMLHttpRequest" } });
+      const $form = loadDoc(formPage.html);
+      const csrf = $form('input[name="csrfmiddlewaretoken"]').attr("value");
+      if (!csrf) throw new Error(`CSRF ausente em ${url}`);
+
+      const numeroField = pickField($form, ["numero", "numero_contrato", "num_contrato", "contrato"], "numero");
+      const objetoField = pickField($form, ["objeto", "descricao", "objeto_contrato"], "objeto");
+      const dataField = pickField($form, ["data_contrato", "data", "data_assinatura"], "data_contrato");
+      const dataFimField = pickField($form, ["data_fim", "vigencia_fim", "data_termino"], "data_fim");
+      const unidadeField = pickField($form, ["unidade_gestora", "unidade", "orgao"], "unidade_gestora");
+
+      const payload = {
+        csrfmiddlewaretoken: csrf,
+        [numeroField]: dados.numero,
+        [objetoField]: dados.objeto,
+        [dataField]: dados.data,
+        [dataFimField]: dados.data_fim || "",
+        [unidadeField]: dados.unidade_gestora,
+        _salvar: "",
+      };
+
+      const r = await m2a.postForm(url, payload, { retries: 1 });
+      const $r = loadDoc(r.html);
+      const contratoId =
+        extractContratoIdFromHref(r.finalUrl) ||
+        extractContratoIdFromHtml(r.html, dados.numero, options.processoId) ||
+        (await localizarCriado());
+      if (contratoId) return { ok: r.status < 400, contratoId, finalUrl: r.finalUrl };
+      throwIfFormRejected($r, "criação do contrato");
+      throw new Error("Criação do contrato não retornou ID interno.");
+    } catch (err) {
+      lastErr = err;
+      if (!isTransientM2AError(err) || attempt === TRANSIENT_ATTEMPTS) break;
+      await waitBeforeRetry(`criação do contrato ${dados.numero} falhou (${err.message})`, attempt);
+      const found = await localizarCriado();
+      if (found) return { ok: true, contratoId: found, finalUrl: contratoUrl(found) };
+    }
+  }
+  throw lastErr;
 }
 
 // --- Módulo 3: atores ---
@@ -220,28 +267,16 @@ export async function criarCabecalhoContrato(ataId, dados) {
 // seguro. Se por acaso o primeiro POST tiver criado o vínculo antes de o proxy
 // devolver 5xx, a segunda tentativa devolverá o alerta de duplicidade, que o
 // ensureActorLinked trata como sucesso (mensagem informativa).
-const ACTOR_LINK_ATTEMPTS = 4;
-const ACTOR_LINK_BACKOFF_MS = [0, 1500, 4000, 8000];
-
 async function postFormWithRetry(url, form, label) {
   let lastErr;
-  for (let attempt = 1; attempt <= ACTOR_LINK_ATTEMPTS; attempt++) {
+  for (let attempt = 1; attempt <= TRANSIENT_ATTEMPTS; attempt++) {
     try {
-      const csrf = await m2a.getCsrf(url);
-      return await m2a.postForm(url, { ...form, csrfmiddlewaretoken: csrf });
+      const csrf = await m2a.getCsrf(url, { force: attempt > 1 });
+      return await m2a.postForm(url, { ...form, csrfmiddlewaretoken: csrf }, { retries: 1 });
     } catch (e) {
       lastErr = e;
-      const status = Number(e?.response?.status ?? e?.status ?? 0);
-      const msg = String(e?.message || "");
-      const isTransient =
-        status >= 500 || status === 429 || status === 408 || status === 0 ||
-        /timeout|ECONNRESET|ETIMEDOUT|EAI_AGAIN|socket hang up|status code 5\d\d/i.test(msg);
-      if (!isTransient || attempt === ACTOR_LINK_ATTEMPTS) break;
-      const wait = ACTOR_LINK_BACKOFF_MS[attempt] ?? 8000;
-      console.warn(
-        `[m2a-contrato] vínculo ${label} falhou (${msg}); aguardando ${wait}ms para retry ${attempt + 1}/${ACTOR_LINK_ATTEMPTS}`,
-      );
-      await sleep(wait);
+      if (!isTransientM2AError(e) || attempt === TRANSIENT_ATTEMPTS) break;
+      await waitBeforeRetry(`vínculo ${label} falhou (${e.message})`, attempt);
     }
   }
   throw lastErr;
@@ -370,6 +405,24 @@ export async function adicionarItensAoContrato(contratoId, itensDesejados) {
     })),
   );
 
+  const itensJaNoContrato = await listarItensContrato(contratoId).catch((err) => {
+    console.warn(`[m2a-contrato] não consegui listar itens já existentes antes da inclusão: ${err.message}`);
+    return [];
+  });
+  const poolExistente = itensJaNoContrato.map((it) => ({ ...it, ataItemId: it.contratoItemId }));
+  const usadosExistentes = new Set();
+  const matchesExistentes = itens.map((item) => {
+    const encontrado = findDisponivelForDesejado(item, poolExistente, usadosExistentes, false);
+    if (encontrado) usadosExistentes.add(encontrado.ataItemId);
+    return { desejado: item, encontrado };
+  });
+  const pendentes = matchesExistentes.filter((m) => !m.encontrado).map((m) => m.desejado);
+  if (!pendentes.length) {
+    console.log("[m2a-contrato] todos os itens desejados já estavam no contrato; módulo 4 tratado como concluído.");
+    console.groupEnd();
+    return { adicionados: 0, jaExistentes: itens.length, avisos: [] };
+  }
+
   const tabelaUrl = `/contratos/ata_registro_preco_contrato/tabela/${contratoId}/?page_size=1000`;
   const tabela = await m2a.get(tabelaUrl, { headers: { "X-Requested-With": "XMLHttpRequest" } });
   const $tab = loadDoc(tabela.html);
@@ -383,12 +436,12 @@ export async function adicionarItensAoContrato(contratoId, itensDesejados) {
     })),
   );
   const numerosDisp = new Set(disponiveis.map((it) => it.numero));
-  const comNumero = itens.filter((it) => it.numero);
+  const comNumero = pendentes.filter((it) => it.numero);
   const hits = comNumero.filter((it) => numerosDisp.has(it.numero)).length;
   const preferDescription = comNumero.length ? hits / comNumero.length < 0.8 : false;
   console.log("[m2a-contrato] estratégia de matching:", {
     contratoId,
-    totalDesejados: itens.length,
+    totalDesejados: pendentes.length,
     totalDisponiveis: disponiveis.length,
     itensComNumero: comNumero.length,
     hitsPorNumero: hits,
@@ -396,7 +449,7 @@ export async function adicionarItensAoContrato(contratoId, itensDesejados) {
   });
 
   const used = new Set();
-  const matches = itens.map((item) => {
+  const matches = pendentes.map((item) => {
     const d = findDisponivelForDesejado(item, disponiveis, used, preferDescription);
     if (d) used.add(d.ataItemId);
     return { desejado: item, disponivel: d };
@@ -418,7 +471,7 @@ export async function adicionarItensAoContrato(contratoId, itensDesejados) {
   const ausentes = matches.filter((m) => !m.disponivel).map((m) => m.desejado);
   for (const it of ausentes) {
     avisos.push(
-      `Item pulado (não localizado na Ata): ${it.numero || it.descricao || "sem-ref"}`,
+      `Item pulado (não localizado na Ata nem no contrato): ${it.numero || it.descricao || "sem-ref"}`,
     );
   }
   const itemIds = encontrados.map((m) => m.disponivel.ataItemId).join(" ");
@@ -433,11 +486,36 @@ export async function adicionarItensAoContrato(contratoId, itensDesejados) {
     $tab('input[name="csrfmiddlewaretoken"]').attr("value") ||
     (await m2a.getCsrf(`/contratos/${contratoId}/`));
 
-  const r = await m2a.postForm(`/contratos/adicionar_item_ata/${contratoId}/`, {
-    csrfmiddlewaretoken: csrf,
-    itens_unidade_participante: itemIds,
-  });
-  ensureOperationAccepted(loadDoc(r.html), "adição de itens ao contrato");
+  let lastErr = null;
+  for (let attempt = 1; attempt <= TRANSIENT_ATTEMPTS; attempt += 1) {
+    try {
+      const r = await m2a.postForm(`/contratos/adicionar_item_ata/${contratoId}/`, {
+        csrfmiddlewaretoken: attempt === 1 ? csrf : await m2a.getCsrf(`/contratos/${contratoId}/`, { force: true }),
+        itens_unidade_participante: itemIds,
+      }, { retries: 1 });
+      ensureOperationAccepted(loadDoc(r.html), "adição de itens ao contrato");
+      lastErr = null;
+      break;
+    } catch (err) {
+      lastErr = err;
+      const verificados = await listarItensContrato(contratoId).catch(() => []);
+      const pool = verificados.map((it) => ({ ...it, ataItemId: it.contratoItemId }));
+      const usedVerify = new Set();
+      const todosEntraram = encontrados.every((m) => {
+        const hit = findDisponivelForDesejado(m.desejado, pool, usedVerify, false);
+        if (hit) usedVerify.add(hit.ataItemId);
+        return !!hit;
+      });
+      if (todosEntraram) {
+        console.warn("[m2a-contrato] POST de itens falhou, mas os itens apareceram no contrato; seguindo.");
+        lastErr = null;
+        break;
+      }
+      if (!isTransientM2AError(err) || attempt === TRANSIENT_ATTEMPTS) break;
+      await waitBeforeRetry(`adição de itens falhou (${err.message})`, attempt);
+    }
+  }
+  if (lastErr) throw lastErr;
   await sleep(ADD_ITEMS_SETTLE_MS);
   console.log("[m2a-contrato] itens adicionados:", encontrados.length, { avisos });
   console.groupEnd();
@@ -462,6 +540,14 @@ function scrapeContratoItens($) {
       };
     })
     .filter((it) => it.contratoItemId && (it.numero || it.descricao));
+}
+
+async function listarItensContrato(contratoId) {
+  const tabela = await m2a.get(
+    `/contratos/itens/tabela/${contratoId}/?page_size=1000`,
+    { headers: { "X-Requested-With": "XMLHttpRequest" } },
+  );
+  return scrapeContratoItens(loadDoc(tabela.html));
 }
 
 export async function atualizarQuantidadesItens(contratoId, itensDesejados) {
@@ -539,17 +625,17 @@ export async function atualizarQuantidadesItens(contratoId, itensDesejados) {
     const url = `/contratos/itens/atualizar_quantidade_contrato_item/${m.encontrado.contratoItemId}/`;
     // Retry idempotente: setar a mesma quantidade N vezes é seguro. Falhas 5xx
     // do M2A aqui deixam o item com quantidade 0 e quebram a dotação depois.
-    const MAX_TENTATIVAS = 4;
-    const BACKOFF_MS = [0, 1500, 4000, 8000];
+    const MAX_TENTATIVAS = TRANSIENT_ATTEMPTS;
+    const BACKOFF_MS = TRANSIENT_BACKOFF_MS;
     let sucesso = false;
     let ultimoErro = null;
     for (let tentativa = 1; tentativa <= MAX_TENTATIVAS; tentativa += 1) {
       if (BACKOFF_MS[tentativa - 1]) await sleep(BACKOFF_MS[tentativa - 1]);
       try {
         const r = await m2a.postForm(url, {
-          csrfmiddlewaretoken: csrf,
+          csrfmiddlewaretoken: tentativa === 1 ? csrf : await m2a.getCsrf(`/contratos/${contratoId}/`, { force: true }),
           quantidade: m.desejado.quantidade,
-        });
+        }, { retries: 1 });
         ensureOperationAccepted(loadDoc(r.html), `quantidade do item ${m.desejado.numero}`);
         atualizados += 1;
         sucesso = true;
@@ -557,7 +643,7 @@ export async function atualizarQuantidadesItens(contratoId, itensDesejados) {
       } catch (err) {
         ultimoErro = err;
         const status = err?.response?.status ?? err?.status ?? 0;
-        const isTransient = status >= 500 || status === 429 || status === 0;
+        const isTransient = isTransientM2AError(err);
         console.warn(
           `[m2a-contrato] falha ao atualizar quantidade item ${m.desejado.numero} (tentativa ${tentativa}/${MAX_TENTATIVAS}, status=${status}): ${err.message}`,
         );
@@ -585,16 +671,34 @@ export async function incluirDotacao(contratoId, dadosDotacao) {
   assertNumericId("dadosDotacao.despesa_projeto_atividade", String(dadosDotacao.despesa_projeto_atividade));
 
   const url = `/contratos/contrato_projeto_atividade/incluir/${contratoId}/`;
-  const csrf = await m2a.getCsrf(url);
-  const r = await m2a.postForm(url, {
-    csrfmiddlewaretoken: csrf,
-    orgao: dadosDotacao.orgao,
-    unidade_orcamentaria: dadosDotacao.unidade_orcamentaria,
-    despesa_projeto_atividade: dadosDotacao.despesa_projeto_atividade,
-    _salvar: "",
-  });
-  ensureOperationAccepted(loadDoc(r.html), "inclusão de dotação orçamentária");
-  return { incluida: true };
+  let lastErr = null;
+  for (let attempt = 1; attempt <= TRANSIENT_ATTEMPTS; attempt += 1) {
+    try {
+      const csrf = await m2a.getCsrf(url, { force: attempt > 1 });
+      const r = await m2a.postForm(url, {
+        csrfmiddlewaretoken: csrf,
+        orgao: dadosDotacao.orgao,
+        unidade_orcamentaria: dadosDotacao.unidade_orcamentaria,
+        despesa_projeto_atividade: dadosDotacao.despesa_projeto_atividade,
+        _salvar: "",
+      }, { retries: 1 });
+      try {
+        ensureOperationAccepted(loadDoc(r.html), "inclusão de dotação orçamentária");
+      } catch (validationErr) {
+        if (/j[aá]\s+existe|duplicad|cadastrad|inclu[ií]d/i.test(String(validationErr.message))) {
+          return { incluida: true, jaExistia: true };
+        }
+        throw validationErr;
+      }
+      return { incluida: true };
+    } catch (err) {
+      lastErr = err;
+      if (/sem itens com quantidade inicial maior que zero/i.test(String(err.message))) break;
+      if (!isTransientM2AError(err) || attempt === TRANSIENT_ATTEMPTS) break;
+      await waitBeforeRetry(`inclusão de dotação falhou (${err.message})`, attempt);
+    }
+  }
+  throw lastErr;
 }
 
 // --- Módulo 7: documentos ---
