@@ -1326,46 +1326,36 @@ async function runCascata(processoId) {
   }
 
   // Payload compatível com sync_m2a_snapshot:
-  // 1 item ÚNICO por ordem da tabela mestra, atrelado à primeira ata VÁLIDA (não cancelada)
-  // onde aparece. Atas canceladas não recebem itens.
-  const primeiraAtaPorOrdem = new Map();
-  const valorContratadoPorAtaOrdem = new Map();
-  const valorContratadoPorOrdem = new Map();
-  for (const { ata, vinculos } of resultados) {
-    if (ata.cancelada) continue;
-    for (const v of vinculos) {
-      if (!primeiraAtaPorOrdem.has(v.ordem)) primeiraAtaPorOrdem.set(v.ordem, ata.id_ata);
-      const vc = Number(v.valor_unitario_contratado) || 0;
-      if (vc > 0) {
-        valorContratadoPorAtaOrdem.set(`${ata.id_ata}|${v.ordem}`, vc);
-        if (!valorContratadoPorOrdem.has(v.ordem)) valorContratadoPorOrdem.set(v.ordem, vc);
-      }
-    }
-  }
-
-  const itens = itensMestre
-    .filter((m) => primeiraAtaPorOrdem.has(m.ordem))
+  // 1 item por VÍNCULO ata+ordem, não apenas a primeira ata por ordem.
+  // O mesmo item mestre pode existir em atas/fornecedores diferentes; se o
+  // snapshot colapsar por ordem, o front nunca encontra a ata correta da
+  // empresa (ex.: item 42 em MF e também em GUIATELLI). Por isso o id_item é
+  // sintético por ata+item_mestre.
+  const itens = resultados
+    .filter(({ ata }) => !ata.cancelada)
+    .flatMap(({ ata, vinculos }) =>
+      vinculos.map((v) => {
+        const mestra = mapaMestraPorOrdem.get(String(v.ordem));
+        if (!mestra) return null;
+        const valorContratado = Number(v.valor_unitario_contratado) || 0;
+        return {
+          id_item: `${ata.id_ata}:${mestra.id_item_mestre}`,
+          id_item_mestre: mestra.id_item_mestre,
+          numero_item: mestra.ordem,
+          descricao: v.descricao_linha || mestra.descricao,
+          unidade: mestra.unidade,
+          // Prefere o valor unitário CONTRATADO (subtabela da ata).
+          // Cai para o estimado da tabela mestra apenas se o contratado não existir.
+          valor_unitario: valorContratado > 0 ? valorContratado : mestra.valor_unitario,
+          id_ata: ata.id_ata,
+        };
+      }),
+    )
+    .filter(Boolean)
     .sort((a, b) => {
-      const numA = Number(a.ordem || a.numero_item || a.numero) || 0;
-      const numB = Number(b.ordem || b.numero_item || b.numero) || 0;
-      return numA - numB;
-    })
-    .map((m) => {
-      const idAta = primeiraAtaPorOrdem.get(m.ordem);
-      const valorContratado =
-        valorContratadoPorAtaOrdem.get(`${idAta}|${m.ordem}`) ||
-        valorContratadoPorOrdem.get(m.ordem) ||
-        0;
-      return {
-        id_item: m.id_item_mestre,
-        numero_item: m.ordem,
-        descricao: m.descricao,
-        unidade: m.unidade,
-        // Prefere o valor unitário CONTRATADO (subtabela da ata).
-        // Cai para o estimado da tabela mestra apenas se o contratado não existir.
-        valor_unitario: valorContratado > 0 ? valorContratado : m.valor_unitario,
-        id_ata: idAta,
-      };
+      const ataCmp = String(a.id_ata).localeCompare(String(b.id_ata), "pt-BR", { numeric: true });
+      if (ataCmp !== 0) return ataCmp;
+      return (Number(a.numero_item) || 0) - (Number(b.numero_item) || 0);
     });
 
   const itensPayloadDiagnostico = itens.map((item) => {
@@ -1375,6 +1365,7 @@ async function runCascata(processoId) {
       ordem: item.numero_item,
       lote: mestra?.lote || "",
       id_item: item.id_item,
+      id_item_mestre: item.id_item_mestre || mestra?.id_item_mestre || "",
       id_ata: item.id_ata,
       numero_ata: ata?.numero_ata || "",
       fornecedor: ata?.fornecedor?.nome || "",
