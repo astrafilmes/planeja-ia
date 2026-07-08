@@ -154,6 +154,31 @@ export const PreGeracaoValidacaoPanel = memo(function PreGeracaoValidacaoPanel({
           </details>
         )}
 
+        {busy && progress && progress.phase !== "idle" && progress.totalAtas > 0 && (
+          <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+            <div className="flex items-center gap-2 text-[12px] font-medium text-primary">
+              <Loader2 className="size-3.5 animate-spin" />
+              {progress.phase === "saldos"
+                ? `Consultando saldos... (${progress.saldosDone}/${progress.totalAtas} atas)`
+                : `Verificando participantes... (${progress.participantesDone}/${progress.totalAtas} atas)`}
+            </div>
+            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-primary/10">
+              <div
+                className="h-full bg-primary transition-all"
+                style={{
+                  width: `${Math.round(
+                    ((progress.phase === "saldos"
+                      ? progress.saldosDone
+                      : progress.totalAtas + progress.participantesDone) /
+                      (progress.totalAtas * 2)) *
+                      100,
+                  )}%`,
+                }}
+              />
+            </div>
+          </div>
+        )}
+
         <Button
           type="button"
           variant={result ? "outline" : "default"}
