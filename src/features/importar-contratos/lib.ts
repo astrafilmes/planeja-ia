@@ -230,16 +230,19 @@ export function resolveM2AItemMatch(
     : [];
 
   const descNorm = normalizeText(item.descricao ?? "");
-  const descPrefix = descNorm.slice(0, 40);
+  // Prefixo mais longo (80) reduz falsos empates entre itens que compartilham
+  // um cabeçalho institucional comum, tipo "SERVIÇOS DE LOCAÇÃO DE GRUPO GERADOR DE ".
+  const descPrefix = descNorm.slice(0, 80);
+  const descShort = descNorm.slice(0, 40);
   const descMatches =
-    descPrefix.length >= 12
+    descShort.length >= 12
       ? syncedItems.filter((candidate) => {
           const cand = normalizeText(candidate.descricao);
           if (!cand) return false;
           return (
-            cand.startsWith(descPrefix) ||
+            cand.startsWith(descShort) ||
             descNorm.startsWith(cand.slice(0, 40)) ||
-            cand.includes(descPrefix)
+            cand.includes(descShort)
           );
         })
       : [];
@@ -274,6 +277,14 @@ export function resolveM2AItemMatch(
     return null;
   }
 
+  // Helper: comprimento do prefixo em comum entre duas strings normalizadas.
+  const commonPrefixLen = (a: string, b: string) => {
+    const n = Math.min(a.length, b.length);
+    let i = 0;
+    while (i < n && a.charCodeAt(i) === b.charCodeAt(i)) i++;
+    return i;
+  };
+
   const scored = pool
     .map((candidate) => {
       const reasons: string[] = [];
@@ -288,16 +299,36 @@ export function resolveM2AItemMatch(
         }
       }
       const candDesc = normalizeText(candidate.descricao);
-      if (descPrefix.length >= 12 && candDesc) {
-        if (candDesc.startsWith(descPrefix)) {
-          score += 45;
-          reasons.push("desc-prefix");
+      if (descShort.length >= 12 && candDesc) {
+        // Igualdade completa é o sinal mais forte de descrição.
+        if (candDesc === descNorm) {
+          score += 80;
+          reasons.push("desc-exact");
         } else if (
-          candDesc.includes(descPrefix) ||
-          descNorm.startsWith(candDesc.slice(0, 40))
+          candDesc.startsWith(descPrefix) ||
+          descNorm.startsWith(candDesc.slice(0, 80))
         ) {
-          score += 30;
+          score += 55;
+          reasons.push("desc-prefix80");
+        } else if (candDesc.startsWith(descShort)) {
+          score += 40;
+          reasons.push("desc-prefix40");
+        } else if (
+          candDesc.includes(descShort) ||
+          descNorm.includes(candDesc.slice(0, 40))
+        ) {
+          score += 25;
           reasons.push("desc-contain");
+        }
+        // Bônus fino: comprimento do prefixo comum (0..30 pts) desempata
+        // itens que compartilham só o cabeçalho institucional.
+        const cp = commonPrefixLen(candDesc, descNorm);
+        if (cp > 0) {
+          const bonus = Math.min(30, Math.floor(cp / 6));
+          if (bonus > 0) {
+            score += bonus;
+            reasons.push(`prefix-cp${cp}`);
+          }
         }
       }
       if (supplierMatches(item.empresa, candidate.ata?.fornecedor?.nome)) {
@@ -310,12 +341,19 @@ export function resolveM2AItemMatch(
           Number(candidate.valor_unitario ?? 0) - Number(item.valorUnitario),
         ) < 0.01
       ) {
-        score += 10;
+        score += 20;
         reasons.push("valor");
       }
       return { candidate, score, reasons };
     })
-    .sort((a, b) => b.score - a.score);
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      // Desempate final: candidato com valor unitário mais próximo do item.
+      const vi = Number(item.valorUnitario ?? 0);
+      const da = Math.abs(Number(a.candidate.valor_unitario ?? 0) - vi);
+      const db = Math.abs(Number(b.candidate.valor_unitario ?? 0) - vi);
+      return da - db;
+    });
 
   const best = scored[0];
 
@@ -337,12 +375,28 @@ export function resolveM2AItemMatch(
   });
 
   if (!best || best.score < 25) return null;
+  // Só marca "ambígua" se houver empate REAL de score E valor unitário também
+  // não separar os candidatos. Com prefixo comum ponderado + valor, o empate
+  // real fica raro.
   const tied = scored.filter((entry) => entry.score === best.score);
+  let ambiguous = false;
+  if (tied.length > 1 && best.score < 90) {
+    const vi = Number(item.valorUnitario ?? 0);
+    if (vi > 0) {
+      const diffs = tied.map((t) =>
+        Math.abs(Number(t.candidate.valor_unitario ?? 0) - vi),
+      );
+      const minDiff = Math.min(...diffs);
+      const winners = diffs.filter((d) => d === minDiff).length;
+      ambiguous = winners > 1;
+    } else {
+      ambiguous = true;
+    }
+  }
   return {
     item: best.candidate,
     score: best.score,
-    status:
-      tied.length > 1 && best.score < 70 ? ("ambigua" as const) : ("auto" as const),
+    status: ambiguous ? ("ambigua" as const) : ("auto" as const),
   };
 }
 
