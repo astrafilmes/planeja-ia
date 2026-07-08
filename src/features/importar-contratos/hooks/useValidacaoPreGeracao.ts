@@ -240,6 +240,13 @@ export function useValidacaoPreGeracao(options: {
           }),
         );
 
+        notify.dismiss(saldosToast);
+        setProgress((p) => ({ ...p, phase: "participantes" }));
+        const partToast = notify.loading(
+          `Verificando participantes das atas... (0/${totalAtas})`,
+        );
+        let participantesDone = 0;
+
         // 2) Participantes (secretarias) por ata.
         const porAta: Record<string, GarantirParticipanteResult[]> = {};
         const bloqueadas: Array<
