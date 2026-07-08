@@ -1,4 +1,4 @@
-import { parseUnidadesGestorasDetalheHtml, unidadeGestoraDetalheConfirmaInclusao } from "./src/m2a/atas-participantes-utils.js";
+import { parseUnidadesGestorasDetalheHtml, unidadeGestoraDetalheConfirmaInclusao } from "../src/m2a/atas-participantes-utils.js";
 
 // Resposta REAL do M2A (JSON com html_table) — mesma que o usuário colou
 const json = JSON.stringify({html_table: `
