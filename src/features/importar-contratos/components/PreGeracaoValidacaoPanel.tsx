@@ -3,11 +3,12 @@ import { AlertCircle, CheckCircle2, Loader2, ShieldAlert, Sparkles } from "lucid
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import type { ValidacaoPreGeracao } from "../hooks/useValidacaoPreGeracao";
+import type { ValidacaoPreGeracao, ValidacaoProgress } from "../hooks/useValidacaoPreGeracao";
 
 type Props = {
   busy: boolean;
   result: ValidacaoPreGeracao | null;
+  progress?: ValidacaoProgress;
   onValidar: () => void;
   disabled?: boolean;
 };
@@ -15,6 +16,7 @@ type Props = {
 export const PreGeracaoValidacaoPanel = memo(function PreGeracaoValidacaoPanel({
   busy,
   result,
+  progress,
   onValidar,
   disabled,
 }: Props) {
@@ -150,6 +152,31 @@ export const PreGeracaoValidacaoPanel = memo(function PreGeracaoValidacaoPanel({
               exercício) e clique em <strong>Revalidar</strong>.
             </p>
           </details>
+        )}
+
+        {busy && progress && progress.phase !== "idle" && progress.totalAtas > 0 && (
+          <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+            <div className="flex items-center gap-2 text-[12px] font-medium text-primary">
+              <Loader2 className="size-3.5 animate-spin" />
+              {progress.phase === "saldos"
+                ? `Consultando saldos... (${progress.saldosDone}/${progress.totalAtas} atas)`
+                : `Verificando participantes... (${progress.participantesDone}/${progress.totalAtas} atas)`}
+            </div>
+            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-primary/10">
+              <div
+                className="h-full bg-primary transition-all"
+                style={{
+                  width: `${Math.round(
+                    ((progress.phase === "saldos"
+                      ? progress.saldosDone
+                      : progress.totalAtas + progress.participantesDone) /
+                      (progress.totalAtas * 2)) *
+                      100,
+                  )}%`,
+                }}
+              />
+            </div>
+          </div>
         )}
 
         <Button

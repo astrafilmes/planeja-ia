@@ -9,6 +9,14 @@ import type { ContratoPreliminar } from "@/lib/contratoImport";
 import type { SecretariaM2A } from "../lib";
 import { resolveSecretariaForContrato } from "../lib";
 import { normSec } from "@/lib/m2a/normSec";
+import { notify } from "@/lib/notify";
+
+export type ValidacaoProgress = {
+  phase: "saldos" | "participantes" | "idle";
+  totalAtas: number;
+  saldosDone: number;
+  participantesDone: number;
+};
 
 export type SaldoIssue = {
   contratoKey: string;
@@ -91,9 +99,17 @@ export function useValidacaoPreGeracao(options: {
     new Map(),
   );
 
+  const [progress, setProgress] = useState<ValidacaoProgress>({
+    phase: "idle",
+    totalAtas: 0,
+    saldosDone: 0,
+    participantesDone: 0,
+  });
+
   const validar = useCallback(
     async (opts: { forceRefresh?: boolean } = {}) => {
       setBusy(true);
+      const toastId = notify.loading("Validando saldos e participantes no M2A...");
       try {
         // Agrupa por ata.
         const atas = new Map<string, ContratoPreliminar[]>();
@@ -120,6 +136,13 @@ export function useValidacaoPreGeracao(options: {
           }
         }
 
+        const totalAtas = atas.size;
+        setProgress({ phase: "saldos", totalAtas, saldosDone: 0, participantesDone: 0 });
+        notify.dismiss(toastId);
+        const saldosToast = notify.loading(
+          `Consultando saldos das atas... (0/${totalAtas})`,
+        );
+
         // 1) Saldos por ata (cota − consumo).
         const saldos: ValidacaoPreGeracao["saldos"] = {
           ok: 0,
@@ -128,6 +151,7 @@ export function useValidacaoPreGeracao(options: {
           naoVerificados: [],
         };
         const novosAjustes = new Map<string, number>();
+        let saldosDone = 0;
 
         await Promise.all(
           Array.from(atas.entries()).map(async ([ataId, contratos]) => {
@@ -140,6 +164,12 @@ export function useValidacaoPreGeracao(options: {
               /* trata como sem verificação */
             }
             const idx = resp ? buildSecretariaSaldoIndex(resp) : null;
+            saldosDone += 1;
+            setProgress((p) => ({ ...p, saldosDone }));
+            notify.loading(
+              `Consultando saldos das atas... (${saldosDone}/${totalAtas})`,
+              { id: saldosToast },
+            );
 
             for (const c of contratos) {
               const label = `${c.empresa} · ${c.secretariaSigla}` || "(contrato)";
@@ -210,6 +240,13 @@ export function useValidacaoPreGeracao(options: {
           }),
         );
 
+        notify.dismiss(saldosToast);
+        setProgress((p) => ({ ...p, phase: "participantes" }));
+        const partToast = notify.loading(
+          `Verificando participantes das atas... (0/${totalAtas})`,
+        );
+        let participantesDone = 0;
+
         // 2) Participantes (secretarias) por ata.
         const porAta: Record<string, GarantirParticipanteResult[]> = {};
         const bloqueadas: Array<
@@ -234,7 +271,15 @@ export function useValidacaoPreGeracao(options: {
                 unidadeGestoraId: sec.m2a_uo_id ?? undefined,
               });
             }
-            if (alvos.size === 0) return;
+            if (alvos.size === 0) {
+              participantesDone += 1;
+              setProgress((p) => ({ ...p, participantesDone }));
+              notify.loading(
+                `Verificando participantes das atas... (${participantesDone}/${totalAtas})`,
+                { id: partToast },
+              );
+              return;
+            }
             try {
               const r = await garantirParticipantesAta(ataId, {
                 data: dataBatch,
@@ -260,8 +305,16 @@ export function useValidacaoPreGeracao(options: {
               porAta[ataId] = [fail];
               bloqueadas.push({ ...fail, ataId, ataNumero });
             }
+            participantesDone += 1;
+            setProgress((p) => ({ ...p, participantesDone }));
+            notify.loading(
+              `Verificando participantes das atas... (${participantesDone}/${totalAtas})`,
+              { id: partToast },
+            );
           }),
         );
+
+        notify.dismiss(partToast);
 
 
         const hasBlockers = saldos.bloqueados.length > 0 || bloqueadas.length > 0;
@@ -272,9 +325,21 @@ export function useValidacaoPreGeracao(options: {
         };
         setResult(finalResult);
         setAjustesAplicaveis(novosAjustes);
+        if (hasBlockers) {
+          notify.warning(
+            `Validação concluída com ${saldos.bloqueados.length + bloqueadas.length} bloqueio(s).`,
+          );
+        } else {
+          notify.success("Validação concluída — pronto para gerar.");
+        }
         return finalResult;
+      } catch (err) {
+        notify.dismiss(toastId);
+        notify.error(err instanceof Error ? err.message : "Falha ao validar");
+        throw err;
       } finally {
         setBusy(false);
+        setProgress({ phase: "idle", totalAtas: 0, saldosDone: 0, participantesDone: 0 });
       }
     },
     [contratosSelecionados, secretariasM2A, dataBatch],
@@ -285,5 +350,5 @@ export function useValidacaoPreGeracao(options: {
     setAjustesAplicaveis(new Map());
   }, []);
 
-  return { busy, result, ajustesAplicaveis, validar, reset };
+  return { busy, result, progress, ajustesAplicaveis, validar, reset };
 }
