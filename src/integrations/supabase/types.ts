@@ -1493,6 +1493,44 @@ export type Database = {
           },
         ]
       }
+      secretaria_unidades_equivalentes: {
+        Row: {
+          created_at: string
+          exercicio: number
+          id: string
+          secretaria_id: string
+          unidade_gestora_m2a_id: string
+          unidade_gestora_m2a_nome: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          exercicio: number
+          id?: string
+          secretaria_id: string
+          unidade_gestora_m2a_id: string
+          unidade_gestora_m2a_nome?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          exercicio?: number
+          id?: string
+          secretaria_id?: string
+          unidade_gestora_m2a_id?: string
+          unidade_gestora_m2a_nome?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "secretaria_unidades_equivalentes_secretaria_id_fkey"
+            columns: ["secretaria_id"]
+            isOneToOne: false
+            referencedRelation: "secretarias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       secretarias: {
         Row: {
           ativa: boolean
