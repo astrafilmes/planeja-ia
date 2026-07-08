@@ -177,7 +177,9 @@ export function useValidacaoPreGeracao(options: {
 
             for (const c of contratos) {
               const ataNumero = c.m2aAtaNumero ?? null;
-              const label = `${c.empresa} · ${c.secretariaSigla}` || "(contrato)";
+              const label =
+                [c.empresa, c.secretariaSigla].filter(Boolean).join(" · ") ||
+                "(contrato)";
               const secResolved = resolveSecretariaForContrato(c, secretariasM2A);
               const secKey = normSecKey(secResolved?.nome || c.secretariaSigla || "");
               const inner = idx?.get(secKey) ?? null;
