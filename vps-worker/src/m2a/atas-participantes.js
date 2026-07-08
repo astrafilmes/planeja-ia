@@ -118,17 +118,28 @@ export async function listarParticipantesAta(ataId) {
 
 export async function listarUnidadesGestorasParticipante(participanteId) {
   if (!participanteId) throw new Error("participanteId obrigatório");
-  const path = `/ata_registro_precos/unidades_participantes/${participanteId}/`;
+  // Endpoint AJAX real que devolve a tabela de UGs do participante.
+  // A URL "/unidades_participantes/{id}/" é só o wrapper HTML que carrega
+  // essa tabela via JS — se lermos o wrapper direto vem 0 linhas e o
+  // sistema conclui erradamente que a UG não foi incluída.
+  const path = `/ata_registro_precos/unidades_participantes/unidades_gestoras/tabela/${participanteId}/?page_size=1000&_=${Date.now()}`;
   const res = await m2a.get(path, {
     headers: {
       "X-Requested-With": "XMLHttpRequest",
-      Accept: "text/html,application/xhtml+xml,application/json,*/*",
+      Accept: "application/json, text/javascript, */*; q=0.01",
+      Referer: `${m2a.http.defaults.baseURL || ""}/ata_registro_precos/unidades_participantes/${participanteId}/`,
     },
   });
   if (res.status !== 200) {
-    throw new Error(`Falha ao carregar detalhe do participante ${participanteId}: HTTP ${res.status}`);
+    throw new Error(`Falha ao carregar UGs do participante ${participanteId}: HTTP ${res.status}`);
   }
-  return parseUnidadesGestorasDetalheHtml(res.html);
+  const rows = parseUnidadesGestorasDetalheHtml(res.html);
+  console.log(
+    `[m2a-participantes] UGs participante ${participanteId}: ${rows.length} linhas — ${rows
+      .map((r) => `"${r.unidadeGestoraNome}" [${r.situacao}${r.padrao ? " · padrão" : ""}]`)
+      .join(" | ") || "(vazio)"}`,
+  );
+  return rows;
 }
 
 /**
@@ -161,10 +172,21 @@ export async function incluirUnidadeGestora({ participanteId, unidadeGestoraId, 
     "";
   const unidadeGestoraNome = extrairNomeUgSelecionada($form, unidadeGestoraId);
   const body = montarPayloadInclusaoUg($form, { csrf, data, unidadeGestoraId });
+  const payloadLog = Object.fromEntries(
+    Array.from(body.entries()).map(([k, v]) => [
+      k,
+      k === "csrfmiddlewaretoken" ? `(len=${String(v).length})` : v,
+    ]),
+  );
+  console.log(
+    `[m2a-participantes] POST ${path} payload=${JSON.stringify(payloadLog)} ug="${unidadeGestoraNome ?? "?"}" (id=${unidadeGestoraId})`,
+  );
   const res = await m2a.postForm(path, body, {
     headers: { Referer: `${m2a.http.defaults.baseURL || ""}${path}` },
   });
-  // Django costuma responder 200 (form redirect interceptado pelo axios com maxRedirects=5).
+  console.log(
+    `[m2a-participantes] POST ${path} → status=${res.status} finalUrl=${res.finalUrl || "-"} bytes=${(res.html || "").length}`,
+  );
   if (res.status >= 400) {
     throw new Error(`Falha ao incluir participante ${participanteId}: HTTP ${res.status}`);
   }
@@ -268,6 +290,10 @@ export async function garantirParticipantes({ ataId, data, alvos, ugsDisponiveis
       nomeSecretaria: alvo.nome,
       ano,
     });
+    console.log(
+      `[m2a-participantes] ata=${ataId} sec="${alvo.nome}" participante=${participante.participanteId} incluido_flag=${participante.incluido} ug_ativa_encontrada=${jaTemUgAtiva.incluida} motivo=${jaTemUgAtiva.motivo} row="${jaTemUgAtiva.row?.unidadeGestoraNome ?? "-"}"`,
+    );
+
 
     if (participante.incluido || jaTemUgAtiva.incluida) {
       results.push({
