@@ -52,7 +52,8 @@ function isTransientResponse(res) {
 }
 
 function retryDelayMs(attempt) {
-  return 1_500 * Math.max(attempt, 1);
+  const base = [0, 1_500, 4_000, 8_000, 12_000][attempt] ?? 12_000;
+  return base + Math.floor(Math.random() * 500);
 }
 
 function absoluteUrl(path) {
@@ -285,7 +286,7 @@ class M2aClient {
       // rejeitou sem processar). Timeouts de rede em POST NÃO são retentados
       // aqui — o caller deve envolver a operação com sua própria lógica se ela
       // for comprovadamente idempotente (ver postFormWithRetry no contrato.js).
-      const maxAttempts = Number(opts.retries ?? 3);
+      const maxAttempts = Number(opts.retries ?? 4);
       let r = null;
       let lastErr = null;
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {

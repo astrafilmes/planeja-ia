@@ -155,6 +155,9 @@ export function useEnviarContratosM2A({
           .update({
             status_envio_m2a: "erro",
             ultimo_erro_m2a: event.mensagem,
+            ...(event.m2a_contrato_id
+              ? { m2a_contrato_id: event.m2a_contrato_id }
+              : {}),
           })
           .eq("id", event.contratoId);
         qc.invalidateQueries({ queryKey: ["processo-detail", processoId] });
