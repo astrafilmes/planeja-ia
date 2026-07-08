@@ -13,6 +13,7 @@
 
 import * as cheerio from "cheerio";
 import { m2a } from "../m2a-client.js";
+import { coerceHtmlPayload } from "./utils.js";
 
 function toNumberBR(txt) {
   if (txt == null) return null;
@@ -41,16 +42,9 @@ export async function listarParticipantesTabela(ataId) {
   if (res.status !== 200) {
     throw new Error(`Falha ao listar participantes da ata ${ataId}: HTTP ${res.status}`);
   }
-  // A resposta é JSON { html: "<table>..." } ou HTML direto — tratamos os dois.
-  let html = res.html || "";
-  try {
-    const parsed = JSON.parse(html);
-    if (parsed && typeof parsed === "object" && typeof parsed.html === "string") {
-      html = parsed.html;
-    }
-  } catch {
-    /* já era HTML */
-  }
+  // A resposta pode vir como JSON { html_table: "<table>..." }, { html: ... }
+  // ou HTML direto — o helper encontra o primeiro bloco HTML em qualquer chave.
+  const html = coerceHtmlPayload(res.html);
   const $ = cheerio.load(html);
   const rows = $("tr.tr_ata_registro_preco_unidade_participante, tr.kt-datatable__row.tr_ata_registro_preco_unidade_participante");
   const out = [];
@@ -85,15 +79,7 @@ export async function listarItensParticipante(participanteId) {
   if (res.status !== 200) {
     throw new Error(`Falha ao listar itens do participante ${participanteId}: HTTP ${res.status}`);
   }
-  let html = res.html || "";
-  try {
-    const parsed = JSON.parse(html);
-    if (parsed && typeof parsed === "object" && typeof parsed.html === "string") {
-      html = parsed.html;
-    }
-  } catch {
-    /* já era HTML */
-  }
+  const html = coerceHtmlPayload(res.html);
   const $ = cheerio.load(html);
   const rows = $("tr.tr_ata_registro_preco_unidade_participante_item, tr.kt-datatable__row.tr_ata_registro_preco_unidade_participante_item");
   const out = [];
