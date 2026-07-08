@@ -178,6 +178,10 @@ function Page() {
     contratosSelecionados,
     secretariasM2A,
     dataBatch: dataBatchOverride,
+    m2aProcessoId:
+      processoVinculado?.m2a_processo_id ??
+      ((jobDetail?.job as any)?.m2a_processo_id as string | null | undefined) ??
+      null,
   });
 
   // Reseta validação sempre que a base mudar.

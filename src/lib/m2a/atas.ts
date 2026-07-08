@@ -60,16 +60,36 @@ export type SaldoSecretariaAta = {
 
 export type SaldosPorSecretariaResponse = {
   ataId: string | number;
+  processoId?: string | null;
   secretarias: SaldoSecretariaAta[];
   avisos: string[];
-  consumoDebug?: { contratosConsiderados: number; linhas: number };
+  consumoDebug?: {
+    contratosConsiderados: number;
+    linhas: number;
+    contratosPorSecretariaItem?: Record<
+      string,
+      Record<
+        string,
+        Array<{
+          contratoId: number | string;
+          numeroContrato?: string | null;
+          processoId?: string | null;
+          processoNumero?: string | null;
+          quantidade?: number | null;
+        }>
+      >
+    >;
+  };
 };
 
 export function fetchSaldosPorSecretariaAta(
   ataId: string,
-  opts: { forceRefresh?: boolean } = {},
+  opts: { forceRefresh?: boolean; m2aProcessoId?: string | null } = {},
 ): Promise<SaldosPorSecretariaResponse> {
-  const q = opts.forceRefresh ? "?refresh=1" : "";
+  const params = new URLSearchParams();
+  if (opts.forceRefresh) params.set("refresh", "1");
+  if (opts.m2aProcessoId) params.set("m2a_processo_id", opts.m2aProcessoId);
+  const q = params.toString() ? `?${params.toString()}` : "";
   return callProxyJson<SaldosPorSecretariaResponse>(
     `/atas/${ataId}/saldos-por-secretaria${q}`,
     "GET",

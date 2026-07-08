@@ -25,6 +25,13 @@ function shortText(value, max = 160) {
   return String(value ?? "").replace(/\s+/g, " ").trim().slice(0, max);
 }
 
+function extractProcessoIdFromUrl(value) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return null;
+  if (/^\d+$/.test(raw)) return raw;
+  return raw.match(/\/processo_administrativo\/(\d+)\/?/)?.[1] ?? null;
+}
+
 export async function processarContratoCompleto(payload, onProgress = () => {}) {
   const { contratoId, m2aProcessoUrl, m2aAtaId, contrato, dadosM2A, itens, dadosDotacao } = payload;
   const numeroContrato = contrato?.numero_contrato || contrato?.numero;
@@ -73,7 +80,9 @@ export async function processarContratoCompleto(payload, onProgress = () => {}) 
   progress("recuperar_id", "Verificando se o contrato já existe na M2A...");
   if (!m2aInternalId) {
     try {
-      m2aInternalId = await buscarIdContratoPorNumero(m2aAtaId, numeroContrato, m2aProcessoUrl);
+      m2aInternalId = await buscarIdContratoPorNumero(m2aAtaId, numeroContrato, m2aProcessoUrl, {
+        processoId: extractProcessoIdFromUrl(m2aProcessoUrl),
+      });
     } catch (err) {
       // Sinal fraco: erro de rede/HTTP durante a busca. Só ignoramos
       // "not found"; qualquer outra falha vira erro para evitar duplicar
@@ -99,7 +108,10 @@ export async function processarContratoCompleto(payload, onProgress = () => {}) 
     if (!created.ok) throw new Error("Falha ao criar cabeçalho do contrato.");
     m2aInternalId =
       created.contratoId ||
-      (await buscarIdContratoPorNumero(m2aAtaId, numeroContrato, m2aProcessoUrl, { deepSearch: true }));
+      (await buscarIdContratoPorNumero(m2aAtaId, numeroContrato, m2aProcessoUrl, {
+        deepSearch: true,
+        processoId: extractProcessoIdFromUrl(m2aProcessoUrl),
+      }));
   }
   if (!m2aInternalId) throw new Error("Não foi possível obter o ID interno do contrato.");
 
@@ -137,7 +149,10 @@ export async function processarContratoCompleto(payload, onProgress = () => {}) 
   if (secretariaNome && itensPayload.length > 0) {
     try {
       invalidateSaldoAtaCache(m2aAtaId);
-      const saldos = await saldosPorSecretaria(m2aAtaId, { forceRefresh: true });
+      const saldos = await saldosPorSecretaria(m2aAtaId, {
+        forceRefresh: true,
+        processoId: extractProcessoIdFromUrl(m2aProcessoUrl),
+      });
       const secKey = normSec(secretariaNome);
       const sec = saldos.secretarias.find((s) => s.secretariaKey === secKey);
       if (!sec) {
