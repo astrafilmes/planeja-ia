@@ -152,6 +152,7 @@ export function useEnviarContratoM2A(
         unidadeGestoraId: secretaria.m2a_orgao_id,
         fiscalId: preference?.fiscal_id ?? secretaria.m2a_fiscal_codigo,
         gestorId: preference?.gestor_id ?? secretaria.m2a_gestor_codigo,
+        secretariaNome: secretaria.nome ?? null,
       });
     } catch (error) {
       return notify.error((error as Error).message);
