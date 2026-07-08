@@ -75,9 +75,16 @@ export function useEnviarContratoM2A(
         setEnviando(false);
         refetch();
       } else if (e.etapa === "erro") {
+        // Mesmo em erro, salvamos o m2a_contrato_id se o worker conseguiu
+        // criar o cabeçalho — a próxima tentativa retoma o pipeline em vez
+        // de tentar criar de novo (o que geraria duplicidade).
         await supabase
           .from("contratos")
-          .update({ status_envio_m2a: "erro", ultimo_erro_m2a: e.mensagem })
+          .update({
+            status_envio_m2a: "erro",
+            ultimo_erro_m2a: e.mensagem,
+            ...(e.m2a_contrato_id ? { m2a_contrato_id: e.m2a_contrato_id } : {}),
+          })
           .eq("id", id);
         notify.error(e.mensagem);
         failTask(e.mensagem);
