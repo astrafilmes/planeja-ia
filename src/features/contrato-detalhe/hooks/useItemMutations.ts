@@ -16,6 +16,7 @@ export function useItemMutations(refetch: () => void) {
   const [warnDontShow, setWarnDontShow] = useState(false);
   const [editingItem, setEditingItem] = useState<ItemRow | null>(null);
   const [editForm, setEditForm] = useState<ItemEditForm>({
+    numero_item: "",
     descricao: "",
     unidade: "",
     quantidade: "",
@@ -68,9 +69,11 @@ export function useItemMutations(refetch: () => void) {
     setSavingItem(true);
     const qtd = Number(editForm.quantidade.replace(",", ".")) || 0;
     const vu = Number(editForm.valor_unitario.replace(",", ".")) || 0;
+    const numeroItemTrim = editForm.numero_item.trim();
     const { error } = await supabase
       .from("contrato_itens")
       .update({
+        numero_item: numeroItemTrim || null,
         descricao: editForm.descricao,
         unidade: editForm.unidade || null,
         quantidade: qtd,

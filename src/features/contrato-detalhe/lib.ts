@@ -110,6 +110,7 @@ export type ContratoFull = {
 };
 
 export type ItemEditForm = {
+  numero_item: string;
   descricao: string;
   unidade: string;
   quantidade: string;
@@ -156,6 +157,7 @@ export function calcQuantidadeTotal(itens: ItemRow[]): number {
 
 export function itemRowToEditForm(item: ItemRow): ItemEditForm {
   return {
+    numero_item: item.numero_item ?? "",
     descricao: item.descricao ?? "",
     unidade: item.unidade ?? "",
     quantidade: String(item.quantidade ?? ""),
