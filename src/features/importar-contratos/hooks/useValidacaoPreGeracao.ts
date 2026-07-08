@@ -136,6 +136,13 @@ export function useValidacaoPreGeracao(options: {
           }
         }
 
+        const totalAtas = atas.size;
+        setProgress({ phase: "saldos", totalAtas, saldosDone: 0, participantesDone: 0 });
+        notify.dismiss(toastId);
+        const saldosToast = notify.loading(
+          `Consultando saldos das atas... (0/${totalAtas})`,
+        );
+
         // 1) Saldos por ata (cota − consumo).
         const saldos: ValidacaoPreGeracao["saldos"] = {
           ok: 0,
@@ -144,6 +151,7 @@ export function useValidacaoPreGeracao(options: {
           naoVerificados: [],
         };
         const novosAjustes = new Map<string, number>();
+        let saldosDone = 0;
 
         await Promise.all(
           Array.from(atas.entries()).map(async ([ataId, contratos]) => {
