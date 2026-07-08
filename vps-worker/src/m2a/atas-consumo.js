@@ -252,9 +252,24 @@ export async function consumoDaAta(ataId, { processoId = null } = {}) {
   const { contratos, path } = await listarContratosDaAta(ataId, { processoId });
   const detalhado = [];
   const agregado = {};
+  const avisos = [];
   for (const c of contratos) {
     if (c.cancelado) continue;
     if (!c.contratoId) continue;
+    if (!c.secretariaNome) {
+      avisos.push({
+        tipo: "contrato_sem_secretaria",
+        mensagem: `Contrato ${c.numero || c.contratoId} da ata ${ataId} sem secretaria identificada na tabela de contratos; consumo não agregado por secretaria.`,
+        contratoId: c.contratoId,
+        numeroContrato: c.numero,
+        processoId: c.processoId,
+        processoNumero: c.processoNumero,
+      });
+      console.warn(
+        `[m2a-consumo] ata ${ataId}: contrato ${c.contratoId} sem secretaria identificada`,
+      );
+      continue;
+    }
     let itens = [];
     try {
       itens = await listarItensContrato(c.contratoId);
@@ -283,5 +298,5 @@ export async function consumoDaAta(ataId, { processoId = null } = {}) {
       });
     }
   }
-  return { ataId, listaContratos: contratos, detalhado, agregado, sourcePath: path };
+  return { ataId, listaContratos: contratos, detalhado, agregado, avisos, sourcePath: path };
 }

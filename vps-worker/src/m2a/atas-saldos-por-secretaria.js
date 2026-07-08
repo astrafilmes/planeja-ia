@@ -60,35 +60,9 @@ export async function saldosPorSecretaria(ataId, { forceRefresh = false, process
     }),
     consumoDaAta(ataId, { processoId: processoKey || null }).catch((err) => {
       avisos.push(`Falha ao carregar consumo: ${err.message}`);
-      return { ataId, agregado: {}, detalhado: [], listaContratos: [] };
+      return { ataId, agregado: {}, detalhado: [], listaContratos: [], avisos: [] };
     }),
   ]);
-
-  const secretarias = cota.participantes.map((p) => {
-    const secretariaKey = normSec(p.secretariaNome);
-    const consumoSec = consumo.agregado?.[secretariaKey] ?? {};
-    const itens = p.itens.map((it) => {
-      const consumido = it.numero ? consumoSec[it.numero] ?? 0 : 0;
-      const cotaVal = it.quantidadeAlocada ?? null;
-      const saldo = cotaVal != null ? Math.max(cotaVal - consumido, 0) : null;
-      return {
-        numero: it.numero,
-        descricao: it.descricao,
-        unidade: it.unidade,
-        cota: cotaVal,
-        consumido,
-        saldo,
-      };
-    });
-    return {
-      participanteId: p.participanteId,
-      secretariaNome: p.secretariaNome,
-      secretariaKey,
-      exercicio: p.exercicio,
-      incluido: p.incluido,
-      itens,
-    };
-  });
 
   const contratosPorSecretariaItem = {};
   for (const row of consumo.detalhado ?? []) {
@@ -113,11 +87,41 @@ export async function saldosPorSecretaria(ataId, { forceRefresh = false, process
     });
   }
 
+  const secretarias = cota.participantes.map((p) => {
+    const secretariaKey = normSec(p.secretariaNome);
+    const consumoSec = consumo.agregado?.[secretariaKey] ?? {};
+    const itens = p.itens.map((it) => {
+      const consumido = it.numero ? consumoSec[it.numero] ?? 0 : 0;
+      const cotaVal = it.quantidadeAlocada ?? null;
+      const saldo = cotaVal != null ? Math.max(cotaVal - consumido, 0) : null;
+      const contratosConsumidores = it.numero
+        ? contratosPorSecretariaItem?.[secretariaKey]?.[String(it.numero)] ?? []
+        : [];
+      return {
+        numero: it.numero,
+        descricao: it.descricao,
+        unidade: it.unidade,
+        cota: cotaVal,
+        consumido,
+        saldo,
+        contratosConsumidores,
+      };
+    });
+    return {
+      participanteId: p.participanteId,
+      secretariaNome: p.secretariaNome,
+      secretariaKey,
+      exercicio: p.exercicio,
+      incluido: p.incluido,
+      itens,
+    };
+  });
+
   const data = {
     ataId,
     processoId: processoKey || null,
     secretarias,
-    avisos,
+    avisos: [...avisos, ...(consumo.avisos ?? [])],
     consumoDebug: {
       contratosConsiderados: consumo.listaContratos?.length ?? 0,
       linhas: consumo.detalhado?.length ?? 0,

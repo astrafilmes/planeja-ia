@@ -51,6 +51,13 @@ export type ValidacaoPreGeracao = {
     ajustados: SaldoIssue[];
     bloqueados: SaldoIssue[];
     naoVerificados: SaldoIssue[];
+    avisos: Array<{
+      ataId: string;
+      ataNumero: string | null;
+      mensagem: string;
+      contratoId?: number | string;
+      numeroContrato?: string | null;
+    }>;
   };
   participantes: {
     porAta: Record<string, GarantirParticipanteResult[]>;
@@ -84,9 +91,9 @@ function buildSecretariaSaldoIndex(
         saldo: it.saldo,
         descricao: it.descricao,
         contratosConsumidores:
-          resp.consumoDebug?.contratosPorSecretariaItem?.[s.secretariaKey]?.[
-            String(it.numero)
-          ] ?? [],
+          it.contratosConsumidores ??
+          resp.consumoDebug?.contratosPorSecretariaItem?.[s.secretariaKey]?.[String(it.numero)] ??
+          [],
       });
     }
     map.set(s.secretariaKey, inner);
@@ -163,6 +170,7 @@ export function useValidacaoPreGeracao(options: {
           ajustados: [],
           bloqueados: [],
           naoVerificados: [],
+          avisos: [],
         };
         const novosAjustes = new Map<string, number>();
         let saldosDone = 0;
@@ -179,6 +187,20 @@ export function useValidacaoPreGeracao(options: {
               /* trata como sem verificação */
             }
             const idx = resp ? buildSecretariaSaldoIndex(resp) : null;
+            const ataNumero = contratos.find((c) => c.m2aAtaNumero)?.m2aAtaNumero ?? null;
+            for (const aviso of resp?.avisos ?? []) {
+              if (typeof aviso === "string") {
+                saldos.avisos.push({ ataId, ataNumero, mensagem: aviso });
+              } else {
+                saldos.avisos.push({
+                  ataId,
+                  ataNumero,
+                  mensagem: aviso.mensagem,
+                  contratoId: aviso.contratoId,
+                  numeroContrato: aviso.numeroContrato,
+                });
+              }
+            }
             saldosDone += 1;
             setProgress((p) => ({ ...p, saldosDone }));
             notify.loading(

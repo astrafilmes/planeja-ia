@@ -32,6 +32,10 @@ function extractProcessoIdFromUrl(value) {
   return raw.match(/\/processo_administrativo\/(\d+)\/?/)?.[1] ?? null;
 }
 
+function contratoUrl(contratoId) {
+  return contratoId ? `${process.env.M2A_BASE_URL?.replace(/\/+$/, "") || "http://precodereferencia.m2atecnologia.com.br"}/contratos/${contratoId}/` : null;
+}
+
 export async function processarContratoCompleto(payload, onProgress = () => {}) {
   const { contratoId, m2aProcessoUrl, m2aAtaId, contrato, dadosM2A, itens, dadosDotacao } = payload;
   const numeroContrato = contrato?.numero_contrato || contrato?.numero;
@@ -148,10 +152,11 @@ export async function processarContratoCompleto(payload, onProgress = () => {}) 
   const secretariaNome = String(dadosM2A?.secretaria_nome ?? "").trim();
   if (secretariaNome && itensPayload.length > 0) {
     try {
-      invalidateSaldoAtaCache(m2aAtaId);
+      const processoId = extractProcessoIdFromUrl(m2aProcessoUrl);
+      invalidateSaldoAtaCache(m2aAtaId, processoId);
       const saldos = await saldosPorSecretaria(m2aAtaId, {
         forceRefresh: true,
-        processoId: extractProcessoIdFromUrl(m2aProcessoUrl),
+        processoId,
       });
       const secKey = normSec(secretariaNome);
       const sec = saldos.secretarias.find((s) => s.secretariaKey === secKey);
@@ -175,6 +180,10 @@ export async function processarContratoCompleto(payload, onProgress = () => {}) 
               saldo: hit.saldo,
               cota: hit.cota,
               consumido: hit.consumido,
+              contratosConsumidos: (hit.contratosConsumidores ?? []).map((c) => ({
+                ...c,
+                contratoUrl: contratoUrl(c.contratoId),
+              })),
             });
           }
         }
@@ -201,7 +210,7 @@ export async function processarContratoCompleto(payload, onProgress = () => {}) 
 
   // Ao concluir com sucesso um contrato, invalida o cache da ata para
   // que a próxima validação enxergue o novo consumo.
-  invalidateSaldoAtaCache(m2aAtaId);
+  invalidateSaldoAtaCache(m2aAtaId, extractProcessoIdFromUrl(m2aProcessoUrl));
 
   const dotacaoPayload = dadosDotacao ?? dadosM2A.dotacao ?? null;
   progress("incluir_dotacoes", "Módulo 6: Incluindo dotação orçamentária...");

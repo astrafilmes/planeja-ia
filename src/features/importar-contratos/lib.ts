@@ -146,13 +146,24 @@ export function resolveSecretariaForContrato(
   secretarias: SecretariaM2A[],
 ) {
   const sigla = contrato.secretariaSigla?.toUpperCase();
-  return (
-    secretarias.find(
-      (s) =>
-        s.sigla?.toUpperCase() === sigla &&
-        s.m2a_dotacao_default === contrato.dotacao,
-    ) ?? secretarias.find((s) => s.sigla?.toUpperCase() === sigla)
+  const exact = secretarias.find(
+    (s) =>
+      s.sigla?.toUpperCase() === sigla &&
+      s.m2a_dotacao_default === contrato.dotacao,
   );
+  if (exact) return exact;
+
+  const candidates = secretarias.filter((s) => s.sigla?.toUpperCase() === sigla);
+  if (contrato.dotacao && candidates.some((s) => s.m2a_dotacao_default)) {
+    console.warn("[m2a-import] secretaria não resolvida com segurança", {
+      sigla,
+      dotacaoContrato: contrato.dotacao,
+      dotacoesCandidatas: candidates.map((s) => s.m2a_dotacao_default).filter(Boolean),
+    });
+    return null;
+  }
+
+  return candidates[0] ?? null;
 }
 
 export function hasM2AActors(sec?: SecretariaM2A | null) {

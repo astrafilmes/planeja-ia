@@ -176,6 +176,48 @@ export const PreGeracaoValidacaoPanel = memo(function PreGeracaoValidacaoPanel({
           </details>
         )}
 
+        {result && result.saldos.avisos.length > 0 && (
+          <details className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2.5">
+            <summary className="cursor-pointer text-[12px] font-medium text-amber-900 dark:text-amber-200">
+              {result.saldos.avisos.length} aviso(s) na leitura de consumo
+            </summary>
+            <ul className="mt-2 max-h-36 list-disc overflow-auto pl-4 text-[12px]">
+              {result.saldos.avisos.slice(0, 20).map((a, i) => (
+                <li key={i}>
+                  {ataUrl(a.ataId) ? (
+                    <a
+                      href={ataUrl(a.ataId)!}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-primary underline-offset-2 hover:underline"
+                    >
+                      Ata {a.ataNumero ?? a.ataId}
+                      <ExternalLink className="size-3" />
+                    </a>
+                  ) : (
+                    <>Ata {a.ataNumero ?? a.ataId}</>
+                  )}
+                  {a.contratoId && (
+                    <>
+                      {" · "}
+                      <a
+                        href={contratoUrl(a.contratoId)!}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-primary underline-offset-2 hover:underline"
+                      >
+                        {a.numeroContrato || `Contrato ${a.contratoId}`}
+                        <ExternalLink className="size-3" />
+                      </a>
+                    </>
+                  )}
+                  {" — "}{a.mensagem}
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+
         {result && result.participantes.bloqueadas.length > 0 && (
           <details className="rounded-lg border border-destructive/40 bg-destructive/5 p-2.5" open>
             <summary className="cursor-pointer text-[12px] font-medium text-destructive">
