@@ -125,7 +125,7 @@ export async function listarContratosDaAta(ataId) {
       .map((_, b) => $(b).text().trim())
       .get()
       .join(" ");
-    const cancelado = /cancel|rescind|anulad|encerrad|extint/i.test(badgeTxt);
+    const cancelado = /cancel|rescind|anulad|encerrad|extint|rascunho|suspens|paralisad|revogad|invalidad/i.test(badgeTxt);
 
     out.push({
       contratoId,
