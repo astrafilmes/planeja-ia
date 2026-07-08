@@ -22,6 +22,7 @@
 import * as cheerio from "cheerio";
 import { m2a } from "../m2a-client.js";
 import { normSec } from "./norm-sec.js";
+import { coerceHtmlPayload } from "./utils.js";
 
 function toNumberBR(txt) {
   if (txt == null) return null;
@@ -53,13 +54,7 @@ async function tentarListarContratos(ataId) {
         headers: { "X-Requested-With": "XMLHttpRequest", Accept: "application/json,text/html,*/*" },
       });
       if (res.status !== 200) continue;
-      let html = res.html || "";
-      try {
-        const parsed = JSON.parse(html);
-        if (parsed && typeof parsed === "object" && typeof parsed.html === "string") {
-          html = parsed.html;
-        }
-      } catch { /* html direto */ }
+      const html = coerceHtmlPayload(res.html);
       const $ = cheerio.load(html);
       const rows = $("tr.tr_contrato, tr.kt-datatable__row.tr_contrato");
       if (rows.length > 0 || /nenhum registro encontrado/i.test(html)) {
@@ -151,13 +146,7 @@ export async function listarItensContrato(contratoId) {
   if (res.status !== 200) {
     throw new Error(`Falha ao carregar itens do contrato ${contratoId}: HTTP ${res.status}`);
   }
-  let html = res.html || "";
-  try {
-    const parsed = JSON.parse(html);
-    if (parsed && typeof parsed === "object" && typeof parsed.html === "string") {
-      html = parsed.html;
-    }
-  } catch { /* html direto */ }
+  const html = coerceHtmlPayload(res.html);
   const $ = cheerio.load(html);
   const rows = $("tr.tr_contrato_item, tr.kt-datatable__row.tr_contrato_item");
   const out = [];
