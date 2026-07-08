@@ -5,3 +5,4 @@ export { useItemMutations } from "./useItemMutations";
 export { useDeleteImportJob } from "./useDeleteImportJob";
 export { useImportarPlanilha } from "./useImportarPlanilha";
 export { useAutorizarGeracao } from "./useAutorizarGeracao";
+export { useValidacaoPreGeracao } from "./useValidacaoPreGeracao";

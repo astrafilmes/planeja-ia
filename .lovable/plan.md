@@ -1,87 +1,97 @@
-# Objetivo
+# Blindagem da geração de contratos
 
-Hoje, no fluxo de importação de planilha IRP, cada **secretaria participante** entra no payload M2A pela sua *unidade orçamentária* (`m2a_uo_id`). Quando duas colunas da planilha pertencem à mesma UO — por exemplo `FF` (Fundeb Fundamental) e `FI` (Fundeb Infantil), ambas mapeadas para a UO "FUNDEB" — o agregador colapsa as duas em **um único participante** e soma as quantidades. Resultado: só sai **1 DFD** onde deveriam sair **2 (ou 3, contando a SEC EDU)**.
+Meta: **nenhum contrato chega ao M2A com preposto vazio, quantidade acima do saldo, ou secretaria sem unidade gestora vinculada na ata**. Toda validação é resolvida na tela de Importação, antes do botão "Autorizar geração".
 
-No fluxo de importação de contratos (registro de preços), isso já funciona certo, porque o parser trabalha por **coluna de dotação** (`ParsedDotacao` guarda `secretariaSigla + dotacao + refColuna`), e cada coluna vira uma entrada independente. Queremos aplicar exatamente essa lógica no fluxo IRP → M2A (processo comum e SRP), sem quebrar o que já funciona.
+---
 
-Além disso, colocar antes do envio uma pergunta explícita "**é registro de preços?**" logo abaixo do input do arquivo, para que a decisão fique clara e visível antes da análise.
+## 1. Preposto obrigatório (bloqueio total)
 
-# O que muda
+**Regra:** o botão "Autorizar geração" fica desabilitado enquanto qualquer fornecedor da importação não tiver preposto preenchido — e também se algum contrato individualmente ficar sem preposto herdado.
 
-## 1. Payload IRP passa a ser por coluna, não por UO
+- Reforçar `fornecedoresSemPreposto` em `usePrepostosState` como bloqueio duro no `AutorizarGeracaoPanel` (hoje já existe o aviso, mas o botão continua clicável em alguns fluxos).
+- Adicionar checagem no `useAutorizarGeracao` que aborta antes de qualquer insert se `prepostoContrato` estiver vazio para qualquer contrato derivado.
+- Persistir automaticamente novos prepostos digitados em `fornecedores_prepostos` já ao sair do campo (debounce), para que a próxima importação do mesmo fornecedor já venha preenchida.
+- Banner vermelho fixo no topo listando fornecedores pendentes com botão "focar no campo".
 
-Arquivo: `src/features/irp/hooks/useEnviarProcessoM2A.ts` (função `buildM2AIrpPayload`).
+## 2. Saldo real da ata M2A (consulta em tempo real)
 
-- Trocar a **chave de participante** de `uo:<uoId>` para `col:<refColuna>` (fallback `row.key` quando não houver `ref_coluna`). Cada linha selecionada em `selectedImportRows` já corresponde a uma coluna distinta da planilha, então cada uma vira um participante próprio, mesmo compartilhando `m2a_uo_id`.
-- `secretariasParticipantes` deixa de ser deduplicado por UO — cada linha vira um item, com seu próprio `ref_coluna`, `nome` (usar `cabecalhoColuna` para diferenciar visualmente FF vs FI vs SEC EDU) e o mesmo par `m2a_orgao_id / m2a_uo_id` quando de fato compartilhado.
-- `agg.quantidades[chave]` passa a somar por coluna, garantindo uma coluna de quantidade separada por DFD.
-- `gerenciadora_chave` segue a mesma regra (`col:<refColuna>`).
+**Regra:** ao clicar em "Autorizar geração", o sistema faz uma consulta ao M2A por ata envolvida e valida item a item.
 
-## 2. Suporte no VPS/worker para múltiplos DFDs sob a mesma UO
+- Nova função no worker: `GET /atas/:m2aAtaId/saldos` → devolve `{ m2a_item_id, quantidade_total, quantidade_utilizada, saldo }`.
+- Nova edge function proxy `m2a-saldos` (ou reuso do `m2a-proxy`) invocada pelo front antes de autorizar.
+- Comportamento por item, considerando quantas dotações o item tem no contrato derivado:
+  - **1 dotação:** se `quantidade_planilha > saldo`, ajusta automaticamente para `saldo` e mostra um badge amarelo "ajustado de X → Y (saldo)". Se `saldo == 0`, item é bloqueado.
+  - **>1 dotação:** bloqueio duro. Mostra card "Este item excede o saldo e possui múltiplas dotações — ajuste manualmente a quantidade de cada dotação". Usuário edita inline (nova coluna editável em `ItensReviewTable`, reaproveitando padrão do `ItemEditDialog`).
+  - **Saldo suficiente:** segue sem alteração.
+- Nova aba/painel "Validação de saldo" no `AutorizarGeracaoPanel` com contadores: `X itens OK · Y ajustados · Z bloqueados`.
 
-Arquivos: `vps-worker/src/m2a/orquestrador-processo-comum.js`, `orquestrador-processo-srp.js`, `processo-comum.js`, `processo-srp.js`.
+## 3. Unidades gestoras equivalentes (participantes da ata)
 
-- Onde hoje o worker itera `secretariasParticipantes` presumindo uma DFD por UO, passar a iterar por participante (por chave `col:*`) e criar **um DFD por chave**, cada um com sua própria dotação/quantidades — igual ao contrato SRP faz por dotação hoje.
-- Mapear corretamente `m2a_uo_id` repetido: o M2A aceita várias DFDs para a mesma UO, o que muda é o conjunto de itens/quantidades e a natureza.
+**Regra:** cada secretaria envolvida no contrato precisa estar cadastrada como **unidade participante** na ata M2A do exercício corrente. Se não estiver, o sistema tenta inclusão automática (portando a lógica do script do usuário) e, se falhar, bloqueia.
 
-## 3. Pergunta "é registro de preços?" no upload
+- Novo endpoint worker `POST /atas/:m2aAtaId/participantes/garantir` recebendo `{ secretariaIds: [] }`. Internamente:
+  1. `GET` da tabela de participantes da ata.
+  2. Para cada secretaria pedida: se já é participante → OK. Se não → busca a `unidade_gestora` equivalente (usando `m2a_uo_id` já mapeado em `secretarias`, com fallback fuzzy por nome normalizado — igual ao `resolveUG2026` do script).
+  3. `POST /ata_registro_precos/unidades_participantes/unidades_gestoras/incluir/:participanteId/` com `data`, `unidade_gestora`, CSRF.
+  4. Retorna lista `{ secretariaId, status: 'ja_incluida' | 'incluida_agora' | 'sem_equivalencia' | 'erro' }`.
+- Front chama esse endpoint durante a validação pré-geração. Bloqueia contratos cujas secretarias não puderem ser incluídas e mostra card acionável "Corrigir na M2A" com o motivo.
+- Tabela auxiliar opcional: `secretaria_unidades_equivalentes(secretaria_id, exercicio, unidade_gestora_m2a_id)` para memorizar equivalências resolvidas manualmente e evitar fuzzy match futuro.
 
-Arquivo: `src/features/irp/components/*` (card de upload) e o hook `useIrpUploadAnalise`.
+## 4. Painel de validação pré-geração
 
-- Adicionar um toggle/segmented control logo **abaixo do input do arquivo**: `Registro de preços` × `Processo comum (sem registro)`.
-- Persistir a escolha em `processoM2AForm.e_registro_preco` desde o início do fluxo (hoje ela só aparece no modal de confirmação).
-- Usar essa flag para:
-  - Ajustar o texto do botão ("Analisar planilha (SRP)" / "Analisar planilha (comum)").
-  - Pré-selecionar a modalidade no modal `IrpConfirmacaoProcessoModal`.
-  - No envio, escolher entre `criarProcessoSrpM2A` e `criarProcessoComumM2A` sem o usuário precisar reconfirmar.
-
-## 4. UI da revisão de secretarias
-
-Arquivo: `src/features/irp/hooks/useIrpImportRows.ts` e a tabela de revisão.
-
-- Já retornamos uma linha por coluna (`importableRows`), então a lista visual continua correta.
-- Adicionar coluna "Dotação/Rótulo" mostrando `cabecalhoColuna` (ex.: `FUNDEB / FF`) para deixar claro que FF e FI vão gerar DFDs separados apesar de compartilharem a UO FUNDEB.
-- No autofill de `unidade_orcamentaria` continuar pegando a primeira linha válida — sem mudanças.
-
-# Detalhes técnicos
-
-## Estrutura do payload novo (comum e SRP)
+Novo componente `PreGeracaoValidacaoPanel` (acima do `AutorizarGeracaoPanel`) que roda ao clicar em "Validar antes de gerar":
 
 ```text
-payload.secretariasParticipantes = [
-  { chave: "col:27", nome: "SEC EDU",  m2a_uo_id: "1234", ref_coluna: 27, ... },
-  { chave: "col:28", nome: "FUNDEB/FF", m2a_uo_id: "5678", ref_coluna: 28, ... },
-  { chave: "col:29", nome: "FUNDEB/FI", m2a_uo_id: "5678", ref_coluna: 29, ... },
-]
-
-payload.itens[i].quantidades = {
-  "col:27": 100,
-  "col:28":  40,
-  "col:29":  60,
-}
+[Validação pré-geração]
+✔ Prepostos:        12/12 fornecedores
+⚠ Saldos:           38 OK · 4 ajustados · 2 bloqueados
+✔ Unidades gestoras: 6/6 secretarias participantes
+[Detalhes ▾]                              [Corrigir problemas] [Autorizar geração]
 ```
 
-O worker itera por chave e cria uma DFD por participante, mesmo quando `m2a_uo_id` se repete.
+- "Autorizar geração" só habilita quando não há bloqueios.
+- Cada seção expande com a lista detalhada e ação inline (editar quantidade, incluir preposto, forçar re-tentativa da inclusão de participante).
 
-## Compatibilidade retroativa
+## 5. Fragilidades e riscos a mitigar
 
-- Snapshots antigos usam `uo:<uoId>` como chave. Como o payload é montado no momento do envio a partir de `selectedImportRows` (banco/parse), não há migração necessária.
-- Jobs IRP já persistidos continuam válidos; a mudança afeta apenas envios futuros ao M2A.
+- **Consulta de saldo em tempo real** adiciona 1–3s de latência por ata. Mitigação: cache em memória por sessão + botão "Revalidar".
+- **Fuzzy match de unidades gestoras** pode escolher errado. Mitigação: quando `bestScore < 3` pedir confirmação manual e persistir na tabela de equivalências.
+- **Consumo de saldo concorrente**: entre a validação e o envio, outro sistema pode gastar o saldo. Mitigação: revalidar saldo por contrato dentro do worker `orquestrador-contrato.js` antes do módulo 5 (atualizar quantidades) e, se divergir, retornar erro tipado `SALDO_INSUFICIENTE_RUNTIME` que o front trata mostrando o card de correção.
+- **CSRF/sessão M2A no worker** para a inclusão de participante — reusar o `m2a-client.js` existente.
+- **Múltiplas dotações com ajuste**: como o usuário confirmou bloqueio manual, garantimos que a lógica de rateio automático **não** é escrita, evitando divisão errada.
 
-## Arquivos afetados
+## 6. Inconsistências atuais que ficam resolvidas
 
-- `src/features/irp/hooks/useEnviarProcessoM2A.ts` — nova chave por coluna.
-- `src/features/irp/hooks/useIrpUploadAnalise.ts` — receber/persistir `e_registro_preco` desde o upload.
-- `src/features/irp/components/` (card de upload + tabela de revisão) — toggle SRP/Comum e coluna "Rótulo".
-- `src/features/irp/lib.ts` — tipos `M2ASrpPayload` / `M2AComumPayload` (ref_coluna já existe; documentar `chave` novo).
-- `vps-worker/src/m2a/orquestrador-processo-comum.js` e `orquestrador-processo-srp.js` — DFD por chave em vez de por UO.
-- `vps-worker/src/m2a/processo-comum.js` e `processo-srp.js` — se houver dedupe interno por UO, remover.
+- Contrato enviado com quantidade > saldo (erro 500 M2A no módulo 5).
+- Contrato enviado sem preposto (falha no módulo de documentos/atores).
+- Secretaria ausente na ata (erro na inclusão de item por participante).
+- Duplicidade de tentativas manuais de sync de participantes por script no console (fica embutido no worker).
 
-# Como validar
+---
 
-1. Rodar a planilha `AQUISIÇÃO_DE_LIVROS_DIDÁTICOS_-_REGISTRO_2026.xlsx` (que tem SEC EDU + FF + FI) marcando "Registro de preços" → esperar 3 participantes distintos no preview e 3 DFDs criadas no M2A.
-2. Rodar a mesma planilha marcando "Processo comum" → mesmos 3 DFDs, agora pelo endpoint comum.
-3. Rodar um caso simples (uma única coluna por secretaria, ex.: `ADESÃO_MATERIAIS_DE_CONSTRUÇÃO.xlsx`) → deve continuar gerando 1 DFD por secretaria, sem regressão.
-4. Conferir no console `[m2a-import]` que `secretariasParticipantes.length === selectedImportRows.length` e que `quantidades` tem uma chave por coluna.
+## Detalhes técnicos
 
-Se estiver de acordo, aprove que eu implemento na sequência (front + worker) e faço os testes.
+**Arquivos que serão criados/alterados:**
+
+- `vps-worker/src/m2a/atas-saldos.js` (novo) — parser da tabela de saldos da ata.
+- `vps-worker/src/m2a/atas-participantes.js` (novo) — porta o script do usuário para incluir participantes (`resolveUG2026`, POST em `unidades_gestoras/incluir/:id/`).
+- `vps-worker/src/routes/atas.js` (novo) — expõe `GET /atas/:id/saldos` e `POST /atas/:id/participantes/garantir`.
+- `supabase/functions/m2a-proxy/index.ts` — encaminha os dois novos endpoints.
+- `src/lib/m2a/atas.ts` (novo) — client tipado no front.
+- `src/features/importar-contratos/hooks/useValidacaoPreGeracao.ts` (novo) — orquestra as 3 validações em paralelo.
+- `src/features/importar-contratos/components/PreGeracaoValidacaoPanel.tsx` (novo) — UI descrita acima.
+- `src/features/importar-contratos/components/ItensReviewTable.tsx` — colunas editáveis de quantidade por dotação + badge "ajustado".
+- `src/features/importar-contratos/components/AutorizarGeracaoPanel.tsx` — bloqueio duro + chip resumo.
+- `src/features/importar-contratos/hooks/useAutorizarGeracao.ts` — aborta se validação não passou; aplica quantidades ajustadas.
+- `vps-worker/src/m2a/orquestrador-contrato.js` — revalida saldo antes do módulo 5, retorna erro tipado.
+- Migration nova: `secretaria_unidades_equivalentes` (com GRANTs e RLS por role admin/gestor).
+
+**Ordem de implementação sugerida:**
+1. Worker: endpoints de saldo e participantes (com testes em `vps-worker/scripts/`).
+2. Edge proxy + client TS.
+3. Hook `useValidacaoPreGeracao` + painel.
+4. Bloqueio duro no `AutorizarGeracaoPanel` e edição inline em `ItensReviewTable`.
+5. Revalidação runtime no orquestrador do worker.
+6. Migration da tabela de equivalências + persistência automática de prepostos.
+
+Confirma para eu começar pelo passo 1 (endpoints no worker)?
