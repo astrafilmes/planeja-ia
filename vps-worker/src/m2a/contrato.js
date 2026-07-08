@@ -215,30 +215,58 @@ export async function criarCabecalhoContrato(ataId, dados) {
 }
 
 // --- Módulo 3: atores ---
+// Retry idempotente para vínculos: M2A às vezes devolve 500/502/503/504/rede em
+// picos. Se o POST falhou por causa do servidor, nada foi criado — reenviar é
+// seguro. Se por acaso o primeiro POST tiver criado o vínculo antes de o proxy
+// devolver 5xx, a segunda tentativa devolverá o alerta de duplicidade, que o
+// ensureActorLinked trata como sucesso (mensagem informativa).
+const ACTOR_LINK_ATTEMPTS = 4;
+const ACTOR_LINK_BACKOFF_MS = [0, 1500, 4000, 8000];
+
+async function postFormWithRetry(url, form, label) {
+  let lastErr;
+  for (let attempt = 1; attempt <= ACTOR_LINK_ATTEMPTS; attempt++) {
+    try {
+      const csrf = await m2a.getCsrf(url);
+      return await m2a.postForm(url, { ...form, csrfmiddlewaretoken: csrf });
+    } catch (e) {
+      lastErr = e;
+      const status = Number(e?.response?.status ?? e?.status ?? 0);
+      const msg = String(e?.message || "");
+      const isTransient =
+        status >= 500 || status === 429 || status === 408 || status === 0 ||
+        /timeout|ECONNRESET|ETIMEDOUT|EAI_AGAIN|socket hang up|status code 5\d\d/i.test(msg);
+      if (!isTransient || attempt === ACTOR_LINK_ATTEMPTS) break;
+      const wait = ACTOR_LINK_BACKOFF_MS[attempt] ?? 8000;
+      console.warn(
+        `[m2a-contrato] vínculo ${label} falhou (${msg}); aguardando ${wait}ms para retry ${attempt + 1}/${ACTOR_LINK_ATTEMPTS}`,
+      );
+      await sleep(wait);
+    }
+  }
+  throw lastErr;
+}
+
 export async function vincularFiscal(contratoId, fiscalId, dataBatch) {
   const url = `/contratos/fiscais/incluir/${contratoId}/`;
-  const csrf = await m2a.getCsrf(url);
-  const r = await m2a.postForm(url, {
-    csrfmiddlewaretoken: csrf,
+  const r = await postFormWithRetry(url, {
     tipo: "1",
     data_nomeacao: dataBatch,
     servidor: fiscalId,
     ativo: "on",
     _salvar: "",
-  });
+  }, "fiscal");
   ensureActorLinked(loadDoc(r.html), "fiscal", "não existe fiscal ativo");
 }
 
 export async function vincularGestor(contratoId, gestorId, dataBatch) {
   const url = `/contratos/gestores/incluir/${contratoId}/`;
-  const csrf = await m2a.getCsrf(url);
-  const r = await m2a.postForm(url, {
-    csrfmiddlewaretoken: csrf,
+  const r = await postFormWithRetry(url, {
     data_nomeacao: dataBatch,
     servidor: gestorId,
     ativo: "on",
     _salvar: "",
-  });
+  }, "gestor");
   ensureActorLinked(loadDoc(r.html), "gestor", "não existe gestor ativo");
 }
 
@@ -259,14 +287,12 @@ export async function vincularPreposto(contratoId, nomePreposto, dataBatch, prep
     prepostoId = json.suggestions[0].id;
   }
   const url = `/contratos/prepostos/incluir/${contratoId}/`;
-  const csrf = await m2a.getCsrf(url);
-  const r = await m2a.postForm(url, {
-    csrfmiddlewaretoken: csrf,
+  const r = await postFormWithRetry(url, {
     data_nomeacao: dataBatch,
     pessoa_fisica: prepostoId,
     ativo: "on",
     _salvar: "",
-  });
+  }, "preposto");
   ensureActorLinked(loadDoc(r.html), "preposto", "não existe preposto ativo");
 }
 
