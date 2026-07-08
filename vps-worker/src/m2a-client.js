@@ -271,7 +271,7 @@ class M2aClient {
         await this.login();
       }
       const methodUpper = method.toUpperCase();
-      const maxAttempts = Number(opts.retries ?? (methodUpper === "GET" ? 3 : 2));
+      const maxAttempts = Number(opts.retries ?? (methodUpper === "GET" ? 3 : 1));
       let r = null;
       let lastErr = null;
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
