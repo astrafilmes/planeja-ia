@@ -9,6 +9,7 @@ import type { ContratoPreliminar } from "@/lib/contratoImport";
 import type { SecretariaM2A } from "../lib";
 import { resolveSecretariaForContrato } from "../lib";
 import { normSec } from "@/lib/m2a/normSec";
+import { getOrgaoMapping } from "@/lib/m2a/orgaos-mapping";
 import { notify } from "@/lib/notify";
 
 export type ValidacaoProgress = {
