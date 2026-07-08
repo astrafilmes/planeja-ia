@@ -63,7 +63,23 @@ export type SaldosPorSecretariaResponse = {
   processoId?: string | null;
   secretarias: SaldoSecretariaAta[];
   avisos: string[];
-  consumoDebug?: { contratosConsiderados: number; linhas: number };
+  consumoDebug?: {
+    contratosConsiderados: number;
+    linhas: number;
+    contratosPorSecretariaItem?: Record<
+      string,
+      Record<
+        string,
+        Array<{
+          contratoId: number | string;
+          numeroContrato?: string | null;
+          processoId?: string | null;
+          processoNumero?: string | null;
+          quantidade?: number | null;
+        }>
+      >
+    >;
+  };
 };
 
 export function fetchSaldosPorSecretariaAta(

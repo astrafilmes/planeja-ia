@@ -21,6 +21,13 @@ export type ValidacaoProgress = {
 export type SaldoIssue = {
   ataId: string;
   ataNumero: string | null;
+  contratosConsumidores?: Array<{
+    contratoId: number | string;
+    numeroContrato?: string | null;
+    processoId?: string | null;
+    processoNumero?: string | null;
+    quantidade?: number | null;
+  }>;
   contratoKey: string;
   contratoLabel: string;
   m2aItemId: string;
@@ -59,15 +66,15 @@ function normSecKey(txt: string) {
 
 function buildSecretariaSaldoIndex(
   resp: SaldosPorSecretariaResponse,
-): Map<string, Map<string, { cota: number | null; consumido: number; saldo: number | null; descricao: string }>> {
+): Map<string, Map<string, { cota: number | null; consumido: number; saldo: number | null; descricao: string; contratosConsumidores?: SaldoIssue["contratosConsumidores"] }>> {
   const map = new Map<
     string,
-    Map<string, { cota: number | null; consumido: number; saldo: number | null; descricao: string }>
+    Map<string, { cota: number | null; consumido: number; saldo: number | null; descricao: string; contratosConsumidores?: SaldoIssue["contratosConsumidores"] }>
   >();
   for (const s of resp.secretarias) {
     const inner = new Map<
       string,
-      { cota: number | null; consumido: number; saldo: number | null; descricao: string }
+      { cota: number | null; consumido: number; saldo: number | null; descricao: string; contratosConsumidores?: SaldoIssue["contratosConsumidores"] }
     >();
     for (const it of s.itens) {
       if (!it.numero) continue;
@@ -76,6 +83,10 @@ function buildSecretariaSaldoIndex(
         consumido: it.consumido,
         saldo: it.saldo,
         descricao: it.descricao,
+        contratosConsumidores:
+          resp.consumoDebug?.contratosPorSecretariaItem?.[s.secretariaKey]?.[
+            String(it.numero)
+          ] ?? [],
       });
     }
     map.set(s.secretariaKey, inner);
@@ -195,6 +206,7 @@ export function useValidacaoPreGeracao(options: {
                 const base: Omit<SaldoIssue, "acao"> = {
                   ataId,
                   ataNumero,
+                  contratosConsumidores: [],
                   contratoKey: c.key,
                   contratoLabel: label,
                   m2aItemId: m2aId,
@@ -220,6 +232,7 @@ export function useValidacaoPreGeracao(options: {
                 base.consumido = hit.consumido;
                 base.saldoDisponivel = hit.saldo;
                 base.descricao = hit.descricao || base.descricao;
+                base.contratosConsumidores = hit.contratosConsumidores ?? [];
 
                 const saldoDisp = hit.saldo;
                 if (saldoDisp == null) {

@@ -47,9 +47,26 @@ function extractContratoLinks($) {
     });
 }
 
-function extractContratoIdFromDoc($, numeroBuscado) {
+function extractProcessoIdFromUrl(value) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return "";
+  if (/^\d+$/.test(raw)) return raw;
+  return raw.match(/\/processo_administrativo\/(\d+)\/?/)?.[1] ?? "";
+}
+
+function processoIdFromContratoRow($, link) {
+  const href = $(link).closest("tr").find('a[href*="/processo_administrativo/"]').first().attr("href") || "";
+  return extractProcessoIdFromUrl(href);
+}
+
+function extractContratoIdFromDoc($, numeroBuscado, processoId = "") {
   const numeroNorm = normalizeContratoNumero(numeroBuscado);
-  const links = extractContratoLinks($);
+  const expectedProcessoId = extractProcessoIdFromUrl(processoId);
+  const links = extractContratoLinks($).filter((l) => {
+    if (!expectedProcessoId) return true;
+    const rowProcessoId = processoIdFromContratoRow($, l.href ? $(`a[href="${l.href}"]`).first() : null);
+    return rowProcessoId === expectedProcessoId;
+  });
   const exact = links.find((l) => normalizeContratoNumero(l.text) === numeroNorm);
   if (exact) return exact.id;
   const rowMatch = links.find((l) =>
@@ -58,8 +75,8 @@ function extractContratoIdFromDoc($, numeroBuscado) {
   return rowMatch?.id ?? null;
 }
 
-function extractContratoIdFromHtml(html, numeroBuscado) {
-  return extractContratoIdFromDoc(loadDoc(html), numeroBuscado);
+function extractContratoIdFromHtml(html, numeroBuscado, processoId = "") {
+  return extractContratoIdFromDoc(loadDoc(html), numeroBuscado, processoId);
 }
 
 function findContratoTableLinksInDoc($, ataId) {
@@ -104,6 +121,7 @@ export async function buscarIdContratoPorNumero(
   ataId, numeroBuscado, m2aProcessoUrl, options = {},
 ) {
   const deepSearch = options.deepSearch ?? false;
+  const expectedProcessoId = options.processoId ?? extractProcessoIdFromUrl(m2aProcessoUrl);
   const urls = deepSearch
     ? await discoverContratoTableUrls(ataId, m2aProcessoUrl)
     : [canonicalContratoTableUrl(ataId)];
@@ -111,7 +129,7 @@ export async function buscarIdContratoPorNumero(
   for (const url of urls) {
     try {
       const r = await m2a.get(url, { headers: { "X-Requested-With": "XMLHttpRequest" } });
-      const id = extractContratoIdFromDoc(loadDoc(r.html), numeroBuscado);
+      const id = extractContratoIdFromDoc(loadDoc(r.html), numeroBuscado, expectedProcessoId);
       if (id) return id;
       errors.push(`${url}: tabela respondeu, contrato não apareceu`);
     } catch (e) {

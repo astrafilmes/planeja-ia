@@ -26,6 +26,8 @@ export const PreGeracaoValidacaoPanel = memo(function PreGeracaoValidacaoPanel({
     participanteId
       ? `http://precodereferencia.m2atecnologia.com.br/ata_registro_precos/unidades_participantes/unidades_gestoras/incluir/${participanteId}/`
       : null;
+  const contratoUrl = (contratoId?: string | number | null) =>
+    contratoId ? `http://precodereferencia.m2atecnologia.com.br/contratos/${contratoId}/` : null;
   const totalAjustes = result?.saldos.ajustados.length ?? 0;
   const totalBloqueiosSaldo = result?.saldos.bloqueados.length ?? 0;
   const totalNaoVerificado = result?.saldos.naoVerificados.length ?? 0;
@@ -145,6 +147,29 @@ export const PreGeracaoValidacaoPanel = memo(function PreGeracaoValidacaoPanel({
                   {s.acao === "bloquear_manual" &&
                     " · possui múltiplas dotações — ajuste a quantidade manualmente por dotação"}
                   {s.acao === "bloquear_sem_saldo" && " · saldo esgotado"}
+                  {s.contratosConsumidores && s.contratosConsumidores.length > 0 && (
+                    <span className="block pl-3 pt-1 text-muted-foreground">
+                      Consumo encontrado: {s.contratosConsumidores.slice(0, 4).map((c, index) => (
+                        <span key={`${c.contratoId}-${index}`}>
+                          {index > 0 ? ", " : ""}
+                          {contratoUrl(c.contratoId) ? (
+                            <a
+                              href={contratoUrl(c.contratoId)!}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 text-primary underline-offset-2 hover:underline"
+                            >
+                              {c.numeroContrato || `Contrato ${c.contratoId}`}
+                              <ExternalLink className="size-3" />
+                            </a>
+                          ) : (
+                            c.numeroContrato || `Contrato ${c.contratoId}`
+                          )}
+                          {c.quantidade != null ? ` (${c.quantidade})` : ""}
+                        </span>
+                      ))}
+                    </span>
+                  )}
                 </li>
               ))}
             </ul>

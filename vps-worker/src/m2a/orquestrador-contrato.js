@@ -80,7 +80,9 @@ export async function processarContratoCompleto(payload, onProgress = () => {}) 
   progress("recuperar_id", "Verificando se o contrato já existe na M2A...");
   if (!m2aInternalId) {
     try {
-      m2aInternalId = await buscarIdContratoPorNumero(m2aAtaId, numeroContrato, m2aProcessoUrl);
+      m2aInternalId = await buscarIdContratoPorNumero(m2aAtaId, numeroContrato, m2aProcessoUrl, {
+        processoId: extractProcessoIdFromUrl(m2aProcessoUrl),
+      });
     } catch (err) {
       // Sinal fraco: erro de rede/HTTP durante a busca. Só ignoramos
       // "not found"; qualquer outra falha vira erro para evitar duplicar
@@ -106,7 +108,10 @@ export async function processarContratoCompleto(payload, onProgress = () => {}) 
     if (!created.ok) throw new Error("Falha ao criar cabeçalho do contrato.");
     m2aInternalId =
       created.contratoId ||
-      (await buscarIdContratoPorNumero(m2aAtaId, numeroContrato, m2aProcessoUrl, { deepSearch: true }));
+      (await buscarIdContratoPorNumero(m2aAtaId, numeroContrato, m2aProcessoUrl, {
+        deepSearch: true,
+        processoId: extractProcessoIdFromUrl(m2aProcessoUrl),
+      }));
   }
   if (!m2aInternalId) throw new Error("Não foi possível obter o ID interno do contrato.");
 
