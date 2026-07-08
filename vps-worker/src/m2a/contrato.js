@@ -511,20 +511,41 @@ export async function atualizarQuantidadesItens(contratoId, itensDesejados) {
   for (const m of matches) {
     if (!m.encontrado) continue;
     const url = `/contratos/itens/atualizar_quantidade_contrato_item/${m.encontrado.contratoItemId}/`;
-    try {
-      const r = await m2a.postForm(url, {
-        csrfmiddlewaretoken: csrf,
-        quantidade: m.desejado.quantidade,
-      });
-      ensureOperationAccepted(loadDoc(r.html), `quantidade do item ${m.desejado.numero}`);
-      atualizados += 1;
-    } catch (err) {
+    // Retry idempotente: setar a mesma quantidade N vezes é seguro. Falhas 5xx
+    // do M2A aqui deixam o item com quantidade 0 e quebram a dotação depois.
+    const MAX_TENTATIVAS = 4;
+    const BACKOFF_MS = [0, 1500, 4000, 8000];
+    let sucesso = false;
+    let ultimoErro = null;
+    for (let tentativa = 1; tentativa <= MAX_TENTATIVAS; tentativa += 1) {
+      if (BACKOFF_MS[tentativa - 1]) await sleep(BACKOFF_MS[tentativa - 1]);
+      try {
+        const r = await m2a.postForm(url, {
+          csrfmiddlewaretoken: csrf,
+          quantidade: m.desejado.quantidade,
+        });
+        ensureOperationAccepted(loadDoc(r.html), `quantidade do item ${m.desejado.numero}`);
+        atualizados += 1;
+        sucesso = true;
+        break;
+      } catch (err) {
+        ultimoErro = err;
+        const status = err?.response?.status ?? err?.status ?? 0;
+        const isTransient = status >= 500 || status === 429 || status === 0;
+        console.warn(
+          `[m2a-contrato] falha ao atualizar quantidade item ${m.desejado.numero} (tentativa ${tentativa}/${MAX_TENTATIVAS}, status=${status}): ${err.message}`,
+        );
+        if (!isTransient) break;
+      }
+    }
+    if (!sucesso) {
       avisos.push(
-        `Item pulado (quantidade insuficiente ou rejeitada) ${m.desejado.numero || m.desejado.descricao || "sem-ref"}: ${err.message}`,
+        `Item pulado (quantidade insuficiente ou rejeitada) ${m.desejado.numero || m.desejado.descricao || "sem-ref"}: ${ultimoErro?.message ?? "erro desconhecido"}`,
       );
     }
     await sleep(ITEM_POST_PAUSE_MS);
   }
+
   console.log("[m2a-contrato] quantidades atualizadas:", atualizados, { avisos });
   console.groupEnd();
   return { atualizados, avisos };
