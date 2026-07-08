@@ -8,7 +8,7 @@ import {
 import type { ContratoPreliminar } from "@/lib/contratoImport";
 import type { SecretariaM2A } from "../lib";
 import { resolveSecretariaForContrato } from "../lib";
-import { normalizeText } from "@/lib/utils/normalize";
+import { normSec } from "@/lib/m2a/normSec";
 
 export type SaldoIssue = {
   contratoKey: string;
