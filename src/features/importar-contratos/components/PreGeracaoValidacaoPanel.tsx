@@ -115,7 +115,10 @@ export const PreGeracaoValidacaoPanel = memo(function PreGeracaoValidacaoPanel({
               {result.saldos.bloqueados.slice(0, 30).map((s, i) => (
                 <li key={i}>
                   <strong>{s.contratoLabel}</strong> · item {s.numero ?? "?"} ·{" "}
-                  qtd {s.quantidadeSolicitada} &gt; saldo{" "}
+                  pedido {s.quantidadeSolicitada}
+                  {s.cota != null && ` · cota ${s.cota}`}
+                  {s.consumido != null && ` · já contratado ${s.consumido}`}
+                  {" · saldo "}
                   {s.saldoDisponivel ?? "?"}
                   {s.acao === "bloquear_manual" &&
                     " · possui múltiplas dotações — ajuste a quantidade manualmente por dotação"}

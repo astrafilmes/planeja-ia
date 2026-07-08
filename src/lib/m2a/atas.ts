@@ -23,24 +23,7 @@ async function callProxyJson<T = unknown>(
   return data as T;
 }
 
-export type AtaItemSaldo = {
-  m2a_item_id: string;
-  numero: string | null;
-  descricao: string;
-  quantidade_total: number | null;
-  quantidade_utilizada: number | null;
-  saldo: number | null;
-};
-
-export type SaldosAtaResponse = {
-  ataId: string | number;
-  itens: AtaItemSaldo[];
-  avisos: string[];
-};
-
-export function fetchSaldosAta(ataId: string): Promise<SaldosAtaResponse> {
-  return callProxyJson<SaldosAtaResponse>(`/atas/${ataId}/saldos`, "GET");
-}
+/* ---------- Participantes (status incluído/não) ---------- */
 
 export type ParticipanteAta = {
   participanteId: number | null;
@@ -54,6 +37,46 @@ export function fetchParticipantesAta(ataId: string) {
     "GET",
   );
 }
+
+/* ---------- Saldos por secretaria (cota − consumo) ---------- */
+
+export type SaldoItemPorSecretaria = {
+  numero: string | null;
+  descricao: string;
+  unidade: string | null;
+  cota: number | null;
+  consumido: number;
+  saldo: number | null;
+};
+
+export type SaldoSecretariaAta = {
+  participanteId: number | null;
+  secretariaNome: string;
+  secretariaKey: string;
+  exercicio: number | null;
+  incluido: boolean;
+  itens: SaldoItemPorSecretaria[];
+};
+
+export type SaldosPorSecretariaResponse = {
+  ataId: string | number;
+  secretarias: SaldoSecretariaAta[];
+  avisos: string[];
+  consumoDebug?: { contratosConsiderados: number; linhas: number };
+};
+
+export function fetchSaldosPorSecretariaAta(
+  ataId: string,
+  opts: { forceRefresh?: boolean } = {},
+): Promise<SaldosPorSecretariaResponse> {
+  const q = opts.forceRefresh ? "?refresh=1" : "";
+  return callProxyJson<SaldosPorSecretariaResponse>(
+    `/atas/${ataId}/saldos-por-secretaria${q}`,
+    "GET",
+  );
+}
+
+/* ---------- Garantir participantes ---------- */
 
 export type GarantirParticipanteResult = {
   secretariaId: string;
