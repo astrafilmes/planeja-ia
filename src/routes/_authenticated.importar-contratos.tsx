@@ -367,6 +367,7 @@ function Page() {
                       <PreGeracaoValidacaoPanel
                         busy={preGeracao.busy}
                         result={preGeracao.result}
+                        progress={preGeracao.progress}
                         onValidar={() => void preGeracao.validar()}
                         disabled={
                           contratosSelecionados.length === 0 ||
