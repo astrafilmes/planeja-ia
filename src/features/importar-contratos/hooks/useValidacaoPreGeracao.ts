@@ -99,9 +99,17 @@ export function useValidacaoPreGeracao(options: {
     new Map(),
   );
 
+  const [progress, setProgress] = useState<ValidacaoProgress>({
+    phase: "idle",
+    totalAtas: 0,
+    saldosDone: 0,
+    participantesDone: 0,
+  });
+
   const validar = useCallback(
     async (opts: { forceRefresh?: boolean } = {}) => {
       setBusy(true);
+      const toastId = notify.loading("Validando saldos e participantes no M2A...");
       try {
         // Agrupa por ata.
         const atas = new Map<string, ContratoPreliminar[]>();
