@@ -9,6 +9,14 @@ import type { ContratoPreliminar } from "@/lib/contratoImport";
 import type { SecretariaM2A } from "../lib";
 import { resolveSecretariaForContrato } from "../lib";
 import { normSec } from "@/lib/m2a/normSec";
+import { notify } from "@/lib/notify";
+
+export type ValidacaoProgress = {
+  phase: "saldos" | "participantes" | "idle";
+  totalAtas: number;
+  saldosDone: number;
+  participantesDone: number;
+};
 
 export type SaldoIssue = {
   contratoKey: string;
