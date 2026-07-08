@@ -217,7 +217,9 @@ export function parseContratoXlsx(
     const unidade = String(row[colUnidade] ?? "").trim();
     if (!empresa && !descricao && !unidade) continue;
     if (!descricao) continue;
-    if (!empresaPrincipal && empresa) empresaPrincipal = empresa;
+    // Linhas sem EMPRESA são itens fracassados — não vinculam a fornecedor algum.
+    if (!empresa) continue;
+    if (!empresaPrincipal) empresaPrincipal = empresa;
 
     const especificacao =
       colItemDesc >= 0 ? String(row[colItemDesc] ?? "").trim() : descricao;
