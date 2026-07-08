@@ -21,6 +21,7 @@ import {
   useImportQueries,
   useItemMutations,
   usePrepostosState,
+  useValidacaoPreGeracao,
 } from "@/features/importar-contratos/hooks";
 import {
   AutorizarGeracaoPanel,
@@ -28,6 +29,7 @@ import {
   HistoricoJobsSidebar,
   ImportSummaryBar,
   ItensReviewTable,
+  PreGeracaoValidacaoPanel,
   UploadCard,
 } from "@/features/importar-contratos/components";
 import type {
