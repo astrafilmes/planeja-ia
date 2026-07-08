@@ -35,9 +35,15 @@ function extractContratoIdFromHref(href) {
   return href?.match(/\/contratos\/(\d+)\/?/)?.[1] ?? null;
 }
 
+function contratoUrl(contratoId) {
+  return contratoId
+    ? `${process.env.M2A_BASE_URL?.replace(/\/+$/, "") || "http://precodereferencia.m2atecnologia.com.br"}/contratos/${contratoId}/`
+    : null;
+}
+
 function isTransientM2AError(err) {
   const status = Number(err?.response?.status ?? err?.status ?? 0);
-  if ([408, 425, 429, 500, 502, 503, 504].includes(status)) return true;
+  if ([0, 408, 425, 429, 500, 502, 503, 504].includes(status)) return true;
   const msg = String(err?.message || "");
   return /timeout|ECONNRESET|ETIMEDOUT|EAI_AGAIN|socket hang up|status code 5\d\d/i.test(msg);
 }
@@ -247,9 +253,9 @@ export async function criarCabecalhoContrato(ataId, dados, options = {}) {
     } catch (err) {
       lastErr = err;
       if (!isTransientM2AError(err) || attempt === TRANSIENT_ATTEMPTS) break;
+      await waitBeforeRetry(`criação do contrato ${dados.numero} falhou (${err.message})`, attempt);
       const found = await localizarCriado();
       if (found) return { ok: true, contratoId: found, finalUrl: contratoUrl(found) };
-      await waitBeforeRetry(`criação do contrato ${dados.numero} falhou (${err.message})`, attempt);
     }
   }
   throw lastErr;
@@ -430,7 +436,7 @@ export async function adicionarItensAoContrato(contratoId, itensDesejados) {
     })),
   );
   const numerosDisp = new Set(disponiveis.map((it) => it.numero));
-  const comNumero = itens.filter((it) => it.numero);
+  const comNumero = pendentes.filter((it) => it.numero);
   const hits = comNumero.filter((it) => numerosDisp.has(it.numero)).length;
   const preferDescription = comNumero.length ? hits / comNumero.length < 0.8 : false;
   console.log("[m2a-contrato] estratégia de matching:", {
@@ -619,15 +625,15 @@ export async function atualizarQuantidadesItens(contratoId, itensDesejados) {
     const url = `/contratos/itens/atualizar_quantidade_contrato_item/${m.encontrado.contratoItemId}/`;
     // Retry idempotente: setar a mesma quantidade N vezes é seguro. Falhas 5xx
     // do M2A aqui deixam o item com quantidade 0 e quebram a dotação depois.
-    const MAX_TENTATIVAS = 4;
-    const BACKOFF_MS = [0, 1500, 4000, 8000];
+    const MAX_TENTATIVAS = TRANSIENT_ATTEMPTS;
+    const BACKOFF_MS = TRANSIENT_BACKOFF_MS;
     let sucesso = false;
     let ultimoErro = null;
     for (let tentativa = 1; tentativa <= MAX_TENTATIVAS; tentativa += 1) {
       if (BACKOFF_MS[tentativa - 1]) await sleep(BACKOFF_MS[tentativa - 1]);
       try {
         const r = await m2a.postForm(url, {
-          csrfmiddlewaretoken: csrf,
+          csrfmiddlewaretoken: tentativa === 1 ? csrf : await m2a.getCsrf(`/contratos/${contratoId}/`, { force: true }),
           quantidade: m.desejado.quantidade,
         }, { retries: 1 });
         ensureOperationAccepted(loadDoc(r.html), `quantidade do item ${m.desejado.numero}`);
