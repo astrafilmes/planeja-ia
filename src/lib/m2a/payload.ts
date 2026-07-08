@@ -113,6 +113,7 @@ export function buildM2AContractPayload(input: M2AContractPayloadInput) {
       gestor_id: input.gestorId,
       preposto_id: null,
       preposto_nome: input.contrato.preposto,
+      secretaria_nome: input.secretariaNome ?? null,
       dotacao: input.dotacao,
       itens,
     },
