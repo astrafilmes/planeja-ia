@@ -8,6 +8,8 @@ import {
   adicionarItensAoContrato, atualizarQuantidadesItens,
   incluirDotacao, configurarDocumentos,
 } from "./contrato.js";
+import { saldosPorSecretaria, invalidateSaldoAtaCache } from "./atas-saldos-por-secretaria.js";
+import { normSec } from "./norm-sec.js";
 
 function logTable(label, rows, limit = 500) {
   const list = Array.isArray(rows) ? rows : [];
