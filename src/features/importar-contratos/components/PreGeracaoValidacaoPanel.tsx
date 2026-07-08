@@ -138,10 +138,12 @@ export const PreGeracaoValidacaoPanel = memo(function PreGeracaoValidacaoPanel({
             <ul className="mt-2 max-h-40 list-disc overflow-auto pl-4 text-[12px]">
               {result.participantes.bloqueadas.slice(0, 20).map((p, i) => (
                 <li key={i}>
+                  <strong>Ata {p.ataNumero ?? p.ataId}</strong> ·{" "}
                   <strong>{p.nome}</strong> · {p.status}
                   {p.mensagem ? ` — ${p.mensagem}` : ""}
                 </li>
               ))}
+
             </ul>
             <p className="mt-2 text-[12px] text-muted-foreground">
               Corrija diretamente no M2A (cadastre a UG equivalente na ata do
