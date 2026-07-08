@@ -212,10 +212,14 @@ export function useValidacaoPreGeracao(options: {
 
         // 2) Participantes (secretarias) por ata.
         const porAta: Record<string, GarantirParticipanteResult[]> = {};
-        const bloqueadas: GarantirParticipanteResult[] = [];
+        const bloqueadas: Array<
+          GarantirParticipanteResult & { ataId: string; ataNumero: string | null }
+        > = [];
 
         await Promise.all(
           Array.from(atas.entries()).map(async ([ataId, contratos]) => {
+            const ataNumero =
+              contratos.find((c) => c.m2aAtaNumero)?.m2aAtaNumero ?? null;
             const alvos = new Map<
               string,
               { secretariaId: string; nome: string; unidadeGestoraId?: string | number }
@@ -243,22 +247,22 @@ export function useValidacaoPreGeracao(options: {
                   item.status === "sem_participante_na_ata" ||
                   item.status === "erro"
                 ) {
-                  bloqueadas.push(item);
+                  bloqueadas.push({ ...item, ataId, ataNumero });
                 }
               }
             } catch (err) {
-              porAta[ataId] = [
-                {
-                  secretariaId: "",
-                  nome: `(falha ao consultar ata ${ataId})`,
-                  status: "erro",
-                  mensagem: err instanceof Error ? err.message : String(err),
-                },
-              ];
-              bloqueadas.push(porAta[ataId][0]);
+              const fail: GarantirParticipanteResult = {
+                secretariaId: "",
+                nome: `(falha ao consultar ata ${ataNumero ?? ataId})`,
+                status: "erro",
+                mensagem: err instanceof Error ? err.message : String(err),
+              };
+              porAta[ataId] = [fail];
+              bloqueadas.push({ ...fail, ataId, ataNumero });
             }
           }),
         );
+
 
         const hasBlockers = saldos.bloqueados.length > 0 || bloqueadas.length > 0;
         const finalResult: ValidacaoPreGeracao = {
