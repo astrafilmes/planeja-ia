@@ -189,6 +189,57 @@ export function useContratosDerivados(options: {
     [jobDetail],
   );
 
+  // Validação de erros que impedem a geração: numeração duplicada dentro do
+  // mesmo contrato, itens sem nº e itens sem descrição. Ajuda o usuário a
+  // corrigir a planilha antes de gerar contratos.
+  const validacaoContratos = useMemo(() => {
+    const duplicados: Array<{
+      contratoKey: string;
+      contratoLabel: string;
+      numero: string;
+      ocorrencias: number;
+    }> = [];
+    const semNumero: Array<{ contratoKey: string; contratoLabel: string; qtd: number }> = [];
+    const semDescricao: Array<{ contratoKey: string; contratoLabel: string; qtd: number }> = [];
+
+    for (const contrato of contratosSelecionados) {
+      const label = `${contrato.secretariaSigla ?? "?"} · ${
+        contrato.m2aAtaNumero ?? contrato.m2aAtaId ?? "sem ata"
+      } · ${resolveFornecedorNome(contrato)}`;
+      const counts = new Map<string, number>();
+      let vazios = 0;
+      let semDesc = 0;
+      for (const item of contrato.itens) {
+        const num = String(item.numeroItem ?? "").trim();
+        if (!num) vazios += 1;
+        else counts.set(num, (counts.get(num) ?? 0) + 1);
+        if (!String(item.descricao ?? "").trim()) semDesc += 1;
+      }
+      for (const [numero, ocorrencias] of counts) {
+        if (ocorrencias > 1) {
+          duplicados.push({
+            contratoKey: contrato.key,
+            contratoLabel: label,
+            numero,
+            ocorrencias,
+          });
+        }
+      }
+      if (vazios > 0)
+        semNumero.push({ contratoKey: contrato.key, contratoLabel: label, qtd: vazios });
+      if (semDesc > 0)
+        semDescricao.push({ contratoKey: contrato.key, contratoLabel: label, qtd: semDesc });
+    }
+
+    return {
+      duplicados,
+      semNumero,
+      semDescricao,
+      hasErros:
+        duplicados.length > 0 || semNumero.length > 0 || semDescricao.length > 0,
+    };
+  }, [contratosSelecionados]);
+
   const isAutorizado = jobDetail?.job?.status === "autorizado";
 
   return {
@@ -202,6 +253,7 @@ export function useContratosDerivados(options: {
     totalItens,
     fornecedoresUnicos,
     itensSemValor,
+    validacaoContratos,
     isAutorizado,
   };
 }

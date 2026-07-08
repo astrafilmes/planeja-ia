@@ -13,6 +13,18 @@ import type {
   SecretariaM2A,
 } from "../lib";
 
+type ValidacaoContratos = {
+  duplicados: Array<{
+    contratoKey: string;
+    contratoLabel: string;
+    numero: string;
+    ocorrencias: number;
+  }>;
+  semNumero: Array<{ contratoKey: string; contratoLabel: string; qtd: number }>;
+  semDescricao: Array<{ contratoKey: string; contratoLabel: string; qtd: number }>;
+  hasErros: boolean;
+};
+
 type Props = {
   isAutorizado: boolean;
   contratosPreliminaresCount: number;
@@ -35,6 +47,7 @@ type Props = {
   dataBatch: string;
   onChangeDataBatch: (value: string) => void;
   onAutorizar: () => void;
+  validacaoContratos: ValidacaoContratos;
 };
 
 /**
@@ -62,6 +75,7 @@ export const AutorizarGeracaoPanel = memo(function AutorizarGeracaoPanel({
   dataBatch,
   onChangeDataBatch,
   onAutorizar,
+  validacaoContratos,
 }: Props) {
   const dataValida = /^\d{4}-\d{2}-\d{2}$/.test(dataBatch);
   const disableBtn =
@@ -71,7 +85,8 @@ export const AutorizarGeracaoPanel = memo(function AutorizarGeracaoPanel({
     contratosSelecionados.length === 0 ||
     contratosSemCadastroM2A.length > 0 ||
     fornecedoresSemPreposto.length > 0 ||
-    contratosSemAtaM2A.length > 0;
+    contratosSemAtaM2A.length > 0 ||
+    validacaoContratos.hasErros;
 
   return (
     <Card className="border-border/60">
@@ -238,6 +253,69 @@ export const AutorizarGeracaoPanel = memo(function AutorizarGeracaoPanel({
                 </div>
               )}
             </div>
+
+            {validacaoContratos.hasErros && (
+              <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-[13px] text-destructive">
+                <div className="font-medium">
+                  Erros na planilha impedem a geração
+                </div>
+                <p className="mt-1 text-[12px] opacity-90">
+                  Corrija os itens abaixo em <strong>Itens da planilha</strong> ou
+                  reimporte a planilha antes de autorizar.
+                </p>
+                {validacaoContratos.duplicados.length > 0 && (
+                  <div className="mt-2">
+                    <div className="text-[12px] font-medium">
+                      Numeração duplicada ({validacaoContratos.duplicados.length})
+                    </div>
+                    <ul className="mt-1 max-h-32 list-disc overflow-auto pl-4 text-[12px]">
+                      {validacaoContratos.duplicados.slice(0, 20).map((d, idx) => (
+                        <li key={`dup-${idx}`}>
+                          Nº <strong>{d.numero}</strong> aparece {d.ocorrencias}×
+                          em {d.contratoLabel}
+                        </li>
+                      ))}
+                      {validacaoContratos.duplicados.length > 20 && (
+                        <li>
+                          … +{validacaoContratos.duplicados.length - 20} outros
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                )}
+                {validacaoContratos.semNumero.length > 0 && (
+                  <div className="mt-2">
+                    <div className="text-[12px] font-medium">
+                      Itens sem nº ({validacaoContratos.semNumero.length}{" "}
+                      contrato(s))
+                    </div>
+                    <ul className="mt-1 max-h-24 list-disc overflow-auto pl-4 text-[12px]">
+                      {validacaoContratos.semNumero.slice(0, 10).map((d, idx) => (
+                        <li key={`sn-${idx}`}>
+                          {d.qtd} item(ns) sem nº em {d.contratoLabel}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {validacaoContratos.semDescricao.length > 0 && (
+                  <div className="mt-2">
+                    <div className="text-[12px] font-medium">
+                      Itens sem descrição ({validacaoContratos.semDescricao.length}{" "}
+                      contrato(s))
+                    </div>
+                    <ul className="mt-1 max-h-24 list-disc overflow-auto pl-4 text-[12px]">
+                      {validacaoContratos.semDescricao.slice(0, 10).map((d, idx) => (
+                        <li key={`sd-${idx}`}>
+                          {d.qtd} item(ns) sem descrição em {d.contratoLabel}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+
 
             {/* Resumo final */}
             <div className="flex flex-col gap-1 rounded-lg bg-muted/40 p-3 text-[13px] text-muted-foreground dark:bg-muted/30">
