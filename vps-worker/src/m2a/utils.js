@@ -158,11 +158,18 @@ function getRejectedMessages($) {
   const rejectedMessages = unique([
     ...diagnostics.errors,
     ...diagnostics.alerts,
-  ]).filter(
-    (m) => !/sucesso|salv|inclu[ií]d|cadastrad/i.test(m),
-  );
+  ])
+    .map((m) => String(m ?? "").trim())
+    // remove mensagens sem letras/dígitos (asteriscos, ":", "-", etc.)
+    .filter((m) => m && /[A-Za-zÀ-ÿ0-9]/.test(m))
+    .filter((m) => !/sucesso|salv|inclu[ií]d|cadastrad/i.test(m));
   return { diagnostics, rejectedMessages };
 }
+
+// Mensagens de "já existe/vinculado/associado" devem ser tratadas como
+// sucesso idempotente — reenvio de contrato não pode quebrar aqui.
+export const ALREADY_EXISTS_MESSAGE =
+  /j[aá]\s+(existe|associ|vincul|cadastrad|inclu[ií]d|est[aá]|foi)|duplicad|associado\s+para\s+esse|dispon[ií]vel\s+para\s+esse/i;
 
 const IGNORABLE_INFORMATIVE =
   /não existe fiscal ativo|não existe gestor ativo|não existe preposto ativo|contrato ainda não foi publicado no pncp|existem \d+ alertas/i;
