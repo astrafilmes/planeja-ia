@@ -9,6 +9,7 @@ import {
   saldosPorSecretaria,
   invalidateSaldoAtaCache,
 } from "../m2a/atas-saldos-por-secretaria.js";
+import { m2a } from "../m2a-client.js";
 
 function validarAtaId(ataId, reply) {
   if (!/^\d+$/.test(String(ataId))) {
