@@ -28,9 +28,18 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function isTransientError(err) {
+function isIdempotentMethod(method) {
+  const m = String(method || "").toUpperCase();
+  return m === "GET" || m === "HEAD" || m === "OPTIONS";
+}
+
+function isTransientError(err, method = "GET") {
   const status = Number(err?.response?.status ?? err?.status ?? 0);
   if (TRANSIENT_STATUS.has(status)) return true;
+  // Para métodos não-idempotentes (POST/PUT/PATCH/DELETE) NÃO tratamos
+  // timeout/rede como transitório — o servidor pode ter processado o
+  // request e apenas perdido a resposta. Retry aqui geraria duplicidade.
+  if (!isIdempotentMethod(method)) return false;
   const code = String(err?.code ?? "");
   if (TRANSIENT_CODES.has(code)) return true;
   return /timeout|socket hang up|network|ECONNRESET|ETIMEDOUT|EAI_AGAIN/i.test(
