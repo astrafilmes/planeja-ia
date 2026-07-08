@@ -9,6 +9,58 @@ import { config } from "../config.js";
 // =====================================================================
 
 const SYNC_CONCURRENCY = 3;
+const RETRYABLE_M2A_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isRetryableM2AError(err) {
+  const status = Number(err?.status ?? err?.response?.status ?? 0);
+  if (RETRYABLE_M2A_STATUS.has(status)) return true;
+  return /timeout|tempor|ECONNRESET|ETIMEDOUT|EAI_AGAIN|socket hang up|M2A respondeu (408|425|429|500|502|503|504)/i.test(
+    String(err?.message ?? err ?? ""),
+  );
+}
+
+function isSuspiciousEmptyAjax(doc) {
+  return Number(doc?.status ?? 0) === 200 && Number(doc?.decodedBytes ?? doc?.bytes ?? 0) < 80;
+}
+
+async function withM2ARetry(label, operation, trace, meta = {}) {
+  const maxAttempts = meta.maxAttempts ?? 3;
+  let lastErr = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const result = await operation(attempt);
+      if (attempt > 1) {
+        traceStep(trace, {
+          ...meta,
+          fase: meta.fase ?? "retry",
+          label: `${label} recuperado`,
+          tentativa: attempt,
+          selecionado: true,
+        });
+      }
+      return result;
+    } catch (err) {
+      lastErr = err;
+      const retryable = isRetryableM2AError(err);
+      traceStep(trace, {
+        ...meta,
+        fase: meta.fase ?? "retry",
+        label: `${label} falhou`,
+        tentativa: attempt,
+        maxTentativas: maxAttempts,
+        retryable,
+        erro: String(err?.message ?? err),
+      });
+      if (!retryable || attempt === maxAttempts) break;
+      await sleep(1_500 * attempt);
+    }
+  }
+  throw lastErr || new Error(`${label} falhou`);
+}
 
 // ---------- helpers de texto / parse ----------
 function cleanTextValue(value) {
@@ -863,7 +915,22 @@ function extractTabelaMestraItens($, processoId) {
 async function fetchTabelaMestraItens(processoId, trace) {
   const url = `/processo_administrativo/item/tabela/${processoId}/?page_size=1000`;
   traceStep(trace, { fase: "itens_mestre", label: "tabela mestra de itens", processo_id: processoId, url });
-  const doc = await fetchDocDetailed(url);
+  const doc = await withM2ARetry(
+    "tabela mestra de itens",
+    async () => {
+      const fetched = await fetchDocDetailed(url);
+      if (isSuspiciousEmptyAjax(fetched)) {
+        const err = new Error(
+          `M2A retornou tabela mestra vazia/instável em ${url} (status=${fetched.status}, bytes=${fetched.decodedBytes})`,
+        );
+        err.status = 502;
+        throw err;
+      }
+      return fetched;
+    },
+    trace,
+    { fase: "itens_mestre", processo_id: processoId, url },
+  );
   const itens = extractTabelaMestraItens(doc.$, processoId);
   logTable(
     `processo ${processoId} / tabela mestra completa`,
@@ -969,7 +1036,22 @@ function extractAtasValidasFromDoc($) {
 async function fetchAtasValidasDoProcesso(processoId, trace) {
   const url = `/licitacao_ata_contrato/tabela/${processoId}/?page_size=1000`;
   traceStep(trace, { fase: "atas", label: "tabela licitacao_ata_contrato", processo_id: processoId, url });
-  const doc = await fetchDocDetailed(url);
+  const doc = await withM2ARetry(
+    "tabela de atas do processo",
+    async () => {
+      const fetched = await fetchDocDetailed(url);
+      if (isSuspiciousEmptyAjax(fetched)) {
+        const err = new Error(
+          `M2A retornou tabela de atas vazia/instável em ${url} (status=${fetched.status}, bytes=${fetched.decodedBytes})`,
+        );
+        err.status = 502;
+        throw err;
+      }
+      return fetched;
+    },
+    trace,
+    { fase: "atas", processo_id: processoId, url },
+  );
   const { atas, ignoradas } = extractAtasValidasFromDoc(doc.$);
   logTable(
     `processo ${processoId} / atas válidas extraídas`,
@@ -1072,7 +1154,22 @@ async function fetchVinculosDaAta(ata, mapaMestraPorOrdem, trace) {
   const url = `/licitacao_ata_contrato_item/subtabela/${idLic}/?page_size=1000`;
   traceStep(trace, { fase: "vinculos", label: "subtabela de itens da ata", id_ata: ata.id_ata, id_lic: idLic, url });
   try {
-    const doc = await fetchDocDetailed(url);
+    const doc = await withM2ARetry(
+      "subtabela de vínculos da ata",
+      async () => {
+        const fetched = await fetchDocDetailed(url);
+        if (isSuspiciousEmptyAjax(fetched)) {
+          const err = new Error(
+            `M2A retornou subtabela de vínculos vazia/instável para ata ${ata.numero_ata || ata.id_ata} (status=${fetched.status}, bytes=${fetched.decodedBytes})`,
+          );
+          err.status = 502;
+          throw err;
+        }
+        return fetched;
+      },
+      trace,
+      { fase: "vinculos", id_ata: ata.id_ata, numero_ata: ata.numero_ata, id_lic: idLic, url },
+    );
     const vinculos = extractVinculosSubtabela(doc.$, ata.id_ata, mapaMestraPorOrdem);
     traceStep(trace, {
       fase: "vinculos",
@@ -1229,46 +1326,36 @@ async function runCascata(processoId) {
   }
 
   // Payload compatível com sync_m2a_snapshot:
-  // 1 item ÚNICO por ordem da tabela mestra, atrelado à primeira ata VÁLIDA (não cancelada)
-  // onde aparece. Atas canceladas não recebem itens.
-  const primeiraAtaPorOrdem = new Map();
-  const valorContratadoPorAtaOrdem = new Map();
-  const valorContratadoPorOrdem = new Map();
-  for (const { ata, vinculos } of resultados) {
-    if (ata.cancelada) continue;
-    for (const v of vinculos) {
-      if (!primeiraAtaPorOrdem.has(v.ordem)) primeiraAtaPorOrdem.set(v.ordem, ata.id_ata);
-      const vc = Number(v.valor_unitario_contratado) || 0;
-      if (vc > 0) {
-        valorContratadoPorAtaOrdem.set(`${ata.id_ata}|${v.ordem}`, vc);
-        if (!valorContratadoPorOrdem.has(v.ordem)) valorContratadoPorOrdem.set(v.ordem, vc);
-      }
-    }
-  }
-
-  const itens = itensMestre
-    .filter((m) => primeiraAtaPorOrdem.has(m.ordem))
+  // 1 item por VÍNCULO ata+ordem, não apenas a primeira ata por ordem.
+  // O mesmo item mestre pode existir em atas/fornecedores diferentes; se o
+  // snapshot colapsar por ordem, o front nunca encontra a ata correta da
+  // empresa (ex.: item 42 em MF e também em GUIATELLI). Por isso o id_item é
+  // sintético por ata+item_mestre.
+  const itens = resultados
+    .filter(({ ata }) => !ata.cancelada)
+    .flatMap(({ ata, vinculos }) =>
+      vinculos.map((v) => {
+        const mestra = mapaMestraPorOrdem.get(String(v.ordem));
+        if (!mestra) return null;
+        const valorContratado = Number(v.valor_unitario_contratado) || 0;
+        return {
+          id_item: `${ata.id_ata}:${mestra.id_item_mestre}`,
+          id_item_mestre: mestra.id_item_mestre,
+          numero_item: mestra.ordem,
+          descricao: v.descricao_linha || mestra.descricao,
+          unidade: mestra.unidade,
+          // Prefere o valor unitário CONTRATADO (subtabela da ata).
+          // Cai para o estimado da tabela mestra apenas se o contratado não existir.
+          valor_unitario: valorContratado > 0 ? valorContratado : mestra.valor_unitario,
+          id_ata: ata.id_ata,
+        };
+      }),
+    )
+    .filter(Boolean)
     .sort((a, b) => {
-      const numA = Number(a.ordem || a.numero_item || a.numero) || 0;
-      const numB = Number(b.ordem || b.numero_item || b.numero) || 0;
-      return numA - numB;
-    })
-    .map((m) => {
-      const idAta = primeiraAtaPorOrdem.get(m.ordem);
-      const valorContratado =
-        valorContratadoPorAtaOrdem.get(`${idAta}|${m.ordem}`) ||
-        valorContratadoPorOrdem.get(m.ordem) ||
-        0;
-      return {
-        id_item: m.id_item_mestre,
-        numero_item: m.ordem,
-        descricao: m.descricao,
-        unidade: m.unidade,
-        // Prefere o valor unitário CONTRATADO (subtabela da ata).
-        // Cai para o estimado da tabela mestra apenas se o contratado não existir.
-        valor_unitario: valorContratado > 0 ? valorContratado : m.valor_unitario,
-        id_ata: idAta,
-      };
+      const ataCmp = String(a.id_ata).localeCompare(String(b.id_ata), "pt-BR", { numeric: true });
+      if (ataCmp !== 0) return ataCmp;
+      return (Number(a.numero_item) || 0) - (Number(b.numero_item) || 0);
     });
 
   const itensPayloadDiagnostico = itens.map((item) => {
@@ -1278,6 +1365,7 @@ async function runCascata(processoId) {
       ordem: item.numero_item,
       lote: mestra?.lote || "",
       id_item: item.id_item,
+      id_item_mestre: item.id_item_mestre || mestra?.id_item_mestre || "",
       id_ata: item.id_ata,
       numero_ata: ata?.numero_ata || "",
       fornecedor: ata?.fornecedor?.nome || "",

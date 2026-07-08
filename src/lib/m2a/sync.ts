@@ -8,6 +8,7 @@ export interface M2aAtaSync {
 
 export interface M2aItemSync {
   id_item: string;
+  id_item_mestre?: string;
   numero_item: string;
   descricao: string;
   unidade: string;
