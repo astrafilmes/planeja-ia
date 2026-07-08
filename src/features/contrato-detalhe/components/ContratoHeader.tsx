@@ -50,7 +50,11 @@ export const ContratoHeaderActions = memo(function ContratoHeaderActions({
     if (novo === statusM2A) return;
     setSalvandoStatus(true);
     try {
-      const patch: Record<string, unknown> = {
+      const patch: {
+        status_envio_m2a: string;
+        enviado_m2a_em?: string;
+        ultimo_erro_m2a?: string | null;
+      } = {
         status_envio_m2a: novo,
       };
       if (novo === "sucesso") {
