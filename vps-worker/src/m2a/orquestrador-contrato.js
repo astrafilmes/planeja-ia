@@ -206,6 +206,23 @@ export async function processarContratoCompleto(payload, onProgress = () => {}) 
   const qtdResult = await atualizarQuantidadesItens(m2aInternalId, itensPayload);
   coletarAvisos("atualizar_quantidades", qtdResult?.avisos);
 
+  // Se algum item ficou sem quantidade (500 persistente do M2A, etc.),
+  // aborta ANTES da dotação para dar um erro claro em vez de
+  // "não é possível criar Projeto/Atividade sem itens com quantidade > 0".
+  const itensSemQtd = (qtdResult?.avisos ?? []).filter((msg) =>
+    /Item pulado \(quantidade/i.test(String(msg)),
+  );
+  if (itensSemQtd.length > 0) {
+    const err = new Error(
+      `Falha ao atualizar quantidade de ${itensSemQtd.length} item(s) após várias tentativas. ` +
+        `Tente reenviar o contrato em alguns segundos — o portal M2A retornou erro temporário. ` +
+        `Detalhes: ${itensSemQtd.join(" | ")}`,
+    );
+    err.code = "QUANTIDADE_ITEM_FALHOU";
+    throw err;
+  }
+
+
   // Ao concluir com sucesso um contrato, invalida o cache da ata para
   // que a próxima validação enxergue o novo consumo.
   invalidateSaldoAtaCache(m2aAtaId, extractProcessoIdFromUrl(m2aProcessoUrl));
