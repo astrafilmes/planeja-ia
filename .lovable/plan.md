@@ -1,97 +1,133 @@
-# Blindagem da geração de contratos
+# Saldo real por (ata, secretaria, item) — plano revisado
 
-Meta: **nenhum contrato chega ao M2A com preposto vazio, quantidade acima do saldo, ou secretaria sem unidade gestora vinculada na ata**. Toda validação é resolvida na tela de Importação, antes do botão "Autorizar geração".
+## Insight
 
----
+A M2A não expõe um endpoint direto de "saldo disponível". Mas os dados existem em dois lugares:
 
-## 1. Preposto obrigatório (bloqueio total)
+1. **Cota da secretaria na ata** — quanto foi alocado para aquela unidade participante em cada item.
+   `GET /ata_registro_precos/unidades_participantes/tabela/{ataId}/?page_size=100`
+   → lista os `participanteId` (com secretaria + exercício).
+   `GET /ata_registro_precos/unidades_participantes/itens/tabela/{participanteId}/?page_size=1000`
+   → para cada item devolve `m2a_item_id` (da linha `tr_...`), unidade, e **quantidade total alocada** para aquela secretaria.
 
-**Regra:** o botão "Autorizar geração" fica desabilitado enquanto qualquer fornecedor da importação não tiver preposto preenchido — e também se algum contrato individualmente ficar sem preposto herdado.
+2. **Consumo já contratado** — soma das quantidades dos itens da ata em contratos existentes daquela ata + secretaria.
+   Cada contrato tem itens em `/contratos/{id}/#contrato_item` (a linha traz `input value="10,0"` + badge `/ 20,00`, onde 10 = já contratado, 20 = disponível — só útil quando já existe contrato). Para ser genérico, iteramos os contratos da ata/secretaria e somamos.
 
-- Reforçar `fornecedoresSemPreposto` em `usePrepostosState` como bloqueio duro no `AutorizarGeracaoPanel` (hoje já existe o aviso, mas o botão continua clicável em alguns fluxos).
-- Adicionar checagem no `useAutorizarGeracao` que aborta antes de qualquer insert se `prepostoContrato` estiver vazio para qualquer contrato derivado.
-- Persistir automaticamente novos prepostos digitados em `fornecedores_prepostos` já ao sair do campo (debounce), para que a próxima importação do mesmo fornecedor já venha preenchida.
-- Banner vermelho fixo no topo listando fornecedores pendentes com botão "focar no campo".
-
-## 2. Saldo real da ata M2A (consulta em tempo real)
-
-**Regra:** ao clicar em "Autorizar geração", o sistema faz uma consulta ao M2A por ata envolvida e valida item a item.
-
-- Nova função no worker: `GET /atas/:m2aAtaId/saldos` → devolve `{ m2a_item_id, quantidade_total, quantidade_utilizada, saldo }`.
-- Nova edge function proxy `m2a-saldos` (ou reuso do `m2a-proxy`) invocada pelo front antes de autorizar.
-- Comportamento por item, considerando quantas dotações o item tem no contrato derivado:
-  - **1 dotação:** se `quantidade_planilha > saldo`, ajusta automaticamente para `saldo` e mostra um badge amarelo "ajustado de X → Y (saldo)". Se `saldo == 0`, item é bloqueado.
-  - **>1 dotação:** bloqueio duro. Mostra card "Este item excede o saldo e possui múltiplas dotações — ajuste manualmente a quantidade de cada dotação". Usuário edita inline (nova coluna editável em `ItensReviewTable`, reaproveitando padrão do `ItemEditDialog`).
-  - **Saldo suficiente:** segue sem alteração.
-- Nova aba/painel "Validação de saldo" no `AutorizarGeracaoPanel` com contadores: `X itens OK · Y ajustados · Z bloqueados`.
-
-## 3. Unidades gestoras equivalentes (participantes da ata)
-
-**Regra:** cada secretaria envolvida no contrato precisa estar cadastrada como **unidade participante** na ata M2A do exercício corrente. Se não estiver, o sistema tenta inclusão automática (portando a lógica do script do usuário) e, se falhar, bloqueia.
-
-- Novo endpoint worker `POST /atas/:m2aAtaId/participantes/garantir` recebendo `{ secretariaIds: [] }`. Internamente:
-  1. `GET` da tabela de participantes da ata.
-  2. Para cada secretaria pedida: se já é participante → OK. Se não → busca a `unidade_gestora` equivalente (usando `m2a_uo_id` já mapeado em `secretarias`, com fallback fuzzy por nome normalizado — igual ao `resolveUG2026` do script).
-  3. `POST /ata_registro_precos/unidades_participantes/unidades_gestoras/incluir/:participanteId/` com `data`, `unidade_gestora`, CSRF.
-  4. Retorna lista `{ secretariaId, status: 'ja_incluida' | 'incluida_agora' | 'sem_equivalencia' | 'erro' }`.
-- Front chama esse endpoint durante a validação pré-geração. Bloqueia contratos cujas secretarias não puderem ser incluídas e mostra card acionável "Corrigir na M2A" com o motivo.
-- Tabela auxiliar opcional: `secretaria_unidades_equivalentes(secretaria_id, exercicio, unidade_gestora_m2a_id)` para memorizar equivalências resolvidas manualmente e evitar fuzzy match futuro.
-
-## 4. Painel de validação pré-geração
-
-Novo componente `PreGeracaoValidacaoPanel` (acima do `AutorizarGeracaoPanel`) que roda ao clicar em "Validar antes de gerar":
-
-```text
-[Validação pré-geração]
-✔ Prepostos:        12/12 fornecedores
-⚠ Saldos:           38 OK · 4 ajustados · 2 bloqueados
-✔ Unidades gestoras: 6/6 secretarias participantes
-[Detalhes ▾]                              [Corrigir problemas] [Autorizar geração]
+**Fórmula:**
+```
+saldo(ata, secretaria, item) = cota_participante − Σ quantidade_contratada_dos_contratos_existentes(ata, secretaria, item)
 ```
 
-- "Autorizar geração" só habilita quando não há bloqueios.
-- Cada seção expande com a lista detalhada e ação inline (editar quantidade, incluir preposto, forçar re-tentativa da inclusão de participante).
+Isso funciona **sempre**, exista ou não contrato anterior. Zero contratos ⇒ saldo = cota total. É a única forma limpa e determinística sem precisar "gerar e apagar".
 
-## 5. Fragilidades e riscos a mitigar
+## Arquitetura
 
-- **Consulta de saldo em tempo real** adiciona 1–3s de latência por ata. Mitigação: cache em memória por sessão + botão "Revalidar".
-- **Fuzzy match de unidades gestoras** pode escolher errado. Mitigação: quando `bestScore < 3` pedir confirmação manual e persistir na tabela de equivalências.
-- **Consumo de saldo concorrente**: entre a validação e o envio, outro sistema pode gastar o saldo. Mitigação: revalidar saldo por contrato dentro do worker `orquestrador-contrato.js` antes do módulo 5 (atualizar quantidades) e, se divergir, retornar erro tipado `SALDO_INSUFICIENTE_RUNTIME` que o front trata mostrando o card de correção.
-- **CSRF/sessão M2A no worker** para a inclusão de participante — reusar o `m2a-client.js` existente.
-- **Múltiplas dotações com ajuste**: como o usuário confirmou bloqueio manual, garantimos que a lógica de rateio automático **não** é escrita, evitando divisão errada.
+### Worker — novos endpoints
 
-## 6. Inconsistências atuais que ficam resolvidas
+- `GET /atas/:ataId/participantes-itens`
+  - Chama `unidades_participantes/tabela/:ataId` → lista de participantes com secretaria.
+  - Para cada participante, chama `unidades_participantes/itens/tabela/:participanteId`.
+  - Retorna:
+    ```json
+    {
+      "ataId": 5115,
+      "participantes": [
+        {
+          "participanteId": 6160,
+          "secretariaNome": "GABINETE DO PREFEITO",
+          "exercicio": 2025,
+          "itens": [
+            { "m2aItemId": "83115", "numero": "40", "unidade": "SERVIÇO", "quantidadeAlocada": 10.0 }
+          ]
+        }
+      ]
+    }
+    ```
 
-- Contrato enviado com quantidade > saldo (erro 500 M2A no módulo 5).
-- Contrato enviado sem preposto (falha no módulo de documentos/atores).
-- Secretaria ausente na ata (erro na inclusão de item por participante).
-- Duplicidade de tentativas manuais de sync de participantes por script no console (fica embutido no worker).
+- `GET /atas/:ataId/consumo`
+  - Lista contratos da ata: `/contratos/tabela/?ata=:ataId&page_size=1000` (endpoint existente do M2A).
+  - Para cada contrato: extrai secretaria (do cabeçalho) e itens (`/contratos/itens/tabela/:contratoId/` ou parseamos da página do contrato).
+  - Agrega por `(secretariaId, m2aItemId)` → `quantidadeContratada`.
+  - Retorna:
+    ```json
+    {
+      "ataId": 5115,
+      "consumo": [
+        { "secretariaNome": "GABINETE DO PREFEITO", "m2aItemId": "83115", "quantidade": 4.0, "contratos": [{"id":69607,"quantidade":4}] }
+      ]
+    }
+    ```
+  - Cache em memória por ataId (TTL curto: 60s) para não re-parsear a cada chamada.
 
----
+- (Opcional, atalho) `GET /atas/:ataId/saldos-por-secretaria` que junta os dois anteriores e devolve `saldo = cota − consumo` pronto.
 
-## Detalhes técnicos
+### Front — `useValidacaoPreGeracao`
 
-**Arquivos que serão criados/alterados:**
+Trocar a lógica atual (que tentava ler saldo global da ata) por:
 
-- `vps-worker/src/m2a/atas-saldos.js` (novo) — parser da tabela de saldos da ata.
-- `vps-worker/src/m2a/atas-participantes.js` (novo) — porta o script do usuário para incluir participantes (`resolveUG2026`, POST em `unidades_gestoras/incluir/:id/`).
-- `vps-worker/src/routes/atas.js` (novo) — expõe `GET /atas/:id/saldos` e `POST /atas/:id/participantes/garantir`.
-- `supabase/functions/m2a-proxy/index.ts` — encaminha os dois novos endpoints.
-- `src/lib/m2a/atas.ts` (novo) — client tipado no front.
-- `src/features/importar-contratos/hooks/useValidacaoPreGeracao.ts` (novo) — orquestra as 3 validações em paralelo.
-- `src/features/importar-contratos/components/PreGeracaoValidacaoPanel.tsx` (novo) — UI descrita acima.
-- `src/features/importar-contratos/components/ItensReviewTable.tsx` — colunas editáveis de quantidade por dotação + badge "ajustado".
-- `src/features/importar-contratos/components/AutorizarGeracaoPanel.tsx` — bloqueio duro + chip resumo.
-- `src/features/importar-contratos/hooks/useAutorizarGeracao.ts` — aborta se validação não passou; aplica quantidades ajustadas.
-- `vps-worker/src/m2a/orquestrador-contrato.js` — revalida saldo antes do módulo 5, retorna erro tipado.
-- Migration nova: `secretaria_unidades_equivalentes` (com GRANTs e RLS por role admin/gestor).
+1. Para cada ata envolvida na importação, buscar `/atas/:id/saldos-por-secretaria` uma vez.
+2. Montar índice `saldoMap[ataId][secretariaMatchKey][m2aItemId] = saldo`.
+   - `secretariaMatchKey`: primeiro tenta `m2a_uo_id`, fallback normalizando nome (mesmo `resolveUG2026`).
+3. Para cada item de cada contrato derivado:
+   - `qtdPlanilha` vs `saldo`.
+   - 1 dotação e `qtd > saldo > 0` → ajusta automático, badge amarelo.
+   - 1 dotação e `saldo == 0` → bloqueia item.
+   - >1 dotação e `Σ qtd > saldo` → bloqueia, força edição manual em `ItensReviewTable`.
+4. Retorna contadores + lista de ajustes/bloqueios para o `PreGeracaoValidacaoPanel`.
 
-**Ordem de implementação sugerida:**
-1. Worker: endpoints de saldo e participantes (com testes em `vps-worker/scripts/`).
-2. Edge proxy + client TS.
-3. Hook `useValidacaoPreGeracao` + painel.
-4. Bloqueio duro no `AutorizarGeracaoPanel` e edição inline em `ItensReviewTable`.
-5. Revalidação runtime no orquestrador do worker.
-6. Migration da tabela de equivalências + persistência automática de prepostos.
+### Runtime safety net
 
-Confirma para eu começar pelo passo 1 (endpoints no worker)?
+Em `orquestrador-contrato.js`, **antes do módulo 5** (atualizar quantidades), rebuscar `saldos-por-secretaria` daquela ata/secretaria/item específicos. Se `qtdEnviada > saldoAtual`, retornar erro tipado `SALDO_INSUFICIENTE_RUNTIME` com `{ m2aItemId, saldoAtual, quantidadePedida }` — o front trata reabrindo o painel de validação para essa ata.
+
+Isso cobre o único cenário que a validação pré-geração não captura: outra pessoa consumiu saldo entre a validação e o envio.
+
+## O que fica de fora (por design)
+
+- **Solução "gerar e apagar"** — descartada pelo custo/tempo.
+- **Rateio automático em múltiplas dotações** — mantido bloqueio manual (decisão anterior do usuário).
+- **Endpoint mágico de saldo direto** — não existe na M2A. A abordagem cota−consumo é a única confiável.
+
+## Fragilidades e mitigações
+
+| Risco | Mitigação |
+|---|---|
+| Contrato antigo com item cancelado inflando o consumo | Ignorar contratos com status `cancelado`/`rescindido` no parser (filtrar por classe/badge). |
+| Contrato em rascunho ainda não salvo por outro usuário | Aceito — sistema de referência é o M2A; se ainda não está lá, não existe. Runtime revalidation cobre corrida. |
+| Latência (2 requests HTTP por ata + N por participante) | Cache 60s por ata no worker; front dispara em paralelo por ata; botão "Revalidar". |
+| Casamento secretaria local ↔ participante M2A | Primeiro `m2a_uo_id`; fallback fuzzy com score mínimo; persistir escolha em `secretaria_unidades_equivalentes` (tabela já criada). |
+| Parser HTML frágil | Usar seletores estáveis (`tr.tr_ata_registro_preco_unidade_participante_item`, `id="tr_..."`), testes com fixtures salvas em `vps-worker/scripts/fixtures/`. |
+| Item da planilha sem `m2aItemId` resolvido | Já é bloqueado hoje (contratosSemCadastroM2A). Mantém. |
+
+## Arquivos afetados
+
+**Novos**
+- `vps-worker/src/m2a/atas-participantes-itens.js` — parser da cota por participante.
+- `vps-worker/src/m2a/atas-consumo.js` — parser dos contratos + agregação.
+- `vps-worker/scripts/fixtures/` — HTML capturado das duas telas para testes offline.
+
+**Alterar**
+- `vps-worker/src/routes/atas.js` — expor `/participantes-itens`, `/consumo`, `/saldos-por-secretaria`.
+- `vps-worker/src/m2a/orquestrador-contrato.js` — revalidação pré-módulo-5 + erro tipado.
+- `src/lib/m2a/atas.ts` — client dos novos endpoints.
+- `src/features/importar-contratos/hooks/useValidacaoPreGeracao.ts` — nova lógica cota−consumo.
+- `src/features/importar-contratos/components/PreGeracaoValidacaoPanel.tsx` — mostrar cota, consumido, saldo por secretaria.
+
+**Remover**
+- `vps-worker/src/m2a/atas-saldos.js` (parser genérico que não bate com a realidade) — substituído pelos dois novos.
+
+## Ordem de execução
+
+1. Parser `atas-participantes-itens.js` + fixture + rota `/participantes-itens`.
+2. Parser `atas-consumo.js` + fixture + rota `/consumo`.
+3. Rota agregadora `/saldos-por-secretaria` com cache.
+4. Refactor de `useValidacaoPreGeracao` e do painel.
+5. Revalidação runtime no orquestrador.
+
+## Metas mensuráveis
+
+- 0 contratos gerados com `quantidade > saldo` (medido via logs do worker por 7 dias).
+- 0 contratos gerados sem preposto (já implementado no bloqueio duro).
+- 0 falhas de "secretaria não é participante" (já coberto pelo `participantes/garantir`).
+- Tempo médio da validação pré-geração < 5s para uma importação típica (≤ 6 secretarias, ≤ 3 atas).
+
+Confirma para eu começar pelos parsers do worker + fixtures?
