@@ -3,11 +3,12 @@ import { AlertCircle, CheckCircle2, Loader2, ShieldAlert, Sparkles } from "lucid
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import type { ValidacaoPreGeracao } from "../hooks/useValidacaoPreGeracao";
+import type { ValidacaoPreGeracao, ValidacaoProgress } from "../hooks/useValidacaoPreGeracao";
 
 type Props = {
   busy: boolean;
   result: ValidacaoPreGeracao | null;
+  progress?: ValidacaoProgress;
   onValidar: () => void;
   disabled?: boolean;
 };
