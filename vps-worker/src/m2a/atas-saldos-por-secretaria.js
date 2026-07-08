@@ -8,19 +8,10 @@
 
 import { cotaParticipantesAta } from "./atas-participantes-itens.js";
 import { consumoDaAta } from "./atas-consumo.js";
+import { normSec } from "./norm-sec.js";
 
 const CACHE_TTL_MS = 60_000;
 const cache = new Map(); // ataId → { at:number, data:object }
-
-function normSec(txt) {
-  return String(txt ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^A-Za-z0-9\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toUpperCase();
-}
 
 export function invalidateSaldoAtaCache(ataId) {
   if (ataId == null) cache.clear();

@@ -8,6 +8,8 @@ import {
   adicionarItensAoContrato, atualizarQuantidadesItens,
   incluirDotacao, configurarDocumentos,
 } from "./contrato.js";
+import { saldosPorSecretaria, invalidateSaldoAtaCache } from "./atas-saldos-por-secretaria.js";
+import { normSec } from "./norm-sec.js";
 
 function logTable(label, rows, limit = 500) {
   const list = Array.isArray(rows) ? rows : [];
@@ -72,8 +74,16 @@ export async function processarContratoCompleto(payload, onProgress = () => {}) 
   if (!m2aInternalId) {
     try {
       m2aInternalId = await buscarIdContratoPorNumero(m2aAtaId, numeroContrato, m2aProcessoUrl);
-    } catch {
-      // será criado abaixo
+    } catch (err) {
+      // Sinal fraco: erro de rede/HTTP durante a busca. Só ignoramos
+      // "not found"; qualquer outra falha vira erro para evitar duplicar
+      // contrato caso ele já exista no portal.
+      const msg = String(err?.message || err || "");
+      if (!/not\s*found|404|nenhum registro/i.test(msg)) {
+        console.warn(`[m2a-orq-contrato] busca por número falhou: ${msg}`);
+        throw new Error(`Falha ao verificar contrato existente na M2A: ${msg}`);
+      }
+      // 404/nenhum → segue e cria abaixo
     }
   }
 
@@ -119,9 +129,64 @@ export async function processarContratoCompleto(payload, onProgress = () => {}) 
   const addResult = await adicionarItensAoContrato(m2aInternalId, itensPayload);
   coletarAvisos("incluir_itens", addResult?.avisos);
 
+  // Revalidação de saldo em tempo real ANTES de escrever quantidades.
+  // Fecha a janela de corrida entre "Validar" (front, cache 60s) e "Autorizar".
+  // Se algum item exceder o saldo, aborta com erro tipado — o front pode
+  // reabrir a validação e o usuário ajusta manualmente.
+  const secretariaNome = String(dadosM2A?.secretaria_nome ?? "").trim();
+  if (secretariaNome && itensPayload.length > 0) {
+    try {
+      invalidateSaldoAtaCache(m2aAtaId);
+      const saldos = await saldosPorSecretaria(m2aAtaId, { forceRefresh: true });
+      const secKey = normSec(secretariaNome);
+      const sec = saldos.secretarias.find((s) => s.secretariaKey === secKey);
+      if (!sec) {
+        console.warn(
+          `[m2a-orq-contrato] revalidação: secretaria "${secretariaNome}" (key="${secKey}") não encontrada entre participantes da ata ${m2aAtaId}`,
+        );
+      } else {
+        const excedentes = [];
+        for (const it of itensPayload) {
+          const numero = String(it.numero ?? it.numero_item ?? "").trim();
+          if (!numero) continue;
+          const qtdEnviada = Number(String(it.quantidade ?? "0").replace(/\./g, "").replace(",", "."));
+          const hit = sec.itens.find((x) => String(x.numero) === numero);
+          if (!hit || hit.saldo == null) continue;
+          if (qtdEnviada > hit.saldo + 1e-6) {
+            excedentes.push({
+              numero,
+              descricao: hit.descricao,
+              qtdEnviada,
+              saldo: hit.saldo,
+              cota: hit.cota,
+              consumido: hit.consumido,
+            });
+          }
+        }
+        if (excedentes.length > 0) {
+          console.error("[m2a-orq-contrato] SALDO_INSUFICIENTE_RUNTIME", excedentes);
+          const err = new Error(
+            `Saldo insuficiente em ${excedentes.length} item(s) no momento do envio. ` +
+              `Refaça a validação e ajuste as quantidades.`,
+          );
+          err.code = "SALDO_INSUFICIENTE_RUNTIME";
+          err.excedentes = excedentes;
+          throw err;
+        }
+      }
+    } catch (err) {
+      if (err?.code === "SALDO_INSUFICIENTE_RUNTIME") throw err;
+      console.warn(`[m2a-orq-contrato] revalidação de saldo falhou (segue mesmo assim): ${err?.message || err}`);
+    }
+  }
+
   progress("atualizar_quantidades", "Módulo 5: Atualizando quantidades dos itens...");
   const qtdResult = await atualizarQuantidadesItens(m2aInternalId, itensPayload);
   coletarAvisos("atualizar_quantidades", qtdResult?.avisos);
+
+  // Ao concluir com sucesso um contrato, invalida o cache da ata para
+  // que a próxima validação enxergue o novo consumo.
+  invalidateSaldoAtaCache(m2aAtaId);
 
   const dotacaoPayload = dadosDotacao ?? dadosM2A.dotacao ?? null;
   progress("incluir_dotacoes", "Módulo 6: Incluindo dotação orçamentária...");

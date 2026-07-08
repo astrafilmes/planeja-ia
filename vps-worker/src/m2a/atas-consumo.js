@@ -21,6 +21,7 @@
 
 import * as cheerio from "cheerio";
 import { m2a } from "../m2a-client.js";
+import { normSec } from "./norm-sec.js";
 
 function toNumberBR(txt) {
   if (txt == null) return null;
@@ -34,16 +35,6 @@ function toNumberBR(txt) {
 function parseNumeroFromSpan(txt) {
   const m = String(txt ?? "").trim().match(/^(\d+)\s*-/);
   return m ? m[1] : null;
-}
-
-function normSec(txt) {
-  return String(txt ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^A-Za-z0-9\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toUpperCase();
 }
 
 async function tentarListarContratos(ataId) {
@@ -134,7 +125,7 @@ export async function listarContratosDaAta(ataId) {
       .map((_, b) => $(b).text().trim())
       .get()
       .join(" ");
-    const cancelado = /cancel|rescind|anulad|encerrad|extint/i.test(badgeTxt);
+    const cancelado = /cancel|rescind|anulad|encerrad|extint|rascunho|suspens|paralisad|revogad|invalidad/i.test(badgeTxt);
 
     out.push({
       contratoId,

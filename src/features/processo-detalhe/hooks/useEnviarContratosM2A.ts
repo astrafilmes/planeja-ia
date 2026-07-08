@@ -298,6 +298,7 @@ export function useEnviarContratosM2A({
         unidadeGestoraId: contrato.m2a_orgao_id,
         fiscalId: shouldAskFiscal ? m2aFiscalId : contrato.m2a_fiscal_codigo,
         gestorId: contrato.m2a_gestor_codigo,
+        secretariaNome: contrato.secretaria_nome ?? null,
       });
     },
     [contratos, m2aContratoData, processo?.m2a_url, shouldAskFiscal, m2aFiscalId],

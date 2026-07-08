@@ -23,6 +23,8 @@ export type M2AContractPayloadInput = {
   unidadeGestoraId?: string | null;
   fiscalId?: string | null;
   gestorId?: string | null;
+  /** Nome da secretaria (usado no worker para revalidar saldo). */
+  secretariaNome?: string | null;
   dotacao?: {
     orgao?: string | null;
     unidade_orcamentaria?: string | null;
@@ -111,6 +113,7 @@ export function buildM2AContractPayload(input: M2AContractPayloadInput) {
       gestor_id: input.gestorId,
       preposto_id: null,
       preposto_nome: input.contrato.preposto,
+      secretaria_nome: input.secretariaNome ?? null,
       dotacao: input.dotacao,
       itens,
     },
