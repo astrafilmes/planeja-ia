@@ -37,9 +37,10 @@ export type ValidacaoPreGeracao = {
   };
   participantes: {
     porAta: Record<string, GarantirParticipanteResult[]>;
-    bloqueadas: GarantirParticipanteResult[];
+    bloqueadas: Array<GarantirParticipanteResult & { ataId: string; ataNumero: string | null }>;
   };
   hasBlockers: boolean;
+
 };
 
 function normSecKey(txt: string) {
