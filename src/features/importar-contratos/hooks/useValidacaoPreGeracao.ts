@@ -325,9 +325,21 @@ export function useValidacaoPreGeracao(options: {
         };
         setResult(finalResult);
         setAjustesAplicaveis(novosAjustes);
+        if (hasBlockers) {
+          notify.warning(
+            `Validação concluída com ${saldos.bloqueados.length + bloqueadas.length} bloqueio(s).`,
+          );
+        } else {
+          notify.success("Validação concluída — pronto para gerar.");
+        }
         return finalResult;
+      } catch (err) {
+        notify.dismiss(toastId);
+        notify.error(err instanceof Error ? err.message : "Falha ao validar");
+        throw err;
       } finally {
         setBusy(false);
+        setProgress({ phase: "idle", totalAtas: 0, saldosDone: 0, participantesDone: 0 });
       }
     },
     [contratosSelecionados, secretariasM2A, dataBatch],
@@ -338,5 +350,5 @@ export function useValidacaoPreGeracao(options: {
     setAjustesAplicaveis(new Map());
   }, []);
 
-  return { busy, result, ajustesAplicaveis, validar, reset };
+  return { busy, result, progress, ajustesAplicaveis, validar, reset };
 }
