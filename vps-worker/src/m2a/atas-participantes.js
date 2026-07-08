@@ -290,6 +290,10 @@ export async function garantirParticipantes({ ataId, data, alvos, ugsDisponiveis
       nomeSecretaria: alvo.nome,
       ano,
     });
+    console.log(
+      `[m2a-participantes] ata=${ataId} sec="${alvo.nome}" participante=${participante.participanteId} incluido_flag=${participante.incluido} ug_ativa_encontrada=${jaTemUgAtiva.incluida} motivo=${jaTemUgAtiva.motivo} row="${jaTemUgAtiva.row?.unidadeGestoraNome ?? "-"}"`,
+    );
+
 
     if (participante.incluido || jaTemUgAtiva.incluida) {
       results.push({
