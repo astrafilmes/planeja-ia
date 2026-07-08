@@ -46,6 +46,19 @@ function tokensNome(txt) {
     .filter((w) => w.length >= 4 && !GENERIC_TOKENS.has(w));
 }
 
+function nomeBaseParticipante(txt) {
+  const raw = String(txt ?? "").trim();
+  const partes = raw.split(/\s+[-–—]\s+/).map((parte) => parte.trim()).filter(Boolean);
+  if (partes.length <= 1) return raw;
+
+  const primeiraParte = norm(partes[0]);
+  if (/\b(SECRETARIA|FUNDO|GABINETE|CONTROLADORIA|PROCURADORIA|AUTARQUIA|PREFEITURA)\b/.test(primeiraParte)) {
+    return partes[0];
+  }
+
+  return raw;
+}
+
 function inferAnoFromData(data) {
   return String(data ?? "").match(/^(20\d{2})-/)?.[1] ?? null;
 }
@@ -55,18 +68,27 @@ function tokenEquivalente(a, b) {
   return a.length >= 4 && b.length >= 4 && (a.startsWith(b) || b.startsWith(a));
 }
 
-function scoreNomeParticipante(alvoNome, participanteNome) {
-  const alvo = tokensNome(alvoNome);
+export function scoreNomeParticipante(alvoNome, participanteNome) {
+  const alvoBase = nomeBaseParticipante(alvoNome);
+  const alvoNorm = norm(alvoBase);
+  const participanteNorm = norm(participanteNome);
+  if (alvoNorm && alvoNorm === participanteNorm) return 1;
+
+  const alvo = tokensNome(alvoBase);
   const cand = tokensNome(participanteNome);
-  if (alvo.length < 2 || cand.length < 2) return 0;
+  if (!alvo.length || !cand.length) return 0;
   const overlap = alvo.filter((w) => cand.some((c) => tokenEquivalente(w, c))).length;
   if (!overlap) return 0;
-  return overlap / Math.max(Math.min(alvo.length, cand.length), 1);
+
+  const coberturaMenorNome = overlap / Math.max(Math.min(alvo.length, cand.length), 1);
+  const coberturaParticipante = overlap / Math.max(cand.length, 1);
+  return Math.max(coberturaMenorNome, coberturaParticipante * 0.95);
 }
 
-function resolverParticipante(participantes, nomeAlvo) {
+export function resolverParticipante(participantes, nomeAlvo) {
   const exactKey = norm(nomeAlvo);
-  const exact = participantes.find((p) => norm(p.nome) === exactKey);
+  const baseKey = norm(nomeBaseParticipante(nomeAlvo));
+  const exact = participantes.find((p) => norm(p.nome) === exactKey || norm(p.nome) === baseKey);
   if (exact) return exact;
 
   const scored = participantes
