@@ -42,16 +42,29 @@ export const ItemEditDialog = memo(function ItemEditDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-3">
-          <div className="grid gap-1.5">
-            <Label htmlFor="edit-descricao">Descrição</Label>
-            <Textarea
-              id="edit-descricao"
-              rows={3}
-              value={form.descricao}
-              onChange={(e) =>
-                onFormChange((f) => ({ ...f, descricao: e.target.value }))
-              }
-            />
+          <div className="grid grid-cols-[110px_1fr] gap-3">
+            <div className="grid gap-1.5">
+              <Label htmlFor="edit-numero">Nº item</Label>
+              <Input
+                id="edit-numero"
+                value={form.numero_item}
+                onChange={(e) =>
+                  onFormChange((f) => ({ ...f, numero_item: e.target.value }))
+                }
+                placeholder="ex.: 12"
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="edit-descricao">Descrição</Label>
+              <Textarea
+                id="edit-descricao"
+                rows={3}
+                value={form.descricao}
+                onChange={(e) =>
+                  onFormChange((f) => ({ ...f, descricao: e.target.value }))
+                }
+              />
+            </div>
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div className="grid gap-1.5">
