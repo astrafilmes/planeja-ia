@@ -103,15 +103,19 @@ export function useValidacaoPreGeracao(options: {
           atas.set(c.m2aAtaId, list);
         }
 
-        // Conta "slots" (contratos) diferentes usando cada m2a_item_id/numero.
+        // Conta "slots" (contratos) por (ataId, item). Escopo por ata evita
+        // colisão entre atas diferentes com mesmo numero_item.
         const usoPorItem = new Map<string, number>();
         for (const c of contratosSelecionados) {
+          const ataId = c.m2aAtaId ?? "sem-ata";
           const vistos = new Set<string>();
           for (const it of c.itens) {
-            const key = it.m2aItemId ?? it.numeroItem ?? null;
-            if (!key || vistos.has(String(key))) continue;
-            vistos.add(String(key));
-            usoPorItem.set(String(key), (usoPorItem.get(String(key)) ?? 0) + 1);
+            const rawKey = it.m2aItemId ?? it.numeroItem ?? null;
+            if (!rawKey) continue;
+            const key = `${ataId}::${rawKey}`;
+            if (vistos.has(key)) continue;
+            vistos.add(key);
+            usoPorItem.set(key, (usoPorItem.get(key) ?? 0) + 1);
           }
         }
 
