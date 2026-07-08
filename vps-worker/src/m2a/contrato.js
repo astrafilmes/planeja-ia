@@ -685,7 +685,7 @@ export async function incluirDotacao(contratoId, dadosDotacao) {
       try {
         ensureOperationAccepted(loadDoc(r.html), "inclusão de dotação orçamentária");
       } catch (validationErr) {
-        if (/j[aá]\s+existe|duplicad|cadastrad|inclu[ií]d/i.test(String(validationErr.message))) {
+        if (/j[aá]\s+(existe|associ|vincul|cadastrad|inclu[ií]d)|duplicad|associado\s+para\s+esse/i.test(String(validationErr.message))) {
           return { incluida: true, jaExistia: true };
         }
         throw validationErr;
