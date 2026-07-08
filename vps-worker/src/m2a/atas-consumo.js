@@ -138,42 +138,71 @@ export async function listarContratosDaAta(ataId) {
  * Lista os itens de UM contrato: quantidade contratada por item.
  * @returns {Promise<Array<{ contratoItemId:number, numero:string|null, descricao:string, quantidadeContratada:number|null, cotaSecretaria:number|null }>>}
  */
-export async function listarItensContrato(contratoId) {
+const MAX_ITEM_RETRIES = 4;
+
+async function fetchItensContratoOnce(contratoId) {
   const path = `/contratos/itens/tabela/${contratoId}/?page_size=1000`;
-  const res = await m2a.get(path, {
-    headers: { "X-Requested-With": "XMLHttpRequest", Accept: "application/json,text/html,*/*" },
-  });
-  if (res.status !== 200) {
-    throw new Error(`Falha ao carregar itens do contrato ${contratoId}: HTTP ${res.status}`);
-  }
-  const html = coerceHtmlPayload(res.html);
-  const $ = cheerio.load(html);
-  const rows = $("tr.tr_contrato_item, tr.kt-datatable__row.tr_contrato_item");
-  const out = [];
-  rows.each((_, el) => {
-    const $tr = $(el);
-    const idAttr = $tr.attr("id") || "";
-    const mId = idAttr.match(/tr_(\d+)/);
-    const contratoItemId = mId ? Number(mId[1]) : null;
-    const descSpan = $tr.find("td").eq(1).find("span").first().text();
-    const numero = parseNumeroFromSpan(descSpan);
-    const descricao = descSpan.replace(/\s+/g, " ").trim();
-    // input com quantidade contratada
-    const inputVal = $tr.find("input.mask_quantidade").attr("value") || "";
-    const quantidadeContratada = toNumberBR(inputVal);
-    // badge "/ 20,00" = cota total daquela secretaria pra esse item
-    const badgeTxt = $tr.find(".m2a-badge, .badge-success").first().text();
-    const badgeMatch = String(badgeTxt).match(/([\d.,]+)/);
-    const cotaSecretaria = badgeMatch ? toNumberBR(badgeMatch[1]) : null;
-    out.push({
-      contratoItemId,
-      numero,
-      descricao,
-      quantidadeContratada,
-      cotaSecretaria,
+  try {
+    const res = await m2a.get(path, {
+      headers: { "X-Requested-With": "XMLHttpRequest", Accept: "application/json,text/html,*/*" },
     });
-  });
-  return out;
+    return { status: res.status, html: res.html, error: null };
+  } catch (err) {
+    // axios lança pra status >= 500 (validateStatus: s < 500)
+    const status = err?.response?.status ?? 0;
+    return { status, html: "", error: err };
+  }
+}
+
+export async function listarItensContrato(contratoId) {
+  let lastErr = null;
+  let lastStatus = 0;
+  for (let attempt = 1; attempt <= MAX_ITEM_RETRIES; attempt++) {
+    const { status, html, error } = await fetchItensContratoOnce(contratoId);
+    lastStatus = status;
+    lastErr = error;
+    // Retry apenas em 5xx ou erro de rede. 4xx = definitivo.
+    if (status === 200) {
+      const parsed = coerceHtmlPayload(html);
+      const $ = cheerio.load(parsed);
+      const rows = $("tr.tr_contrato_item, tr.kt-datatable__row.tr_contrato_item");
+      const out = [];
+      rows.each((_, el) => {
+        const $tr = $(el);
+        const idAttr = $tr.attr("id") || "";
+        const mId = idAttr.match(/tr_(\d+)/);
+        const contratoItemId = mId ? Number(mId[1]) : null;
+        const descSpan = $tr.find("td").eq(1).find("span").first().text();
+        const numero = parseNumeroFromSpan(descSpan);
+        const descricao = descSpan.replace(/\s+/g, " ").trim();
+        const inputVal = $tr.find("input.mask_quantidade").attr("value") || "";
+        const quantidadeContratada = toNumberBR(inputVal);
+        const badgeTxt = $tr.find(".m2a-badge, .badge-success").first().text();
+        const badgeMatch = String(badgeTxt).match(/([\d.,]+)/);
+        const cotaSecretaria = badgeMatch ? toNumberBR(badgeMatch[1]) : null;
+        out.push({
+          contratoItemId,
+          numero,
+          descricao,
+          quantidadeContratada,
+          cotaSecretaria,
+        });
+      });
+      return out;
+    }
+    const transient = !status || status >= 500;
+    if (!transient) {
+      throw new Error(`Falha ao carregar itens do contrato ${contratoId}: HTTP ${status}`);
+    }
+    if (attempt < MAX_ITEM_RETRIES) {
+      const wait = 500 * Math.pow(2, attempt - 1); // 500, 1000, 2000, 4000
+      console.warn(`[m2a-consumo] contrato ${contratoId} HTTP ${status} — retry ${attempt}/${MAX_ITEM_RETRIES - 1} em ${wait}ms`);
+      await new Promise((r) => setTimeout(r, wait));
+    }
+  }
+  throw new Error(
+    `Falha ao carregar itens do contrato ${contratoId} após ${MAX_ITEM_RETRIES} tentativas (último status=${lastStatus}${lastErr ? `, msg=${lastErr.message}` : ""})`,
+  );
 }
 
 /**
