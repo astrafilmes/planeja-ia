@@ -174,6 +174,18 @@ function Page() {
 
   const { excluirJob } = useDeleteImportJob({ activeJobId, setActiveJobId });
 
+  const preGeracao = useValidacaoPreGeracao({
+    contratosSelecionados,
+    secretariasM2A,
+    dataBatch: dataBatchOverride,
+  });
+
+  // Reseta validação sempre que a base mudar.
+  useEffect(() => {
+    preGeracao.reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeJobId, contratosSelecionados.length, dataBatchOverride]);
+
   /* ------------------------------- Handlers ------------------------------- */
   const toggleContratoDesmarcado = useCallback((key: string) => {
     setContratosDesmarcados((current) => {
@@ -350,27 +362,42 @@ function Page() {
                 </TabsContent>
 
                 <TabsContent value="autorizar" className="mt-3">
-                  <AutorizarGeracaoPanel
-                    isAutorizado={isAutorizado}
-                    contratosPreliminaresCount={contratosPreliminares.length}
-                    contratosSelecionados={contratosSelecionados}
-                    contratosSemAtaM2A={contratosSemAtaM2A}
-                    contratosSemCadastroM2A={contratosSemCadastroM2A}
-                    contratosDesmarcados={contratosDesmarcados}
-                    fornecedoresPrepostoTargets={fornecedoresPrepostoTargets}
-                    fornecedoresSemPreposto={fornecedoresSemPreposto}
-                    fornecedorMapFromDb={fornecedorMapFromDb}
-                    prepostosByFornecedor={prepostosByFornecedor}
-                    onChangePreposto={onChangePreposto}
-                    processoVinculado={processoVinculado}
-                    totalValor={totalValor}
-                    totalItens={totalItens}
-                    busy={busy}
-                    dataBatch={dataBatchOverride}
-                    onChangeDataBatch={setDataBatchOverride}
-                    onAutorizar={autorizarGeracao}
-                    validacaoContratos={validacaoContratos}
-                  />
+                  <div className="flex flex-col gap-4">
+                    {!isAutorizado && (
+                      <PreGeracaoValidacaoPanel
+                        busy={preGeracao.busy}
+                        result={preGeracao.result}
+                        onValidar={() => void preGeracao.validar()}
+                        disabled={
+                          contratosSelecionados.length === 0 ||
+                          fornecedoresSemPreposto.length > 0
+                        }
+                      />
+                    )}
+                    <AutorizarGeracaoPanel
+                      isAutorizado={isAutorizado}
+                      contratosPreliminaresCount={contratosPreliminares.length}
+                      contratosSelecionados={contratosSelecionados}
+                      contratosSemAtaM2A={contratosSemAtaM2A}
+                      contratosSemCadastroM2A={contratosSemCadastroM2A}
+                      contratosDesmarcados={contratosDesmarcados}
+                      fornecedoresPrepostoTargets={fornecedoresPrepostoTargets}
+                      fornecedoresSemPreposto={fornecedoresSemPreposto}
+                      fornecedorMapFromDb={fornecedorMapFromDb}
+                      prepostosByFornecedor={prepostosByFornecedor}
+                      onChangePreposto={onChangePreposto}
+                      processoVinculado={processoVinculado}
+                      totalValor={totalValor}
+                      totalItens={totalItens}
+                      busy={busy}
+                      dataBatch={dataBatchOverride}
+                      onChangeDataBatch={setDataBatchOverride}
+                      onAutorizar={autorizarGeracao}
+                      validacaoContratos={validacaoContratos}
+                      preGeracaoValidada={!!preGeracao.result}
+                      preGeracaoBloqueada={preGeracao.result?.hasBlockers ?? false}
+                    />
+                  </div>
                 </TabsContent>
               </Tabs>
             </div>

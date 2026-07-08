@@ -48,6 +48,10 @@ type Props = {
   onChangeDataBatch: (value: string) => void;
   onAutorizar: () => void;
   validacaoContratos: ValidacaoContratos;
+  /** Se true, a validação pré-geração (saldo + participantes) já foi executada. */
+  preGeracaoValidada?: boolean;
+  /** Se true, a validação pré-geração encontrou bloqueios. */
+  preGeracaoBloqueada?: boolean;
 };
 
 /**
@@ -76,6 +80,8 @@ export const AutorizarGeracaoPanel = memo(function AutorizarGeracaoPanel({
   onChangeDataBatch,
   onAutorizar,
   validacaoContratos,
+  preGeracaoValidada = false,
+  preGeracaoBloqueada = false,
 }: Props) {
   const dataValida = /^\d{4}-\d{2}-\d{2}$/.test(dataBatch);
   const disableBtn =
@@ -86,7 +92,9 @@ export const AutorizarGeracaoPanel = memo(function AutorizarGeracaoPanel({
     contratosSemCadastroM2A.length > 0 ||
     fornecedoresSemPreposto.length > 0 ||
     contratosSemAtaM2A.length > 0 ||
-    validacaoContratos.hasErros;
+    validacaoContratos.hasErros ||
+    !preGeracaoValidada ||
+    preGeracaoBloqueada;
 
   return (
     <Card className="border-border/60">
