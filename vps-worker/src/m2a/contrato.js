@@ -38,11 +38,14 @@ function extractContratoLinks($) {
     .toArray()
     .map((a) => {
       const href = $(a).attr("href") || "";
+      const row = $(a).closest("tr");
+      const processoHref = row.find('a[href*="/processo_administrativo/"]').first().attr("href") || "";
       return {
         href,
         id: extractContratoIdFromHref(href),
         text: textOf($, a),
-        rowText: textOf($, $(a).closest("tr")),
+        rowText: textOf($, row),
+        processoId: extractProcessoIdFromUrl(processoHref),
       };
     });
 }
@@ -54,18 +57,12 @@ function extractProcessoIdFromUrl(value) {
   return raw.match(/\/processo_administrativo\/(\d+)\/?/)?.[1] ?? "";
 }
 
-function processoIdFromContratoRow($, link) {
-  const href = $(link).closest("tr").find('a[href*="/processo_administrativo/"]').first().attr("href") || "";
-  return extractProcessoIdFromUrl(href);
-}
-
 function extractContratoIdFromDoc($, numeroBuscado, processoId = "") {
   const numeroNorm = normalizeContratoNumero(numeroBuscado);
   const expectedProcessoId = extractProcessoIdFromUrl(processoId);
   const links = extractContratoLinks($).filter((l) => {
     if (!expectedProcessoId) return true;
-    const rowProcessoId = processoIdFromContratoRow($, l.href ? $(`a[href="${l.href}"]`).first() : null);
-    return rowProcessoId === expectedProcessoId;
+    return l.processoId === expectedProcessoId;
   });
   const exact = links.find((l) => normalizeContratoNumero(l.text) === numeroNorm);
   if (exact) return exact.id;
