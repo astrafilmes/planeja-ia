@@ -36,9 +36,10 @@ export async function contratosRoutes(app) {
         mensagem: err.message,
         code: err.code,
         excedentes: err.excedentes,
+        m2a_contrato_id: err.m2a_contrato_id,
         sucesso: false,
       });
-      sseSend(reply, "error", { ok: false, error: err.message, code: err.code, excedentes: err.excedentes });
+      sseSend(reply, "error", { ok: false, error: err.message, code: err.code, excedentes: err.excedentes, m2a_contrato_id: err.m2a_contrato_id });
     } finally {
       reply.raw.end();
     }
