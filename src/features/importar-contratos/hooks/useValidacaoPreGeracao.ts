@@ -43,7 +43,7 @@ export type ValidacaoPreGeracao = {
 };
 
 function normSecKey(txt: string) {
-  return (normalizeText(txt) || "").toUpperCase();
+  return normSec(txt);
 }
 
 function buildSecretariaSaldoIndex(
