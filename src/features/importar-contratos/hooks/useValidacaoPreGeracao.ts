@@ -150,7 +150,8 @@ export function useValidacaoPreGeracao(options: {
                 const numero = item.numeroItem ? String(item.numeroItem) : null;
                 const m2aId = item.m2aItemId ?? "";
                 const qtd = Number(item.quantidade ?? 0);
-                const usoKey = m2aId || numero || "";
+                const usoKey =
+                  (m2aId || numero) ? `${ataId}::${m2aId || numero}` : "";
                 const totalDotacoes = usoKey ? usoPorItem.get(usoKey) ?? 1 : 1;
 
                 const base: Omit<SaldoIssue, "acao"> = {
