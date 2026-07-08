@@ -9,7 +9,6 @@ import {
   saldosPorSecretaria,
   invalidateSaldoAtaCache,
 } from "../m2a/atas-saldos-por-secretaria.js";
-import { m2a } from "../m2a-client.js";
 
 function validarAtaId(ataId, reply) {
   if (!/^\d+$/.test(String(ataId))) {
@@ -20,33 +19,6 @@ function validarAtaId(ataId, reply) {
 }
 
 export async function atasRoutes(app) {
-  // GET /atas/debug/raw?path=/algum/path — DEV: retorna HTML/JSON bruto para
-  // inspecionar seletores do M2A.
-  app.get("/atas/debug/raw", async (req, reply) => {
-    const raw = String(req.query?.path || "");
-    if (!raw.startsWith("/")) {
-      return reply.code(400).send({ error: "path deve começar com /" });
-    }
-    try {
-      const r = await m2a.get(raw, {
-        headers: {
-          "X-Requested-With": "XMLHttpRequest",
-          Accept: "application/json,text/html,*/*",
-        },
-      });
-      const body = r.html || "";
-      return {
-        status: r.status,
-        finalUrl: r.finalUrl,
-        contentType: r.contentType,
-        bytes: body.length,
-        snippet: body.slice(0, 8000),
-      };
-    } catch (err) {
-      return reply.code(500).send({ error: err.message });
-    }
-  });
-
   // GET /atas/:ataId/participantes — status (incluído sim/não) dos participantes.
   app.get("/atas/:ataId/participantes", async (req, reply) => {
     const { ataId } = req.params;
