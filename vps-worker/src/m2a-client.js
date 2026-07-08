@@ -14,6 +14,37 @@ import { config } from "./config.js";
  */
 
 const CSRF_TTL_MS = 10 * 60 * 1000;
+const TRANSIENT_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
+const TRANSIENT_CODES = new Set([
+  "ECONNRESET",
+  "ECONNABORTED",
+  "ETIMEDOUT",
+  "EPIPE",
+  "ENOTFOUND",
+  "EAI_AGAIN",
+]);
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isTransientError(err) {
+  const status = Number(err?.response?.status ?? err?.status ?? 0);
+  if (TRANSIENT_STATUS.has(status)) return true;
+  const code = String(err?.code ?? "");
+  if (TRANSIENT_CODES.has(code)) return true;
+  return /timeout|socket hang up|network|ECONNRESET|ETIMEDOUT|EAI_AGAIN/i.test(
+    String(err?.message ?? ""),
+  );
+}
+
+function isTransientResponse(res) {
+  return TRANSIENT_STATUS.has(Number(res?.status ?? 0));
+}
+
+function retryDelayMs(attempt) {
+  return 1_500 * Math.max(attempt, 1);
+}
 
 function absoluteUrl(path) {
   return path.startsWith("http") ? path : `${config.m2a.baseUrl}${path}`;
@@ -239,8 +270,25 @@ class M2aClient {
         console.log(`[m2a] sessão ausente — efetuando login antes de ${method} ${path}`);
         await this.login();
       }
-      let r = await this._raw(method, path, opts);
-      console.log(`[m2a] ${method} ${path} → ${r.status} (finalUrl=${r.finalUrl || "-"}, bytes=${r.html.length})`);
+      const methodUpper = method.toUpperCase();
+      const maxAttempts = Number(opts.retries ?? (methodUpper === "GET" ? 3 : 2));
+      let r = null;
+      let lastErr = null;
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+          r = await this._raw(method, path, opts);
+          console.log(`[m2a] ${method} ${path} → ${r.status} (tentativa=${attempt}/${maxAttempts}, finalUrl=${r.finalUrl || "-"}, bytes=${r.html.length})`);
+          if (!isTransientResponse(r) || attempt === maxAttempts) break;
+          console.warn(`[m2a] resposta transitória ${r.status} em ${method} ${path}; tentando novamente após pausa`);
+        } catch (err) {
+          lastErr = err;
+          const status = err?.response?.status ? ` HTTP ${err.response.status}` : "";
+          console.warn(`[m2a] falha${status} em ${method} ${path} (tentativa=${attempt}/${maxAttempts}): ${err.message}`);
+          if (!isTransientError(err) || attempt === maxAttempts) throw err;
+        }
+        await sleep(retryDelayMs(attempt));
+      }
+      if (!r) throw lastErr || new Error(`M2A_REQUEST_FAILED: ${method} ${path}`);
       const isPost = method.toUpperCase() === "POST";
       const sessionExpired =
         M2aClient.isLoginPage(r.html, r.finalUrl) || r.status === 401;

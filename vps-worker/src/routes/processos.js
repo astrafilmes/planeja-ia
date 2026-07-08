@@ -9,6 +9,58 @@ import { config } from "../config.js";
 // =====================================================================
 
 const SYNC_CONCURRENCY = 3;
+const RETRYABLE_M2A_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isRetryableM2AError(err) {
+  const status = Number(err?.status ?? err?.response?.status ?? 0);
+  if (RETRYABLE_M2A_STATUS.has(status)) return true;
+  return /timeout|tempor|ECONNRESET|ETIMEDOUT|EAI_AGAIN|socket hang up|M2A respondeu (408|425|429|500|502|503|504)/i.test(
+    String(err?.message ?? err ?? ""),
+  );
+}
+
+function isSuspiciousEmptyAjax(doc) {
+  return Number(doc?.status ?? 0) === 200 && Number(doc?.decodedBytes ?? doc?.bytes ?? 0) < 80;
+}
+
+async function withM2ARetry(label, operation, trace, meta = {}) {
+  const maxAttempts = meta.maxAttempts ?? 3;
+  let lastErr = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const result = await operation(attempt);
+      if (attempt > 1) {
+        traceStep(trace, {
+          ...meta,
+          fase: meta.fase ?? "retry",
+          label: `${label} recuperado`,
+          tentativa: attempt,
+          selecionado: true,
+        });
+      }
+      return result;
+    } catch (err) {
+      lastErr = err;
+      const retryable = isRetryableM2AError(err);
+      traceStep(trace, {
+        ...meta,
+        fase: meta.fase ?? "retry",
+        label: `${label} falhou`,
+        tentativa: attempt,
+        maxTentativas: maxAttempts,
+        retryable,
+        erro: String(err?.message ?? err),
+      });
+      if (!retryable || attempt === maxAttempts) break;
+      await sleep(1_500 * attempt);
+    }
+  }
+  throw lastErr || new Error(`${label} falhou`);
+}
 
 // ---------- helpers de texto / parse ----------
 function cleanTextValue(value) {
