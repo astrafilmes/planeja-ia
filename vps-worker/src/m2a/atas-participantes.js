@@ -15,41 +15,22 @@
 import * as cheerio from "cheerio";
 import { m2a } from "../m2a-client.js";
 import { coerceHtmlPayload, ensureOperationAccepted } from "./utils.js";
-
-const norm = (txt) => {
-  if (!txt) return "";
-  return String(txt)
-    .replace(/\(\s*\d{4}\s*\)/g, "")
-    .replace(/^\d+\s*-\s*/g, "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^A-Za-z0-9\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toUpperCase();
-};
-
-const GENERIC_TOKENS = new Set([
-  "SECRETARIA",
-  "MUNICIPAL",
-  "PREFEITURA",
-  "FUNDO",
-  "GABINETE",
-  "CONTROLADORIA",
-  "PROCURADORIA",
-  "AUTARQUIA",
-  "DE",
-  "DA",
-  "DO",
-  "DAS",
-  "DOS",
-  "E",
-]);
+import {
+  extrairNomeUgSelecionada,
+  montarPayloadInclusaoUg,
+  normM2AText as norm,
+  parseUnidadesGestorasDetalheHtml,
+  unidadeGestoraDetalheConfirmaInclusao,
+} from "./atas-participantes-utils.js";
 
 function tokensNome(txt) {
   return norm(txt)
     .split(" ")
     .filter((w) => w.length >= 4 && !GENERIC_TOKENS.has(w));
+}
+
+function inferAnoFromData(data) {
+  return String(data ?? "").match(/^(20\d{2})-/)?.[1] ?? null;
 }
 
 function tokenEquivalente(a, b) {
@@ -118,6 +99,21 @@ export async function listarParticipantesAta(ataId) {
   return out;
 }
 
+export async function listarUnidadesGestorasParticipante(participanteId) {
+  if (!participanteId) throw new Error("participanteId obrigatório");
+  const path = `/ata_registro_precos/unidades_participantes/${participanteId}/`;
+  const res = await m2a.get(path, {
+    headers: {
+      "X-Requested-With": "XMLHttpRequest",
+      Accept: "text/html,application/xhtml+xml,application/json,*/*",
+    },
+  });
+  if (res.status !== 200) {
+    throw new Error(`Falha ao carregar detalhe do participante ${participanteId}: HTTP ${res.status}`);
+  }
+  return parseUnidadesGestorasDetalheHtml(res.html);
+}
+
 /**
  * Inclui uma unidade gestora (secretaria) como participante ativa de uma ata.
  * @param {object} args
@@ -132,12 +128,22 @@ export async function incluirUnidadeGestora({ participanteId, unidadeGestoraId, 
     throw new Error("data deve estar em YYYY-MM-DD");
   }
   const path = `/ata_registro_precos/unidades_participantes/unidades_gestoras/incluir/${participanteId}/`;
-  const csrf = await m2a.getCsrf(path);
-  const body = new URLSearchParams();
-  body.set("csrfmiddlewaretoken", csrf);
-  body.set("data", data);
-  body.set("unidade_gestora", String(unidadeGestoraId));
-  body.set("_salvar", "");
+  const formRes = await m2a.get(path, {
+    headers: {
+      "X-Requested-With": "XMLHttpRequest",
+      Accept: "text/html,application/xhtml+xml,application/json,*/*",
+    },
+  });
+  if (formRes.status !== 200) {
+    throw new Error(`Falha ao carregar formulário do participante ${participanteId}: HTTP ${formRes.status}`);
+  }
+  const $form = cheerio.load(coerceHtmlPayload(formRes.html));
+  const csrf =
+    $form('input[name="csrfmiddlewaretoken"]').attr("value") ||
+    m2a.rememberCsrf?.(formRes.html, path) ||
+    "";
+  const unidadeGestoraNome = extrairNomeUgSelecionada($form, unidadeGestoraId);
+  const body = montarPayloadInclusaoUg($form, { csrf, data, unidadeGestoraId });
   const res = await m2a.postForm(path, body, {
     headers: { Referer: `${m2a.http.defaults.baseURL || ""}${path}` },
   });
@@ -166,12 +172,21 @@ export async function incluirUnidadeGestora({ participanteId, unidadeGestoraId, 
           cheerio.load(coerceHtmlPayload(retry.html)),
           `a inclusão do participante ${participanteId}`,
         );
-        return { ok: true, dataUsada: retryData };
+        return {
+          ok: true,
+          dataUsada: retryData,
+          unidadeGestoraNome,
+          detalheRows: parseUnidadesGestorasDetalheHtml(retry.html),
+        };
       }
     }
     throw err;
   }
-  return { ok: true };
+  return {
+    ok: true,
+    unidadeGestoraNome,
+    detalheRows: parseUnidadesGestorasDetalheHtml(res.html),
+  };
 }
 
 /**
@@ -212,7 +227,6 @@ export async function garantirParticipantes({ ataId, data, alvos, ugsDisponiveis
   };
 
   const results = [];
-  let teveInclusao = false;
   for (const alvo of alvos) {
     const participante = resolverParticipante(participantes, alvo.nome);
     if (!participante) {
@@ -224,12 +238,29 @@ export async function garantirParticipantes({ ataId, data, alvos, ugsDisponiveis
       });
       continue;
     }
-    if (participante.incluido) {
+    let detalheAntes = [];
+    try {
+      detalheAntes = await listarUnidadesGestorasParticipante(participante.participanteId);
+    } catch (err) {
+      console.warn(
+        `[m2a-participantes] falha ao carregar detalhe do participante ${participante.participanteId}: ${err.message}`,
+      );
+    }
+    const ano = inferAnoFromData(data);
+    const jaTemUgAtiva = unidadeGestoraDetalheConfirmaInclusao(detalheAntes, {
+      nomeSecretaria: alvo.nome,
+      ano,
+    });
+
+    if (participante.incluido || jaTemUgAtiva.incluida) {
       results.push({
         secretariaId: alvo.secretariaId,
         nome: alvo.nome,
         participanteId: participante.participanteId,
         status: "ja_incluida",
+        mensagem: jaTemUgAtiva.incluida
+          ? `UG ativa encontrada no detalhe: ${jaTemUgAtiva.row?.unidadeGestoraNome}`
+          : undefined,
       });
       continue;
     }
@@ -244,18 +275,38 @@ export async function garantirParticipantes({ ataId, data, alvos, ugsDisponiveis
       continue;
     }
     try {
-      await incluirUnidadeGestora({
+      const inclusao = await incluirUnidadeGestora({
         participanteId: participante.participanteId,
         unidadeGestoraId: ug,
         data,
       });
-      teveInclusao = true;
+      const detalheDepois = inclusao.detalheRows?.length
+        ? inclusao.detalheRows
+        : await listarUnidadesGestorasParticipante(participante.participanteId);
+      const confirmado = unidadeGestoraDetalheConfirmaInclusao(detalheDepois, {
+        unidadeGestoraNome: inclusao.unidadeGestoraNome,
+        nomeSecretaria: alvo.nome,
+        ano,
+      });
+      if (!confirmado.incluida) {
+        results.push({
+          secretariaId: alvo.secretariaId,
+          nome: alvo.nome,
+          participanteId: participante.participanteId,
+          unidadeGestoraId: ug,
+          status: "erro",
+          mensagem:
+            "o portal aceitou o POST, mas a UG não apareceu ativa no detalhe do participante; abra a inclusão da UG e confira a mensagem exibida pelo M2A",
+        });
+        continue;
+      }
       results.push({
         secretariaId: alvo.secretariaId,
         nome: alvo.nome,
         participanteId: participante.participanteId,
         unidadeGestoraId: ug,
         status: "incluida_agora",
+        mensagem: `UG ativa confirmada no detalhe: ${confirmado.row?.unidadeGestoraNome}`,
       });
     } catch (err) {
       results.push({
@@ -269,19 +320,6 @@ export async function garantirParticipantes({ ataId, data, alvos, ugsDisponiveis
     }
     // Rate-limit leve para não estressar o portal.
     await new Promise((r) => setTimeout(r, 250));
-  }
-
-  if (teveInclusao) {
-    const atualizados = await listarParticipantesAta(ataId);
-    for (const result of results) {
-      if (result.status !== "incluida_agora") continue;
-      const participante = resolverParticipante(atualizados, result.nome);
-      if (!participante?.incluido) {
-        result.status = "erro";
-        result.mensagem =
-          "o portal respondeu 200, mas a secretaria continuou como não incluída; confira se a Unidade Gestora externa cadastrada é a UG correta";
-      }
-    }
   }
   return { results };
 }
