@@ -83,20 +83,18 @@ export async function processarContratoCompleto(payload, onProgress = () => {}) 
 
   progress("recuperar_id", "Verificando se o contrato já existe na M2A...");
   if (!m2aInternalId) {
+    // buscarIdContratoPorNumero agora retorna:
+    //  - string → contrato já existe (usa esse ID)
+    //  - null   → tabela respondeu OK mas contrato não está listado (segue para criação)
+    //  - throw  → portal indisponível de verdade (aborta para não duplicar)
     try {
       m2aInternalId = await buscarIdContratoPorNumero(m2aAtaId, numeroContrato, m2aProcessoUrl, {
         processoId: extractProcessoIdFromUrl(m2aProcessoUrl),
       });
     } catch (err) {
-      // Sinal fraco: erro de rede/HTTP durante a busca. Só ignoramos
-      // "not found"; qualquer outra falha vira erro para evitar duplicar
-      // contrato caso ele já exista no portal.
       const msg = String(err?.message || err || "");
-      if (!/not\s*found|404|nenhum registro/i.test(msg)) {
-        console.warn(`[m2a-orq-contrato] busca por número falhou: ${msg}`);
-        throw new Error(`Falha ao verificar contrato existente na M2A: ${msg}`);
-      }
-      // 404/nenhum → segue e cria abaixo
+      console.warn(`[m2a-orq-contrato] verificação prévia falhou: ${msg}`);
+      throw new Error(`Falha ao verificar contrato existente na M2A: ${msg}`);
     }
   }
 
