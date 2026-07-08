@@ -98,6 +98,15 @@ export function useEnviarContratosM2A({
       const contratoAtual = contratos.find((c) => c.id === event.contratoId);
       const belongsToProcess = Boolean(contratoAtual);
       if (!belongsToProcess) return;
+      if (
+        event.m2a_contrato_id &&
+        event.m2a_contrato_id !== contratoAtual?.m2a_contrato_id
+      ) {
+        await supabase
+          .from("contratos")
+          .update({ m2a_contrato_id: event.m2a_contrato_id })
+          .eq("id", event.contratoId);
+      }
 
       const total = Math.max(m2aBatchRef.current.total, 1);
       const etapaIndex = Math.max(ETAPAS_ORDEM.indexOf(event.etapa), 0);
