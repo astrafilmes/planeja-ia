@@ -114,6 +114,24 @@ function canonicalContratoTableUrl(ataId) {
   return `/ata_registro_precos/tabela_contratos/${ataId}?page_size=1000`;
 }
 
+/**
+ * Busca o ID interno do contrato pelo número na tabela de contratos da Ata.
+ *
+ * Retornos:
+ *  - string  → contrato encontrado (ID interno M2A)
+ *  - null    → tabela respondeu OK, mas o contrato não está listado
+ *              (== "ainda não existe no portal", caso esperado antes de criar)
+ *
+ * Lança apenas quando NENHUMA das URLs candidatas conseguiu responder com
+ * sucesso (todas caíram por HTTP 5xx / rede). Nesse caso o chamador deve
+ * abortar em vez de tentar criar o contrato — se o portal está fora do ar
+ * não dá para saber se o contrato já existe, e recriar geraria duplicata.
+ *
+ * Faz retry externo com backoff exponencial em cima das falhas transientes
+ * do portal (500/502/503/504/rede), independente do retry interno do
+ * m2a-client, porque em picos de instabilidade do M2A o retry curto do
+ * client não é suficiente.
+ */
 export async function buscarIdContratoPorNumero(
   ataId, numeroBuscado, m2aProcessoUrl, options = {},
 ) {
@@ -122,20 +140,44 @@ export async function buscarIdContratoPorNumero(
   const urls = deepSearch
     ? await discoverContratoTableUrls(ataId, m2aProcessoUrl)
     : [canonicalContratoTableUrl(ataId)];
+
+  const MAX_ATTEMPTS = 4;
+  const BACKOFF_MS = [0, 2000, 5000, 10000];
   const errors = [];
+  let anyUrlResponded = false;
+
   for (const url of urls) {
-    try {
-      const r = await m2a.get(url, { headers: { "X-Requested-With": "XMLHttpRequest" } });
-      const id = extractContratoIdFromDoc(loadDoc(r.html), numeroBuscado, expectedProcessoId);
-      if (id) return id;
-      errors.push(`${url}: tabela respondeu, contrato não apareceu`);
-    } catch (e) {
-      errors.push(`${url}: ${e.message}`);
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        const r = await m2a.get(url, { headers: { "X-Requested-With": "XMLHttpRequest" } });
+        anyUrlResponded = true;
+        const id = extractContratoIdFromDoc(loadDoc(r.html), numeroBuscado, expectedProcessoId);
+        if (id) return id;
+        // Tabela respondeu OK mas o contrato não apareceu → não existe (ainda).
+        errors.push(`${url}: tabela respondeu, contrato não listado`);
+        break; // não repete essa URL — resposta OK, só não tem o contrato
+      } catch (e) {
+        const status = Number(e?.response?.status ?? 0);
+        const isTransient = status >= 500 || status === 429 || status === 408 ||
+          /timeout|ECONNRESET|ETIMEDOUT|EAI_AGAIN|socket hang up/i.test(String(e?.message || ""));
+        errors.push(`${url}[t${attempt}]: ${e.message}`);
+        if (!isTransient || attempt === MAX_ATTEMPTS) break;
+        console.warn(`[m2a-contrato] busca por número — ${url} falhou (${e.message}); aguardando ${BACKOFF_MS[attempt]}ms para retry ${attempt + 1}/${MAX_ATTEMPTS}`);
+        await sleep(BACKOFF_MS[attempt]);
+      }
     }
   }
-  throw new Error(
-    `Não foi possível localizar o contrato '${numeroBuscado}' na Ata ${ataId}. Tentativas: ${errors.join(" | ")}`,
+
+  // Se pelo menos uma URL respondeu com sucesso e não achou o contrato →
+  // sinaliza "não existe" para o orquestrador seguir e criar.
+  if (anyUrlResponded) return null;
+
+  // Nenhuma URL respondeu com sucesso → erro real, aborta.
+  const err = new Error(
+    `Não foi possível consultar a tabela de contratos da Ata ${ataId} (portal M2A indisponível). Tentativas: ${errors.join(" | ")}`,
   );
+  err.code = "M2A_TABELA_CONTRATOS_INDISPONIVEL";
+  throw err;
 }
 
 // --- Módulo 1: criar cabeçalho ---
