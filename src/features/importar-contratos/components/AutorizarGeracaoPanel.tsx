@@ -13,6 +13,18 @@ import type {
   SecretariaM2A,
 } from "../lib";
 
+type ValidacaoContratos = {
+  duplicados: Array<{
+    contratoKey: string;
+    contratoLabel: string;
+    numero: string;
+    ocorrencias: number;
+  }>;
+  semNumero: Array<{ contratoKey: string; contratoLabel: string; qtd: number }>;
+  semDescricao: Array<{ contratoKey: string; contratoLabel: string; qtd: number }>;
+  hasErros: boolean;
+};
+
 type Props = {
   isAutorizado: boolean;
   contratosPreliminaresCount: number;
@@ -35,6 +47,7 @@ type Props = {
   dataBatch: string;
   onChangeDataBatch: (value: string) => void;
   onAutorizar: () => void;
+  validacaoContratos: ValidacaoContratos;
 };
 
 /**
@@ -62,6 +75,7 @@ export const AutorizarGeracaoPanel = memo(function AutorizarGeracaoPanel({
   dataBatch,
   onChangeDataBatch,
   onAutorizar,
+  validacaoContratos,
 }: Props) {
   const dataValida = /^\d{4}-\d{2}-\d{2}$/.test(dataBatch);
   const disableBtn =
@@ -71,7 +85,8 @@ export const AutorizarGeracaoPanel = memo(function AutorizarGeracaoPanel({
     contratosSelecionados.length === 0 ||
     contratosSemCadastroM2A.length > 0 ||
     fornecedoresSemPreposto.length > 0 ||
-    contratosSemAtaM2A.length > 0;
+    contratosSemAtaM2A.length > 0 ||
+    validacaoContratos.hasErros;
 
   return (
     <Card className="border-border/60">
