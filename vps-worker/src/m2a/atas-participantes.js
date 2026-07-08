@@ -23,6 +23,23 @@ import {
   unidadeGestoraDetalheConfirmaInclusao,
 } from "./atas-participantes-utils.js";
 
+const GENERIC_TOKENS = new Set([
+  "SECRETARIA",
+  "MUNICIPAL",
+  "PREFEITURA",
+  "FUNDO",
+  "GABINETE",
+  "CONTROLADORIA",
+  "PROCURADORIA",
+  "AUTARQUIA",
+  "DE",
+  "DA",
+  "DO",
+  "DAS",
+  "DOS",
+  "E",
+]);
+
 function tokensNome(txt) {
   return norm(txt)
     .split(" ")

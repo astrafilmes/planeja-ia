@@ -120,6 +120,25 @@ export function montarPayloadInclusaoUg($, { csrf, data, unidadeGestoraId }) {
   if (csrf) body.set("csrfmiddlewaretoken", csrf);
   body.set("data", String(data));
   body.set("unidade_gestora", String(unidadeGestoraId));
+  root.find('input[name], select[name]').each((_, el) => {
+    const field = $(el);
+    const name = field.attr("name") || "";
+    const nameNorm = normFull(name);
+    if (!/(^|\s)(PADRAO|PADRAO UNIDADE GESTORA|PRINCIPAL)(\s|$)/.test(nameNorm)) return;
+    if (field.is("select")) {
+      const truthy = field
+        .find("option")
+        .toArray()
+        .find((option) => /\b(sim|true|yes|1)\b/i.test(`${$(option).attr("value") ?? ""} ${textOf($, option)}`));
+      if (truthy) body.set(name, $(truthy).attr("value") ?? "");
+      return;
+    }
+    const type = String(field.attr("type") ?? "").toLowerCase();
+    if (type === "checkbox" || type === "radio" || type === "hidden") {
+      body.set(name, field.attr("value") || "on");
+    }
+  });
+  if (!body.has("padrao")) body.set("padrao", "on");
   if (!body.has("_salvar")) body.set("_salvar", "");
   return body;
 }
