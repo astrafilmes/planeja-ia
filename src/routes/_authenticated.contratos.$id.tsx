@@ -78,7 +78,9 @@ function Page() {
           contratoId={id}
           enviando={envio.enviando}
           connected={envio.connected}
+          statusM2A={statusM2A}
           onEnviar={envio.handleEnviar}
+          onStatusChanged={() => refetch()}
         />
       }
     >
