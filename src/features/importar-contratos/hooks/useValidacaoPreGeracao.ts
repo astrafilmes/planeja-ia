@@ -309,10 +309,19 @@ export function useValidacaoPreGeracao(options: {
             for (const c of contratos) {
               const sec = resolveSecretariaForContrato(c, secretariasM2A);
               if (!sec) continue;
-              if (alvos.has(sec.id)) continue;
-              alvos.set(sec.id, {
+              // Use o NOME DO ÓRGÃO PAI (secretaria responsável) — é o que aparece
+              // como participante da ata no M2A. A UO/dotação local (ex.: "HOSPITAL
+              // MUNICIPAL") não existe como participante — o participante é sempre
+              // a secretaria (ex.: "SECRETARIA MUNICIPAL DE SAÚDE").
+              const orgao = getOrgaoMapping(sec.m2a_orgao_id);
+              const nomeParticipante = orgao?.nome ?? sec.nome;
+              // Dedup por órgão M2A (evita tentar incluir 3x a mesma secretaria
+              // quando o processo mistura contratos de UOs diferentes do mesmo órgão).
+              const dedupKey = sec.m2a_orgao_id ?? sec.id;
+              if (alvos.has(dedupKey)) continue;
+              alvos.set(dedupKey, {
                 secretariaId: sec.id,
-                nome: sec.nome,
+                nome: nomeParticipante,
                 unidadeGestoraId: sec.m2a_orgao_id ?? undefined,
               });
             }
