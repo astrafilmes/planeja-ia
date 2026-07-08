@@ -172,10 +172,21 @@ export async function incluirUnidadeGestora({ participanteId, unidadeGestoraId, 
     "";
   const unidadeGestoraNome = extrairNomeUgSelecionada($form, unidadeGestoraId);
   const body = montarPayloadInclusaoUg($form, { csrf, data, unidadeGestoraId });
+  const payloadLog = Object.fromEntries(
+    Array.from(body.entries()).map(([k, v]) => [
+      k,
+      k === "csrfmiddlewaretoken" ? `(len=${String(v).length})` : v,
+    ]),
+  );
+  console.log(
+    `[m2a-participantes] POST ${path} payload=${JSON.stringify(payloadLog)} ug="${unidadeGestoraNome ?? "?"}" (id=${unidadeGestoraId})`,
+  );
   const res = await m2a.postForm(path, body, {
     headers: { Referer: `${m2a.http.defaults.baseURL || ""}${path}` },
   });
-  // Django costuma responder 200 (form redirect interceptado pelo axios com maxRedirects=5).
+  console.log(
+    `[m2a-participantes] POST ${path} → status=${res.status} finalUrl=${res.finalUrl || "-"} bytes=${(res.html || "").length}`,
+  );
   if (res.status >= 400) {
     throw new Error(`Falha ao incluir participante ${participanteId}: HTTP ${res.status}`);
   }
