@@ -100,6 +100,7 @@ function Page() {
     totalItens,
     fornecedoresUnicos,
     itensSemValor,
+    validacaoContratos,
     isAutorizado,
   } = derived;
 
@@ -366,6 +367,7 @@ function Page() {
                     dataBatch={dataBatchOverride}
                     onChangeDataBatch={setDataBatchOverride}
                     onAutorizar={autorizarGeracao}
+                    validacaoContratos={validacaoContratos}
                   />
                 </TabsContent>
               </Tabs>
