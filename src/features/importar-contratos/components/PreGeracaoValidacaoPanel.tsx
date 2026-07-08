@@ -16,6 +16,7 @@ type Props = {
 export const PreGeracaoValidacaoPanel = memo(function PreGeracaoValidacaoPanel({
   busy,
   result,
+  progress,
   onValidar,
   disabled,
 }: Props) {
