@@ -65,6 +65,19 @@ export function useValidacaoPreGeracao(options: {
         atas.set(c.m2aAtaId, list);
       }
 
+      // Conta quantos "slots" (contratos) diferentes usam cada m2a_item_id.
+      // Se >1, significa que o item foi rateado entre secretarias/dotações
+      // diferentes → bloqueio manual quando o total excede o saldo.
+      const usoPorItem = new Map<string, number>();
+      for (const c of contratosSelecionados) {
+        const vistos = new Set<string>();
+        for (const it of c.itens) {
+          if (!it.m2aItemId || vistos.has(it.m2aItemId)) continue;
+          vistos.add(it.m2aItemId);
+          usoPorItem.set(it.m2aItemId, (usoPorItem.get(it.m2aItemId) ?? 0) + 1);
+        }
+      }
+
       // 1) Saldos por ata.
       const saldos: ValidacaoPreGeracao["saldos"] = {
         ok: 0,
@@ -86,18 +99,19 @@ export function useValidacaoPreGeracao(options: {
           const saldoMap = new Map(itens.map((i) => [i.m2a_item_id, i]));
 
           for (const c of contratos) {
-            const label = c.numero || c.empresa || "(contrato)";
-            for (const item of c.itens ?? []) {
-              const m2aId = (item as any).m2aItemId as string | undefined;
-              const qtd = Number((item as any).quantidade ?? 0);
-              const totalDotacoes = ((item as any).dotacoes ?? []).length || 1;
+            const label =
+              `${c.empresa} · ${c.secretariaSigla}` || "(contrato)";
+            for (const item of c.itens) {
+              const m2aId = item.m2aItemId ?? undefined;
+              const qtd = Number(item.quantidade ?? 0);
+              const totalDotacoes = m2aId ? usoPorItem.get(m2aId) ?? 1 : 1;
               if (!m2aId) {
                 saldos.naoVerificados.push({
-                  contratoKey: c.contratoKey ?? label,
+                  contratoKey: c.key,
                   contratoLabel: label,
                   m2aItemId: "",
-                  numero: (item as any).numeroItem ?? null,
-                  descricao: (item as any).descricao ?? "",
+                  numero: item.numeroItem ?? null,
+                  descricao: item.descricao ?? "",
                   quantidadeSolicitada: qtd,
                   saldoDisponivel: null,
                   totalDotacoes,
@@ -108,11 +122,11 @@ export function useValidacaoPreGeracao(options: {
               const s = saldoMap.get(m2aId);
               const saldoDisp = s?.saldo ?? null;
               const base: Omit<SaldoIssue, "acao"> = {
-                contratoKey: c.contratoKey ?? label,
+                contratoKey: c.key,
                 contratoLabel: label,
                 m2aItemId: m2aId,
-                numero: s?.numero ?? (item as any).numeroItem ?? null,
-                descricao: s?.descricao || (item as any).descricao || "",
+                numero: s?.numero ?? item.numeroItem ?? null,
+                descricao: s?.descricao || item.descricao || "",
                 quantidadeSolicitada: qtd,
                 saldoDisponivel: saldoDisp,
                 totalDotacoes,
@@ -134,7 +148,7 @@ export function useValidacaoPreGeracao(options: {
                 continue;
               }
               saldos.ajustados.push({ ...base, acao: "ajustar_para_saldo" });
-              novosAjustes.set(`${c.contratoKey}::${m2aId}`, saldoDisp);
+              novosAjustes.set(`${c.key}::${m2aId}`, saldoDisp);
             }
           }
         }),
