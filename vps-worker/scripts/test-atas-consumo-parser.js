@@ -11,33 +11,25 @@ const HTML_TABELA_CONTRATOS_5115 = `{"html":"<table><thead><tr><th></th><th></th
 
 const HTML_ITENS_CONTRATO_69607 = `<table><tbody><tr class="kt-datatable__row tr_contrato_item odd" id="tr_933595"><td class="details-control" url_detail="/contratos/itens/subtabela/933595/"><i class="flaticon2-down kt-font-info"></i></td><td class="text-left"><span>37 - MARGARINA VEGETAL COM SAL - 500G</span></td><td class="text-center"><span>POTE</span></td><td class="text-center td-to-value"><div><input type="text" class="form-control mask_quantidade input-focus" value="25,0" placeholder="25,0" id="quantidade_selecionada_933595" style="text-align: right;"/><div class="m2a-badge badge-success">/ 25,00</div></div></td><td class="text-center"><span class="kt-badge kt-badge--inline kt-badge--lg kt-badge--rounded">25,00</span></td><td class="text-right">R$ 9,22</td><td class="text-right"><span class="kt-badge">R$ 9,22</span></td><td></td></tr><tr class="kt-datatable__row tr_contrato_item" id="tr_638482"><td></td><td class="text-left"><span>12 - ARROZ TIPO 1 - 1KG</span></td><td><span>PACOTE</span></td><td class="td-to-value"><div><input type="text" class="form-control mask_quantidade" value="10,0" id="quantidade_selecionada_638482"/><div class="m2a-badge badge-success">/ 20,00</div></div></td><td><span>20,00</span></td><td>R$ 4,00</td><td><span>R$ 4,00</span></td><td></td></tr></tbody></table>`;
 
-// ---------- mock do client m2a ----------
+// ---------- mock do client m2a: sobrescreve método na instância ----------
 const calls = [];
-const mockM2a = {
-  get: async (path) => {
-    calls.push(path);
-    if (path.startsWith("/ata_registro_precos/tabela_contratos/5115")) {
-      return { status: 200, html: HTML_TABELA_CONTRATOS_5115 };
-    }
-    if (path.startsWith("/contratos/itens/tabela/69607")) {
-      return { status: 200, html: HTML_ITENS_CONTRATO_69607 };
-    }
-    if (path.startsWith("/contratos/itens/tabela/70000")) {
-      // cancelado — não deveria ser chamado
-      throw new Error("não deveria buscar itens de contrato cancelado");
-    }
-    // Fallbacks antigos: devolver "sem registros" pra não interferir
-    return { status: 200, html: "<html>nenhum registro encontrado</html>" };
-  },
+const { m2a } = await import("../src/m2a-client.js");
+m2a.get = async (path) => {
+  calls.push(path);
+  if (path.startsWith("/ata_registro_precos/tabela_contratos/5115")) {
+    return { status: 200, html: HTML_TABELA_CONTRATOS_5115 };
+  }
+  if (path.startsWith("/contratos/itens/tabela/69607")) {
+    return { status: 200, html: HTML_ITENS_CONTRATO_69607 };
+  }
+  if (path.startsWith("/contratos/itens/tabela/70000")) {
+    throw new Error("não deveria buscar itens de contrato cancelado");
+  }
+  return { status: 200, html: "<html>nenhum registro encontrado</html>" };
 };
 
-// ---------- injeta mock via override do módulo m2a-client.js ----------
-// Truque: importa dinamicamente o módulo e substitui a export `m2a`.
-const clientModule = await import("../src/m2a-client.js");
-Object.defineProperty(clientModule, "m2a", { value: mockM2a, configurable: true, writable: true });
-
 const { listarContratosDaAta, listarItensContrato, consumoDaAta } = await import(
-  pathToFileURL(new URL("../src/m2a/atas-consumo.js", import.meta.url)).href
+  "../src/m2a/atas-consumo.js"
 );
 
 // ---------- teste 1: listarContratosDaAta ----------
