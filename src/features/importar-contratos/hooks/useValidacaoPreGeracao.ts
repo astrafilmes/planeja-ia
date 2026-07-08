@@ -164,6 +164,12 @@ export function useValidacaoPreGeracao(options: {
               /* trata como sem verificação */
             }
             const idx = resp ? buildSecretariaSaldoIndex(resp) : null;
+            saldosDone += 1;
+            setProgress((p) => ({ ...p, saldosDone }));
+            notify.loading(
+              `Consultando saldos das atas... (${saldosDone}/${totalAtas})`,
+              { id: saldosToast },
+            );
 
             for (const c of contratos) {
               const label = `${c.empresa} · ${c.secretariaSigla}` || "(contrato)";
