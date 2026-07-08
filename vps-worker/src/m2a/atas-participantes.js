@@ -14,7 +14,7 @@
 
 import * as cheerio from "cheerio";
 import { m2a } from "../m2a-client.js";
-import { coerceHtmlPayload } from "./utils.js";
+import { coerceHtmlPayload, ensureOperationAccepted } from "./utils.js";
 
 const norm = (txt) => {
   if (!txt) return "";
@@ -29,20 +29,73 @@ const norm = (txt) => {
     .toUpperCase();
 };
 
+const GENERIC_TOKENS = new Set([
+  "SECRETARIA",
+  "MUNICIPAL",
+  "PREFEITURA",
+  "FUNDO",
+  "GABINETE",
+  "CONTROLADORIA",
+  "PROCURADORIA",
+  "AUTARQUIA",
+  "DE",
+  "DA",
+  "DO",
+  "DAS",
+  "DOS",
+  "E",
+]);
+
+function tokensNome(txt) {
+  return norm(txt)
+    .split(" ")
+    .filter((w) => w.length >= 4 && !GENERIC_TOKENS.has(w));
+}
+
+function scoreNomeParticipante(alvoNome, participanteNome) {
+  const alvo = tokensNome(alvoNome);
+  const cand = tokensNome(participanteNome);
+  if (alvo.length < 2 || cand.length < 2) return 0;
+  const candSet = new Set(cand);
+  const overlap = alvo.filter((w) => candSet.has(w)).length;
+  if (!overlap) return 0;
+  return overlap / Math.max(Math.min(alvo.length, cand.length), 1);
+}
+
+function resolverParticipante(participantes, nomeAlvo) {
+  const exactKey = norm(nomeAlvo);
+  const exact = participantes.find((p) => norm(p.nome) === exactKey);
+  if (exact) return exact;
+
+  const scored = participantes
+    .map((p) => ({ participante: p, score: scoreNomeParticipante(nomeAlvo, p.nome) }))
+    .filter((entry) => entry.score >= 0.8)
+    .sort((a, b) => b.score - a.score);
+
+  if (!scored.length) return null;
+  const [best, second] = scored;
+  if (second && best.score - second.score < 0.15) return null;
+  return best.participante;
+}
+
 /**
  * Lê a tabela de participantes de uma ata.
  * @returns {Array<{ participanteId: number, nome: string, incluido: boolean }>}
  */
 export async function listarParticipantesAta(ataId) {
-  const path = `/ata_registro_precos/unidades_participantes/tabela/${ataId}/?page_size=100`;
+  const path = `/ata_registro_precos/unidades_participantes/tabela/${ataId}/?page_size=100&_=${Date.now()}`;
   const res = await m2a.get(path, {
-    headers: { "X-Requested-With": "XMLHttpRequest", Accept: "application/json,text/html,*/*" },
+    headers: {
+      "X-Requested-With": "XMLHttpRequest",
+      Accept: "application/json, text/javascript, */*; q=0.01",
+      Referer: `${m2a.http.defaults.baseURL || ""}/ata_registro_precos/${ataId}/`,
+    },
   });
   if (res.status !== 200) {
     throw new Error(`Falha ao carregar ata ${ataId}: HTTP ${res.status}`);
   }
   const $ = cheerio.load(coerceHtmlPayload(res.html));
-  const rows = $("tr.kt-datatable__row.tr_ata_registro_preco_unidade_participante");
+  const rows = $("tr.tr_ata_registro_preco_unidade_participante, tr.kt-datatable__row.tr_ata_registro_preco_unidade_participante");
   const out = [];
   rows.each((_, el) => {
     const $tr = $(el);
@@ -88,6 +141,8 @@ export async function incluirUnidadeGestora({ participanteId, unidadeGestoraId, 
   if (res.status >= 400) {
     throw new Error(`Falha ao incluir participante ${participanteId}: HTTP ${res.status}`);
   }
+  const $ = cheerio.load(coerceHtmlPayload(res.html));
+  ensureOperationAccepted($, `a inclusão do participante ${participanteId}`);
   return { ok: true };
 }
 
@@ -105,9 +160,6 @@ export async function incluirUnidadeGestora({ participanteId, unidadeGestoraId, 
  */
 export async function garantirParticipantes({ ataId, data, alvos, ugsDisponiveis = [] }) {
   const participantes = await listarParticipantesAta(ataId);
-  const participantesPorNome = new Map(
-    participantes.map((p) => [norm(p.nome), p]),
-  );
   const ugsPorNome = new Map(
     (ugsDisponiveis || []).map((u) => [norm(u.nome), u.id]),
   );
@@ -132,13 +184,15 @@ export async function garantirParticipantes({ ataId, data, alvos, ugsDisponiveis
   };
 
   const results = [];
+  let teveInclusao = false;
   for (const alvo of alvos) {
-    const participante = participantesPorNome.get(norm(alvo.nome));
+    const participante = resolverParticipante(participantes, alvo.nome);
     if (!participante) {
       results.push({
         secretariaId: alvo.secretariaId,
         nome: alvo.nome,
         status: "sem_participante_na_ata",
+        mensagem: "participante não encontrado com segurança na tabela da ata",
       });
       continue;
     }
@@ -167,6 +221,7 @@ export async function garantirParticipantes({ ataId, data, alvos, ugsDisponiveis
         unidadeGestoraId: ug,
         data,
       });
+      teveInclusao = true;
       results.push({
         secretariaId: alvo.secretariaId,
         nome: alvo.nome,
@@ -186,6 +241,19 @@ export async function garantirParticipantes({ ataId, data, alvos, ugsDisponiveis
     }
     // Rate-limit leve para não estressar o portal.
     await new Promise((r) => setTimeout(r, 250));
+  }
+
+  if (teveInclusao) {
+    const atualizados = await listarParticipantesAta(ataId);
+    for (const result of results) {
+      if (result.status !== "incluida_agora") continue;
+      const participante = resolverParticipante(atualizados, result.nome);
+      if (!participante?.incluido) {
+        result.status = "erro";
+        result.mensagem =
+          "o portal respondeu 200, mas a secretaria continuou como não incluída; confira se a Unidade Gestora externa cadastrada é a UG correta";
+      }
+    }
   }
   return { results };
 }

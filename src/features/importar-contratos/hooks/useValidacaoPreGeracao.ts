@@ -268,7 +268,7 @@ export function useValidacaoPreGeracao(options: {
               alvos.set(sec.id, {
                 secretariaId: sec.id,
                 nome: sec.nome,
-                unidadeGestoraId: sec.m2a_uo_id ?? undefined,
+                unidadeGestoraId: sec.m2a_orgao_id ?? undefined,
               });
             }
             if (alvos.size === 0) {
