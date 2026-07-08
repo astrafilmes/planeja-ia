@@ -280,7 +280,12 @@ class M2aClient {
         await this.login();
       }
       const methodUpper = method.toUpperCase();
-      const maxAttempts = Number(opts.retries ?? (methodUpper === "GET" ? 3 : 1));
+      // Retry universal: todos os métodos podem tentar até 3 vezes por padrão.
+      // Para POST/PUT/DELETE só retentamos em respostas 5xx/429 (o servidor
+      // rejeitou sem processar). Timeouts de rede em POST NÃO são retentados
+      // aqui — o caller deve envolver a operação com sua própria lógica se ela
+      // for comprovadamente idempotente (ver postFormWithRetry no contrato.js).
+      const maxAttempts = Number(opts.retries ?? 3);
       let r = null;
       let lastErr = null;
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -293,7 +298,7 @@ class M2aClient {
           lastErr = err;
           const status = err?.response?.status ? ` HTTP ${err.response.status}` : "";
           console.warn(`[m2a] falha${status} em ${method} ${path} (tentativa=${attempt}/${maxAttempts}): ${err.message}`);
-          if (!isTransientError(err) || attempt === maxAttempts) throw err;
+          if (!isTransientError(err, methodUpper) || attempt === maxAttempts) throw err;
         }
         await sleep(retryDelayMs(attempt));
       }
