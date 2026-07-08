@@ -19,6 +19,8 @@ export type ValidacaoProgress = {
 };
 
 export type SaldoIssue = {
+  ataId: string;
+  ataNumero: string | null;
   contratoKey: string;
   contratoLabel: string;
   m2aItemId: string;
@@ -91,8 +93,9 @@ export function useValidacaoPreGeracao(options: {
   contratosSelecionados: ContratoPreliminar[];
   secretariasM2A: SecretariaM2A[];
   dataBatch: string;
+  m2aProcessoId?: string | null;
 }) {
-  const { contratosSelecionados, secretariasM2A, dataBatch } = options;
+  const { contratosSelecionados, secretariasM2A, dataBatch, m2aProcessoId } = options;
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<ValidacaoPreGeracao | null>(null);
   const [ajustesAplicaveis, setAjustesAplicaveis] = useState<Map<string, number>>(
@@ -159,6 +162,7 @@ export function useValidacaoPreGeracao(options: {
             try {
               resp = await fetchSaldosPorSecretariaAta(ataId, {
                 forceRefresh: opts.forceRefresh,
+                m2aProcessoId,
               });
             } catch {
               /* trata como sem verificação */
@@ -172,6 +176,7 @@ export function useValidacaoPreGeracao(options: {
             );
 
             for (const c of contratos) {
+              const ataNumero = c.m2aAtaNumero ?? null;
               const label = `${c.empresa} · ${c.secretariaSigla}` || "(contrato)";
               const secResolved = resolveSecretariaForContrato(c, secretariasM2A);
               const secKey = normSecKey(secResolved?.nome || c.secretariaSigla || "");
@@ -186,6 +191,8 @@ export function useValidacaoPreGeracao(options: {
                 const totalDotacoes = usoKey ? usoPorItem.get(usoKey) ?? 1 : 1;
 
                 const base: Omit<SaldoIssue, "acao"> = {
+                  ataId,
+                  ataNumero,
                   contratoKey: c.key,
                   contratoLabel: label,
                   m2aItemId: m2aId,
@@ -342,7 +349,7 @@ export function useValidacaoPreGeracao(options: {
         setProgress({ phase: "idle", totalAtas: 0, saldosDone: 0, participantesDone: 0 });
       }
     },
-    [contratosSelecionados, secretariasM2A, dataBatch],
+    [contratosSelecionados, secretariasM2A, dataBatch, m2aProcessoId],
   );
 
   const reset = useCallback(() => {

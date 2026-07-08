@@ -38,6 +38,12 @@ function parseNumeroFromSpan(txt) {
   return m ? m[1] : null;
 }
 
+function normalizeId(value) {
+  const raw = String(value ?? "").trim();
+  const m = raw.match(/\d+/);
+  return m ? m[0] : "";
+}
+
 async function tentarListarContratos(ataId) {
   // Endpoint oficial usado pela tela da ata:
   //   GET /ata_registro_precos/tabela_contratos/{ataId}?page_size=1000
@@ -82,10 +88,13 @@ function limparNomeSecretaria(txt) {
  * Colunas (após checkbox): número, processo, contratante (secretaria),
  * fornecedor, início vig., fim vig., valor, situação, origem.
  */
-export async function listarContratosDaAta(ataId) {
+export async function listarContratosDaAta(ataId, { processoId = null } = {}) {
   const { $, rows, path } = await tentarListarContratos(ataId);
   if (!$ || !rows) return { path: null, contratos: [] };
   const out = [];
+  const expectedProcessoId = normalizeId(processoId);
+  let descartadosOutroProcesso = 0;
+  let descartadosSemProcesso = 0;
   rows.each((_, el) => {
     const $tr = $(el);
     const idAttr = $tr.attr("id") || "";
@@ -96,6 +105,27 @@ export async function listarContratosDaAta(ataId) {
     const cells = $tr.find("td, th").toArray().map((c) =>
       $(c).text().replace(/\s+/g, " ").trim(),
     );
+
+    const processoHref =
+      $tr.find('a[href*="/processo_administrativo/"]').first().attr("href") || "";
+    const processoIdLinha = normalizeId(
+      processoHref.match(/\/processo_administrativo\/(\d+)\/?/)?.[1],
+    );
+    const processoNumero =
+      $tr.find('a[href*="/processo_administrativo/"]').first().text().replace(/\s+/g, " ").trim() ||
+      cells.find((t) => /\d+\s*\/\s*\d{4}/.test(t)) ||
+      "";
+
+    if (expectedProcessoId) {
+      if (!processoIdLinha) {
+        descartadosSemProcesso += 1;
+        return;
+      }
+      if (processoIdLinha !== expectedProcessoId) {
+        descartadosOutroProcesso += 1;
+        return;
+      }
+    }
 
     // Número contrato: primeira célula com padrão "NNN/AAAA..."
     const numero = cells.find((t) => /^\d{1,6}\/\d{4}/.test(t)) || "";
@@ -127,10 +157,18 @@ export async function listarContratosDaAta(ataId) {
       numero,
       secretariaNome,
       contratanteRaw,
+      processoId: processoIdLinha || null,
+      processoNumero,
       cancelado,
       situacao: badgeTxt.trim(),
     });
   });
+  if (expectedProcessoId && (descartadosOutroProcesso || descartadosSemProcesso)) {
+    console.warn(
+      `[m2a-consumo] ata ${ataId}: contratos filtrados por processo ${expectedProcessoId} ` +
+        `(outro processo=${descartadosOutroProcesso}, sem processo=${descartadosSemProcesso})`,
+    );
+  }
   return { path, contratos: out };
 }
 
@@ -210,8 +248,8 @@ export async function listarItensContrato(contratoId) {
  *   { [normSec(secretariaNome)]: { [numeroItem]: quantidadeTotalConsumida } }
  * Também retorna a lista bruta para debug.
  */
-export async function consumoDaAta(ataId) {
-  const { contratos, path } = await listarContratosDaAta(ataId);
+export async function consumoDaAta(ataId, { processoId = null } = {}) {
+  const { contratos, path } = await listarContratosDaAta(ataId, { processoId });
   const detalhado = [];
   const agregado = {};
   for (const c of contratos) {
@@ -234,6 +272,8 @@ export async function consumoDaAta(ataId) {
       detalhado.push({
         contratoId: c.contratoId,
         numeroContrato: c.numero,
+        processoId: c.processoId,
+        processoNumero: c.processoNumero,
         secretariaNome: c.secretariaNome,
         secretariaKey: secKey,
         numeroItem: it.numero,

@@ -146,7 +146,31 @@ export async function incluirUnidadeGestora({ participanteId, unidadeGestoraId, 
     throw new Error(`Falha ao incluir participante ${participanteId}: HTTP ${res.status}`);
   }
   const $ = cheerio.load(coerceHtmlPayload(res.html));
-  ensureOperationAccepted($, `a inclusão do participante ${participanteId}`);
+  try {
+    ensureOperationAccepted($, `a inclusão do participante ${participanteId}`);
+  } catch (err) {
+    const msg = String(err?.message ?? "");
+    const minDate = msg.match(/data inicial da unidade orçamentária padrão\.\s*\((\d{2})\/(\d{2})\/(\d{4})\)/i);
+    if (minDate) {
+      const retryData = `${minDate[3]}-${minDate[2]}-${minDate[1]}`;
+      if (retryData !== data) {
+        const retryBody = new URLSearchParams(body);
+        retryBody.set("data", retryData);
+        const retry = await m2a.postForm(path, retryBody, {
+          headers: { Referer: `${m2a.http.defaults.baseURL || ""}${path}` },
+        });
+        if (retry.status >= 400) {
+          throw new Error(`Falha ao incluir participante ${participanteId}: HTTP ${retry.status}`);
+        }
+        ensureOperationAccepted(
+          cheerio.load(coerceHtmlPayload(retry.html)),
+          `a inclusão do participante ${participanteId}`,
+        );
+        return { ok: true, dataUsada: retryData };
+      }
+    }
+    throw err;
+  }
   return { ok: true };
 }
 

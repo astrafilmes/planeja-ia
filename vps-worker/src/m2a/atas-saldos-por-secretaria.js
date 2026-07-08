@@ -33,8 +33,9 @@ export function invalidateSaldoAtaCache(ataId) {
  *   avisos: [string]
  * }
  */
-export async function saldosPorSecretaria(ataId, { forceRefresh = false } = {}) {
-  const key = String(ataId);
+export async function saldosPorSecretaria(ataId, { forceRefresh = false, processoId = null } = {}) {
+  const processoKey = String(processoId ?? "").trim();
+  const key = `${ataId}::${processoKey || "todos"}`;
   if (!forceRefresh) {
     const hit = cache.get(key);
     if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.data;
@@ -46,7 +47,7 @@ export async function saldosPorSecretaria(ataId, { forceRefresh = false } = {}) 
       avisos.push(`Falha ao carregar cota: ${err.message}`);
       return { ataId, participantes: [] };
     }),
-    consumoDaAta(ataId).catch((err) => {
+    consumoDaAta(ataId, { processoId: processoKey || null }).catch((err) => {
       avisos.push(`Falha ao carregar consumo: ${err.message}`);
       return { ataId, agregado: {}, detalhado: [], listaContratos: [] };
     }),
@@ -80,6 +81,7 @@ export async function saldosPorSecretaria(ataId, { forceRefresh = false } = {}) 
 
   const data = {
     ataId,
+    processoId: processoKey || null,
     secretarias,
     avisos,
     consumoDebug: {

@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { AlertCircle, CheckCircle2, Loader2, ShieldAlert, Sparkles } from "lucide-react";
+import { AlertCircle, CheckCircle2, ExternalLink, Loader2, ShieldAlert, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +20,8 @@ export const PreGeracaoValidacaoPanel = memo(function PreGeracaoValidacaoPanel({
   onValidar,
   disabled,
 }: Props) {
+  const ataUrl = (ataId?: string | number | null) =>
+    ataId ? `http://precodereferencia.m2atecnologia.com.br/ata_registro_precos/${ataId}/` : null;
   const totalAjustes = result?.saldos.ajustados.length ?? 0;
   const totalBloqueiosSaldo = result?.saldos.bloqueados.length ?? 0;
   const totalNaoVerificado = result?.saldos.naoVerificados.length ?? 0;
@@ -116,7 +118,21 @@ export const PreGeracaoValidacaoPanel = memo(function PreGeracaoValidacaoPanel({
             <ul className="mt-2 max-h-48 list-disc overflow-auto pl-4 text-[12px]">
               {result.saldos.bloqueados.slice(0, 30).map((s, i) => (
                 <li key={i}>
-                  <strong>{s.contratoLabel}</strong> · item {s.numero ?? "?"} ·{" "}
+                  <strong>{s.contratoLabel}</strong> ·{" "}
+                  {ataUrl(s.ataId) ? (
+                    <a
+                      href={ataUrl(s.ataId)!}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-primary underline-offset-2 hover:underline"
+                    >
+                      Ata {s.ataNumero ?? s.ataId}
+                      <ExternalLink className="size-3" />
+                    </a>
+                  ) : (
+                    <>Ata {s.ataNumero ?? s.ataId}</>
+                  )}{" "}
+                  · item {s.numero ?? "?"} ·{" "}
                   pedido {s.quantidadeSolicitada}
                   {s.cota != null && ` · cota ${s.cota}`}
                   {s.consumido != null && ` · já contratado ${s.consumido}`}
@@ -140,7 +156,20 @@ export const PreGeracaoValidacaoPanel = memo(function PreGeracaoValidacaoPanel({
             <ul className="mt-2 max-h-40 list-disc overflow-auto pl-4 text-[12px]">
               {result.participantes.bloqueadas.slice(0, 20).map((p, i) => (
                 <li key={i}>
-                  <strong>Ata {p.ataNumero ?? p.ataId}</strong> ·{" "}
+                  {ataUrl(p.ataId) ? (
+                    <a
+                      href={ataUrl(p.ataId)!}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 font-semibold text-primary underline-offset-2 hover:underline"
+                    >
+                      Ata {p.ataNumero ?? p.ataId}
+                      <ExternalLink className="size-3" />
+                    </a>
+                  ) : (
+                    <strong>Ata {p.ataNumero ?? p.ataId}</strong>
+                  )}{" "}
+                  ·{" "}
                   <strong>{p.nome}</strong> · {p.status}
                   {p.mensagem ? ` — ${p.mensagem}` : ""}
                 </li>

@@ -47,7 +47,8 @@ export async function atasRoutes(app) {
     const { ataId } = req.params;
     if (!validarAtaId(ataId, reply)) return;
     try {
-      return await consumoDaAta(ataId);
+      const processoId = req.query?.processo_id ?? req.query?.m2a_processo_id ?? null;
+      return await consumoDaAta(ataId, { processoId });
     } catch (err) {
       return reply.code(500).send({ error: err.message });
     }
@@ -58,8 +59,9 @@ export async function atasRoutes(app) {
     const { ataId } = req.params;
     if (!validarAtaId(ataId, reply)) return;
     const forceRefresh = String(req.query?.refresh ?? "") === "1";
+    const processoId = req.query?.processo_id ?? req.query?.m2a_processo_id ?? null;
     try {
-      return await saldosPorSecretaria(ataId, { forceRefresh });
+      return await saldosPorSecretaria(ataId, { forceRefresh, processoId });
     } catch (err) {
       return reply.code(500).send({ error: err.message });
     }

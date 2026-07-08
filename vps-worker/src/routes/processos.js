@@ -530,9 +530,12 @@ async function fetchItensDaAta(ata, trace) {
 //   | td.text-center (vigência início) | td.text-center (vigência fim)
 //   | td.text-right (valor) | td hidden status | td hidden modalidade
 //   | td ações | td hidden objeto
-function extractContratosFromDoc($, ataId) {
+function extractContratosFromDoc($, ataId, processoId = null) {
   const out = [];
   const seen = new Set();
+  const expectedProcessoId = String(processoId ?? "").trim();
+  let descartadosOutroProcesso = 0;
+  let descartadosSemProcesso = 0;
   $('a[href*="/contratos/"]').each((_, a) => {
     const $a = $(a);
     const href = $a.attr("href") || "";
@@ -596,11 +599,29 @@ function extractContratosFromDoc($, ataId) {
       if (cnpjMatch) cnpj = cnpjMatch[0];
     }
 
+    const processoAnchor = tr.find('a[href*="/processo_administrativo/"]').first();
+    const processoHref = processoAnchor.attr("href") || "";
+    const processoIdLinha = processoHref.match(/\/processo_administrativo\/(\d+)\/?/)?.[1] || "";
+    const processoNumero = cleanTextValue(processoAnchor.find("span").first().text() || processoAnchor.text());
+
+    if (expectedProcessoId) {
+      if (!processoIdLinha) {
+        descartadosSemProcesso += 1;
+        return;
+      }
+      if (processoIdLinha !== expectedProcessoId) {
+        descartadosOutroProcesso += 1;
+        return;
+      }
+    }
+
     out.push({
       id_contrato_m2a: contratoId,
       numero_contrato: numero,
       sequencial: extrairNumeroSequencial(numero),
       id_ata: ataId,
+      m2a_processo_id: processoIdLinha || null,
+      processo_numero: processoNumero || null,
       secretaria_nome: secretaria || "",
       fornecedor_nome: fornecedor || "",
       fornecedor_cnpj: cnpj,
@@ -611,6 +632,12 @@ function extractContratosFromDoc($, ataId) {
       objeto,
     });
   });
+  if (expectedProcessoId && (descartadosOutroProcesso || descartadosSemProcesso)) {
+    console.warn(
+      `[m2a-vps] ata ${ataId}: contratos descartados pelo filtro de processo ${expectedProcessoId} ` +
+        `(outro processo=${descartadosOutroProcesso}, sem processo=${descartadosSemProcesso})`,
+    );
+  }
   return out;
 }
 
@@ -698,7 +725,7 @@ async function fetchAtaFornecedorFromDetail(idAta, trace) {
   return null;
 }
 
-async function fetchContratosDaAta(ata, trace) {
+async function fetchContratosDaAta(ata, trace = [], processoId = null) {
   const url = `/ata_registro_precos/tabela_contratos/${ata.id_ata}?page_size=1000`;
   try {
     traceStep(trace, {
@@ -709,7 +736,7 @@ async function fetchContratosDaAta(ata, trace) {
       url,
     });
     const doc = await fetchDocDetailed(url);
-    const contratos = extractContratosFromDoc(doc.$, ata.id_ata);
+    const contratos = extractContratosFromDoc(doc.$, ata.id_ata, processoId);
     traceStep(trace, {
       fase: "contratos",
       label: "contratos da ata",
@@ -724,6 +751,8 @@ async function fetchContratosDaAta(ata, trace) {
       amostra: contratos.slice(0, 5).map((contrato) => ({
         numero_contrato: contrato.numero_contrato,
         id_contrato_m2a: contrato.id_contrato_m2a,
+        m2a_processo_id: contrato.m2a_processo_id,
+        processo_numero: contrato.processo_numero,
         secretaria_nome: contrato.secretaria_nome,
       })),
     });
@@ -1121,7 +1150,7 @@ async function runCascata(processoId) {
       : fetchVinculosDaAta(ata, mapaMestraPorOrdem, trace);
     const [vinculos, contratos] = await Promise.all([
       vinculosPromise,
-      fetchContratosDaAta(ata, trace),
+      fetchContratosDaAta(ata, trace, processoId),
     ]);
     if (ata.cancelada) {
       traceStep(trace, {
@@ -1383,7 +1412,7 @@ export async function processosRoutes(app) {
     const ataId = String(req.params.ataId || "").trim();
     if (!ataId) return reply.code(400).send({ error: "ataId obrigatório" });
     try {
-      const contratos = await fetchContratosDaAta({ id_ata: ataId });
+      const contratos = await fetchContratosDaAta({ id_ata: ataId }, [], id);
       return { id_ata: ataId, contratos };
     } catch (err) {
       const status = err.status && err.status >= 400 ? err.status : 500;
