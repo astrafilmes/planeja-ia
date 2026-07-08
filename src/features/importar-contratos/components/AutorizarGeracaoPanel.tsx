@@ -342,6 +342,14 @@ export const AutorizarGeracaoPanel = memo(function AutorizarGeracaoPanel({
               </div>
             </div>
 
+            {!preGeracaoValidada && contratosSelecionados.length > 0 && (
+              <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-900 dark:text-amber-200">
+                Execute a <strong>Validação pré-geração</strong> acima antes de
+                autorizar. O sistema vai consultar o saldo real de cada ata e
+                confirmar as secretarias participantes.
+              </div>
+            )}
+
             <Button
               size="lg"
               className="w-full"
