@@ -643,7 +643,7 @@ export async function atualizarQuantidadesItens(contratoId, itensDesejados) {
       } catch (err) {
         ultimoErro = err;
         const status = err?.response?.status ?? err?.status ?? 0;
-        const isTransient = status >= 500 || status === 429 || status === 0;
+        const isTransient = isTransientM2AError(err);
         console.warn(
           `[m2a-contrato] falha ao atualizar quantidade item ${m.desejado.numero} (tentativa ${tentativa}/${MAX_TENTATIVAS}, status=${status}): ${err.message}`,
         );
