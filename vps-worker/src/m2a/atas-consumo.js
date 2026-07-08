@@ -47,10 +47,13 @@ function normSec(txt) {
 }
 
 async function tentarListarContratos(ataId) {
+  // Endpoint oficial usado pela tela da ata:
+  //   GET /ata_registro_precos/tabela_contratos/{ataId}?page_size=1000
+  // Fallbacks antigos mantidos por segurança.
   const candidates = [
+    `/ata_registro_precos/tabela_contratos/${ataId}?page_size=1000`,
     `/contratos/tabela/?ata_registro_preco=${ataId}&page_size=1000`,
     `/contratos/tabela/?ata=${ataId}&page_size=1000`,
-    `/contratos/tabela/?ata_id=${ataId}&page_size=1000`,
   ];
   let lastErr = null;
   for (const path of candidates) {
@@ -79,8 +82,19 @@ async function tentarListarContratos(ataId) {
   return { $: null, rows: null, path: null };
 }
 
+function limparNomeSecretaria(txt) {
+  // Ex.: "05 - SECRETARIA DE DESENVOLVIMENTO RURAL E PESCA (2025)"
+  //   → "SECRETARIA DE DESENVOLVIMENTO RURAL E PESCA"
+  let s = String(txt ?? "").replace(/\s+/g, " ").trim();
+  s = s.replace(/^\d+\s*-\s*/, "");
+  s = s.replace(/\s*\(\s*\d{4}\s*\)\s*$/, "");
+  return s.trim();
+}
+
 /**
  * Lista os contratos de uma ata (id, número, secretaria, status).
+ * Colunas (após checkbox): número, processo, contratante (secretaria),
+ * fornecedor, início vig., fim vig., valor, situação, origem.
  */
 export async function listarContratosDaAta(ataId) {
   const { $, rows, path } = await tentarListarContratos(ataId);
@@ -91,32 +105,45 @@ export async function listarContratosDaAta(ataId) {
     const idAttr = $tr.attr("id") || "";
     const mId = idAttr.match(/tr_(\d+)/);
     const contratoId = mId ? Number(mId[1]) : null;
-    const rowText = $tr.text().replace(/\s+/g, " ").trim();
-    // Detecta status via badge (cancelado/rescindido/etc).
-    const badgeTxt = $tr.find(".kt-badge, .badge").text().toLowerCase();
-    const cancelado = /cancel|rescind|anulad/i.test(badgeTxt);
-    // Secretaria costuma ser a coluna com texto mais longo em caixa alta.
-    let secretariaNome = "";
-    $tr.find("td").each((_, td) => {
-      const t = $(td).text().replace(/\s+/g, " ").trim();
+    if (!contratoId) return;
+
+    const cells = $tr.find("td, th").toArray().map((c) =>
+      $(c).text().replace(/\s+/g, " ").trim(),
+    );
+
+    // Número contrato: primeira célula com padrão "NNN/AAAA..."
+    const numero = cells.find((t) => /^\d{1,6}\/\d{4}/.test(t)) || "";
+
+    // Secretaria (contratante): célula que começa com "NN - " ou contém
+    // termos institucionais conhecidos (SECRETARIA/PREFEITURA/FUNDO/etc).
+    let contratanteRaw = "";
+    for (const t of cells) {
+      if (!t) continue;
       if (
-        t.length > secretariaNome.length &&
-        /[A-ZÀ-Ú]{4}/.test(t) &&
-        !/^\d/.test(t) &&
-        !/^R\$/.test(t)
+        /^\d+\s*-\s*/.test(t) ||
+        /\b(SECRETARIA|PREFEITURA|FUNDO|C[ÂA]MARA|GABINETE|CONTROLADORIA|PROCURADORIA|AUTARQUIA)\b/i.test(t)
       ) {
-        secretariaNome = t;
+        contratanteRaw = t;
+        break;
       }
-    });
-    // Número do contrato: coluna começando com dígitos "026/2025..." ou similar.
-    let numero = "";
-    $tr.find("td").each((_, td) => {
-      const t = $(td).text().replace(/\s+/g, " ").trim();
-      if (!numero && /^\d{1,6}\/\d{4}/.test(t)) numero = t;
-    });
-    if (contratoId) {
-      out.push({ contratoId, numero, secretariaNome, cancelado, rowText });
     }
+    const secretariaNome = limparNomeSecretaria(contratanteRaw);
+
+    const badgeTxt = $tr
+      .find(".kt-badge, .badge")
+      .map((_, b) => $(b).text().trim())
+      .get()
+      .join(" ");
+    const cancelado = /cancel|rescind|anulad|encerrad|extint/i.test(badgeTxt);
+
+    out.push({
+      contratoId,
+      numero,
+      secretariaNome,
+      contratanteRaw,
+      cancelado,
+      situacao: badgeTxt.trim(),
+    });
   });
   return { path, contratos: out };
 }
