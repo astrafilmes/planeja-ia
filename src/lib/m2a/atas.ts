@@ -47,6 +47,13 @@ export type SaldoItemPorSecretaria = {
   cota: number | null;
   consumido: number;
   saldo: number | null;
+  contratosConsumidores?: Array<{
+    contratoId: number | string;
+    numeroContrato?: string | null;
+    processoId?: string | null;
+    processoNumero?: string | null;
+    quantidade?: number | null;
+  }>;
 };
 
 export type SaldoSecretariaAta = {
@@ -62,7 +69,17 @@ export type SaldosPorSecretariaResponse = {
   ataId: string | number;
   processoId?: string | null;
   secretarias: SaldoSecretariaAta[];
-  avisos: string[];
+  avisos: Array<
+    | string
+    | {
+        tipo?: string;
+        mensagem: string;
+        contratoId?: number | string;
+        numeroContrato?: string | null;
+        processoId?: string | null;
+        processoNumero?: string | null;
+      }
+  >;
   consumoDebug?: {
     contratosConsiderados: number;
     linhas: number;

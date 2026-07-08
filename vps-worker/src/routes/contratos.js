@@ -34,9 +34,11 @@ export async function contratosRoutes(app) {
         contratoId: payload.contratoId,
         etapa: "erro",
         mensagem: err.message,
+        code: err.code,
+        excedentes: err.excedentes,
         sucesso: false,
       });
-      sseSend(reply, "error", { ok: false, error: err.message });
+      sseSend(reply, "error", { ok: false, error: err.message, code: err.code, excedentes: err.excedentes });
     } finally {
       reply.raw.end();
     }
@@ -50,7 +52,7 @@ export async function contratosRoutes(app) {
       const result = await processarContratoCompleto(payload, (e) => events.push(e));
       return { ok: true, events, ...result };
     } catch (err) {
-      return reply.code(500).send({ ok: false, error: err.message, events });
+      return reply.code(500).send({ ok: false, error: err.message, code: err.code, excedentes: err.excedentes, events });
     }
   });
 
