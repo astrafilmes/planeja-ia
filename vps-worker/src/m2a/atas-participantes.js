@@ -52,12 +52,16 @@ function tokensNome(txt) {
     .filter((w) => w.length >= 4 && !GENERIC_TOKENS.has(w));
 }
 
+function tokenEquivalente(a, b) {
+  if (a === b) return true;
+  return a.length >= 4 && b.length >= 4 && (a.startsWith(b) || b.startsWith(a));
+}
+
 function scoreNomeParticipante(alvoNome, participanteNome) {
   const alvo = tokensNome(alvoNome);
   const cand = tokensNome(participanteNome);
   if (alvo.length < 2 || cand.length < 2) return 0;
-  const candSet = new Set(cand);
-  const overlap = alvo.filter((w) => candSet.has(w)).length;
+  const overlap = alvo.filter((w) => cand.some((c) => tokenEquivalente(w, c))).length;
   if (!overlap) return 0;
   return overlap / Math.max(Math.min(alvo.length, cand.length), 1);
 }
