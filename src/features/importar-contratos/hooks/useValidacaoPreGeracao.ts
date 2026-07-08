@@ -138,7 +138,7 @@ export function useValidacaoPreGeracao(options: {
 
             for (const c of contratos) {
               const label = `${c.empresa} · ${c.secretariaSigla}` || "(contrato)";
-              const secKey = normSecKey(c.secretariaSigla || c.secretariaNome || "");
+              const secKey = normSecKey(c.secretariaSigla || "");
               const inner = idx?.get(secKey) ?? null;
 
               for (const item of c.itens) {
