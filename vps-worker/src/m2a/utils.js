@@ -177,7 +177,7 @@ const IGNORABLE_INFORMATIVE =
 export function ensureOperationAccepted($, contexto) {
   const { rejectedMessages } = getRejectedMessages($);
   const blocking = rejectedMessages.filter(
-    (m) => !IGNORABLE_INFORMATIVE.test(m),
+    (m) => !IGNORABLE_INFORMATIVE.test(m) && !ALREADY_EXISTS_MESSAGE.test(m),
   );
   if (blocking.length) {
     throw new Error(`M2A rejeitou ${contexto}: ${blocking.join(" | ")}`);
@@ -186,9 +186,12 @@ export function ensureOperationAccepted($, contexto) {
 
 export function throwIfFormRejected($, contexto) {
   const { rejectedMessages } = getRejectedMessages($);
-  if (rejectedMessages.length) {
+  const blocking = rejectedMessages.filter(
+    (m) => !ALREADY_EXISTS_MESSAGE.test(m),
+  );
+  if (blocking.length) {
     throw new Error(
-      `M2A rejeitou ${contexto}: ${rejectedMessages.join(" | ")}`,
+      `M2A rejeitou ${contexto}: ${blocking.join(" | ")}`,
     );
   }
 }
@@ -203,7 +206,9 @@ export function ensureActorLinked($, actorLabel, expectedMissingAlert) {
       `M2A não confirmou o vínculo de ${actorLabel}: ${rejectedMessages.join(" | ")}`,
     );
   }
-  const blocking = rejectedMessages.filter((m) => !IGNORABLE_INFORMATIVE.test(m));
+  const blocking = rejectedMessages.filter(
+    (m) => !IGNORABLE_INFORMATIVE.test(m) && !ALREADY_EXISTS_MESSAGE.test(m),
+  );
   if (blocking.length) {
     throw new Error(
       `M2A rejeitou o vínculo de ${actorLabel}: ${blocking.join(" | ")}`,
