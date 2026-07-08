@@ -2,6 +2,7 @@
 // O navegador nunca fala direto com a VPS nem com o portal M2A.
 
 import { supabase } from "@/integrations/supabase/client";
+import { FunctionsHttpError } from "@supabase/supabase-js";
 import type { M2aSyncPayload } from "@/lib/m2a";
 
 interface ProxyArgs {
@@ -19,13 +20,33 @@ async function callWorker<T = unknown>({
     body: { path, method, body },
   });
   if (error) {
-    throw new Error(error.message || "Falha ao chamar m2a-proxy");
+    let details = error.message || "Falha ao chamar m2a-proxy";
+    if (error instanceof FunctionsHttpError) {
+      try {
+        const raw = await error.context.text();
+        try {
+          const parsed = JSON.parse(raw);
+          details =
+            (parsed?.error as string) ||
+            (parsed?.message as string) ||
+            raw ||
+            details;
+        } catch {
+          if (raw) details = raw;
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+    console.error(`[m2a-proxy] ${method} ${path} falhou:`, details);
+    throw new Error(`m2a-proxy ${path}: ${details}`);
   }
   if (data && typeof data === "object" && "error" in data && (data as { error?: string }).error) {
     throw new Error(String((data as { error: string }).error));
   }
   return data as T;
 }
+
 
 export interface WorkerProcessoResponse extends M2aSyncPayload {
   processo_id: string;
