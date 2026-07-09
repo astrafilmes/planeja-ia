@@ -46,13 +46,25 @@ export function useProcessoDetalhe(id: string) {
       const itensByContrato: Record<string, ContratoItemM2A[]> = {};
 
       if (contratoIds.length > 0) {
-        const { data: itens, error: itensError } = await supabase
-          .from("contrato_itens")
-          .select(
-            "contrato_id, numero_item, ordem_item, descricao, m2a_item_id, quantidade, unidade, valor_unitario, valor_total",
-          )
-          .in("contrato_id", contratoIds);
-        if (itensError) throw itensError;
+        // PostgREST devolve no máximo 1000 linhas por request; um processo
+        // pode ter milhares de contrato_itens (ex.: 4k+). Sem paginação,
+        // contratos além do corte apareciam com R$ 0,00 e sem itens no envio
+        // ao portal ("Contrato sem itens para envio").
+        const PAGE = 1000;
+        const itens: any[] = [];
+        for (let from = 0; ; from += PAGE) {
+          const { data: page, error: itensError } = await supabase
+            .from("contrato_itens")
+            .select(
+              "contrato_id, numero_item, ordem_item, descricao, m2a_item_id, quantidade, unidade, valor_unitario, valor_total",
+            )
+            .in("contrato_id", contratoIds)
+            .range(from, from + PAGE - 1);
+          if (itensError) throw itensError;
+          const rows = page ?? [];
+          itens.push(...rows);
+          if (rows.length < PAGE) break;
+        }
 
         const m2aItemIds = [
           ...new Set(
