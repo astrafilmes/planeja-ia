@@ -17,8 +17,9 @@ import {
   isNumericM2AId,
   listenAllM2AProgress,
   sendToM2A,
+  type M2AProgressEvent,
 } from "@/lib/m2a";
-import { sleep, type ContratoRow, type Processo } from "../lib";
+import { type ContratoRow, type Processo } from "../lib";
 
 type Params = {
   processoId: string;
@@ -92,10 +93,26 @@ export function useEnviarContratosM2A({
     if (preference.fiscal_id) setM2aFiscalId(preference.fiscal_id);
   }, [preference]);
 
-  // Listener global de progresso — limpo no cleanup para evitar memory leak.
+  // Refs para o listener global — evita re-registrar a cada mudança em
+  // `contratos` (o que fazia perder eventos `concluido` durante o troca).
+  const contratosRef = useRef(contratos);
+  useEffect(() => {
+    contratosRef.current = contratos;
+  }, [contratos]);
+  // Resolver do envio sequencial: cada contrato só termina quando o worker
+  // emite `concluido` ou `erro`. O loop de envio aguarda essa promessa antes
+  // de despachar o próximo, evitando 7-8 SSEs concorrentes disputando a
+  // sessão M2A e a edge function.
+  const pendingResolversRef = useRef<Map<string, (evt: M2AProgressEvent) => void>>(
+    new Map(),
+  );
+
+  // Listener global de progresso — registrado UMA vez no mount.
   useEffect(() => {
     const off = listenAllM2AProgress(async (event) => {
-      const contratoAtual = contratos.find((c) => c.id === event.contratoId);
+      const contratoAtual = contratosRef.current.find(
+        (c) => c.id === event.contratoId,
+      );
       const belongsToProcess = Boolean(contratoAtual);
       if (!belongsToProcess) return;
       if (
@@ -150,6 +167,11 @@ export function useEnviarContratosM2A({
         if (m2aBatchRef.current.finished >= total) {
           finishTask("Envio ao portal concluído.");
         }
+        const resolver = pendingResolversRef.current.get(event.contratoId);
+        if (resolver) {
+          pendingResolversRef.current.delete(event.contratoId);
+          resolver(event);
+        }
       }
 
       if (event.etapa === "erro") {
@@ -170,12 +192,18 @@ export function useEnviarContratosM2A({
           })
           .eq("id", event.contratoId);
         qc.invalidateQueries({ queryKey: ["processo-detail", processoId] });
+        const resolver = pendingResolversRef.current.get(event.contratoId);
+        if (resolver) {
+          pendingResolversRef.current.delete(event.contratoId);
+          resolver(event);
+        }
       }
     });
     return () => {
       off?.();
     };
-  }, [contratos, failTask, finishTask, processoId, qc, updateProgress]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const validateM2AConfig = useCallback(() => {
     const ids = Array.from(selected);
@@ -381,8 +409,24 @@ export function useEnviarContratosM2A({
         });
       }
 
+      // Envio SEQUENCIAL de verdade: registra um resolver para este contrato
+      // e só avança quando o listener global receber `concluido` ou `erro`.
+      // Isso evita 7-8 SSEs concorrentes disputando cookie/sessão M2A e
+      // exaurindo a edge function — que era o motivo do "embaralhado".
+      const waitTerminal = new Promise<void>((resolve) => {
+        pendingResolversRef.current.set(cid, () => resolve());
+        // Timeout de segurança (8min por contrato): se o SSE cair, libera
+        // o próximo. O listener global continua ativo caso o evento chegue
+        // atrasado (worker mais lento que a edge function).
+        setTimeout(() => {
+          if (pendingResolversRef.current.has(cid)) {
+            pendingResolversRef.current.delete(cid);
+            resolve();
+          }
+        }, 8 * 60 * 1000);
+      });
       sendToM2A(payload as any);
-      await sleep(3000);
+      await waitTerminal;
     }
 
     setSending(false);
