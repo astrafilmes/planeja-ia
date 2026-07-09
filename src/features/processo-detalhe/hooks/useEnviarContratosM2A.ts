@@ -409,8 +409,24 @@ export function useEnviarContratosM2A({
         });
       }
 
+      // Envio SEQUENCIAL de verdade: registra um resolver para este contrato
+      // e só avança quando o listener global receber `concluido` ou `erro`.
+      // Isso evita 7-8 SSEs concorrentes disputando cookie/sessão M2A e
+      // exaurindo a edge function — que era o motivo do "embaralhado".
+      const waitTerminal = new Promise<void>((resolve) => {
+        pendingResolversRef.current.set(cid, () => resolve());
+        // Timeout de segurança (8min por contrato): se o SSE cair, libera
+        // o próximo. O listener global continua ativo caso o evento chegue
+        // atrasado (worker mais lento que a edge function).
+        setTimeout(() => {
+          if (pendingResolversRef.current.has(cid)) {
+            pendingResolversRef.current.delete(cid);
+            resolve();
+          }
+        }, 8 * 60 * 1000);
+      });
       sendToM2A(payload as any);
-      await sleep(3000);
+      await waitTerminal;
     }
 
     setSending(false);
