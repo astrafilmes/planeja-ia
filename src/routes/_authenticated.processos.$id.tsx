@@ -78,8 +78,14 @@ function Page() {
 
   const clearSelection = useCallback(() => setSelected(new Set()), []);
   const toggleAll = useCallback(
-    (checked: boolean) => {
-      setSelected(checked ? new Set(contratos.map((c) => c.id)) : new Set());
+    (checked: boolean, ids?: string[]) => {
+      const pool = ids ?? contratos.map((c) => c.id);
+      setSelected((prev) => {
+        const n = new Set(prev);
+        if (checked) for (const id of pool) n.add(id);
+        else for (const id of pool) n.delete(id);
+        return n;
+      });
     },
     [contratos],
   );
