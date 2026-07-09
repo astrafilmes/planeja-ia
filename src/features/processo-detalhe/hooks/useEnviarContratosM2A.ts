@@ -17,8 +17,9 @@ import {
   isNumericM2AId,
   listenAllM2AProgress,
   sendToM2A,
+  type M2AProgressEvent,
 } from "@/lib/m2a";
-import { sleep, type ContratoRow, type Processo } from "../lib";
+import { type ContratoRow, type Processo } from "../lib";
 
 type Params = {
   processoId: string;
