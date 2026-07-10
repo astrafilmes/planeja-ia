@@ -772,6 +772,15 @@ function Page() {
  })}
  </TableBody>
  </Table>
+ <TablePagination
+   page={processosPage}
+   pageSize={processosPageSize}
+   totalPages={processosTotalPages}
+   total={processosTotal}
+   onPageChange={setProcessosPage}
+   onPageSizeChange={setProcessosPageSize}
+   label="processo(s)"
+ />
  </Card>
 
  <AlertDialog
