@@ -31,6 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TablePagination, usePaginatedRows } from "@/components/ui/table-pagination";
 import { BRL, formatDateBR, type ContratoRow } from "../lib";
 import { M2AStatusBadge } from "./M2AStatusBadge";
 import { ContratosBulkActionsBar } from "./ContratosBulkActionsBar";
