@@ -216,6 +216,17 @@ function Page() {
  },
  });
 
+  const {
+    paginated: paginatedProcessos,
+    page: processosPage,
+    setPage: setProcessosPage,
+    pageSize: processosPageSize,
+    setPageSize: setProcessosPageSize,
+    totalPages: processosTotalPages,
+    total: processosTotal,
+  } = usePaginatedRows<any>(processos ?? [], 25);
+
+
  useEffect(() => {
  setSelected(new Set());
  }, [processos]);
