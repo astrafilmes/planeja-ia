@@ -127,6 +127,25 @@ export const ContratoHeaderActions = memo(function ContratoHeaderActions({
         </DropdownMenuContent>
       </DropdownMenu>
 
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={onSincronizar}
+        disabled={sincronizando || !connected || !hasM2AContrato}
+        title={
+          !hasM2AContrato
+            ? "Envie o contrato à M2A antes de sincronizar."
+            : "Puxar quantidades e itens atualizados do portal M2A."
+        }
+      >
+        {sincronizando ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : (
+          <RefreshCw className="size-4" />
+        )}
+        {sincronizando ? "Sincronizando..." : "Sincronizar da M2A"}
+      </Button>
+
       <Button size="sm" onClick={onEnviar} disabled={enviando || !connected}>
         {enviando ? (
           <Loader2 className="size-4 animate-spin" />
