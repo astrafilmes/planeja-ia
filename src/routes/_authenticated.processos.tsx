@@ -30,6 +30,7 @@ import {
  TableHeader,
  TableRow,
 } from"@/components/ui/table";
+import { TablePagination, usePaginatedRows } from"@/components/ui/table-pagination";
 import {
  Dialog,
  DialogContent,
