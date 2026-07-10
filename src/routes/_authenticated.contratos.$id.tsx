@@ -9,6 +9,7 @@ import {
   useContratoForm,
   useEnviarContratoM2A,
   useItemMutations,
+  useSincronizarContratoM2A,
 } from "@/features/contrato-detalhe/hooks";
 import {
   ContratoAtoresTab,
