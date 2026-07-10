@@ -83,6 +83,9 @@ function Page() {
           enviando={envio.enviando}
           connected={envio.connected}
           statusM2A={statusM2A}
+          hasM2AContrato={Boolean(c.m2a_contrato_id)}
+          sincronizando={sincro.sincronizando}
+          onSincronizar={sincro.sincronizar}
           onEnviar={envio.handleEnviar}
           onStatusChanged={() => refetch()}
         />
