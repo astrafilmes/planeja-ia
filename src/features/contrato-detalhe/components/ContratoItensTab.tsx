@@ -78,7 +78,8 @@ export const ContratoItensTab = memo(function ContratoItensTab({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {itens.map((it, i) => {
+            {paginatedItens.map((it, i) => {
+              const displayIndex = page * pageSize + i;
               const total = Number(
                 it.valor_total ??
                   Number(it.quantidade ?? 0) * Number(it.valor_unitario ?? 0),
