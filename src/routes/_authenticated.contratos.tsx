@@ -265,16 +265,26 @@ function Page() {
  const list = data ?? [];
  const ids = list.map((c: any) => c.id);
  const totals: Record<string, number> = {};
- if (ids.length) {
- const { data: itens } = await supabase
- .from("contrato_itens")
- .select("contrato_id, valor_total")
- .in("contrato_id", ids);
- for (const it of (itens ?? []) as any[]) {
- totals[it.contrato_id] =
- (totals[it.contrato_id] ?? 0) + Number(it.valor_total ?? 0);
- }
- }
+      if (ids.length) {
+        // PostgREST limita 1000 linhas/request; contratos com muitos itens
+        // ficavam com valor R$ 0,00 na listagem. Paginar até esgotar.
+        const PAGE = 1000;
+        for (let from = 0; ; from += PAGE) {
+          const { data: itens, error: itErr } = await supabase
+            .from("contrato_itens")
+            .select("contrato_id, valor_total")
+            .in("contrato_id", ids)
+            .range(from, from + PAGE - 1);
+          if (itErr) throw itErr;
+          const rows = (itens ?? []) as any[];
+          for (const it of rows) {
+            totals[it.contrato_id] =
+              (totals[it.contrato_id] ?? 0) + Number(it.valor_total ?? 0);
+          }
+          if (rows.length < PAGE) break;
+        }
+      }
+
  return list.map((c: any) => ({ ...c, valor_total: totals[c.id] ?? 0 }));
  },
  });
