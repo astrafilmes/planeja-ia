@@ -691,7 +691,7 @@ function Page() {
  </TableCell>
  </TableRow>
  )}
- {processos?.map((p: any) => {
+ {paginatedProcessos.map((p: any) => {
  const parsed = parseNumeroProcesso(p.numero_processo);
  const objetoResumo = resumirObjetoProcesso(p.objeto);
  return (
