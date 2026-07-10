@@ -10,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TablePagination, usePaginatedRows } from "@/components/ui/table-pagination";
 import { BRL, formatQuantidade, type ItemConsolidado } from "../lib";
 
 export interface ItensConsolidadosTabProps {
@@ -23,6 +24,15 @@ export function ItensConsolidadosTab({
   search,
   onSearchChange,
 }: ItensConsolidadosTabProps) {
+  const {
+    paginated: paginatedItens,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+    totalPages,
+    total,
+  } = usePaginatedRows(itens, 25);
   return (
     <Card>
       <CardHeader className="border-b border-border/60">
@@ -75,7 +85,7 @@ export function ItensConsolidadosTab({
                 </TableCell>
               </TableRow>
             ) : (
-              itens.map((item) => (
+              paginatedItens.map((item) => (
                 <TableRow key={`${item.codigo}-${item.descricao}`}>
                   <TableCell className="text-xs">{item.codigo}</TableCell>
                   <TableCell className="min-w-0">
@@ -100,6 +110,15 @@ export function ItensConsolidadosTab({
             )}
           </TableBody>
         </Table>
+        <TablePagination
+          page={page}
+          pageSize={pageSize}
+          totalPages={totalPages}
+          total={total}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          label="item(ns)"
+        />
       </CardContent>
     </Card>
   );

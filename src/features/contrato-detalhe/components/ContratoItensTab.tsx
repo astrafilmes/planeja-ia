@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TablePagination, usePaginatedRows } from "@/components/ui/table-pagination";
 import { FileText, Pencil, Trash2 } from "lucide-react";
 import { BRL, calcQuantidadeTotal, type ItemActionKind, type ItemRow } from "../lib";
 
@@ -27,6 +28,15 @@ export const ContratoItensTab = memo(function ContratoItensTab({
   onItemAction,
 }: ContratoItensTabProps) {
   const quantidadeTotal = useMemo(() => calcQuantidadeTotal(itens), [itens]);
+  const {
+    paginated: paginatedItens,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+    totalPages,
+    total,
+  } = usePaginatedRows(itens, 25);
 
   if (itens.length === 0) {
     return (
@@ -68,7 +78,8 @@ export const ContratoItensTab = memo(function ContratoItensTab({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {itens.map((it, i) => {
+            {paginatedItens.map((it, i) => {
+              const displayIndex = page * pageSize + i;
               const total = Number(
                 it.valor_total ??
                   Number(it.quantidade ?? 0) * Number(it.valor_unitario ?? 0),
@@ -76,7 +87,7 @@ export const ContratoItensTab = memo(function ContratoItensTab({
               return (
                 <TableRow key={it.id} className="hover:bg-muted/40">
                   <TableCell className="pl-4 py-2 font-mono text-xs text-muted-foreground">
-                    {it.numero_item ?? i + 1}
+                    {it.numero_item ?? displayIndex + 1}
                   </TableCell>
                   <TableCell className="hidden py-2 text-xs sm:table-cell">
                     {it.lote ?? "—"}
@@ -174,6 +185,15 @@ export const ContratoItensTab = memo(function ContratoItensTab({
           </TableFooter>
         </Table>
       </div>
+      <TablePagination
+        page={page}
+        pageSize={pageSize}
+        totalPages={totalPages}
+        total={total}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        label="item(ns)"
+      />
     </Card>
   );
 });

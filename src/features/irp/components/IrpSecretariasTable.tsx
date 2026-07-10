@@ -7,6 +7,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TablePagination, usePaginatedRows } from "@/components/ui/table-pagination";
 import { Checkbox } from "@/components/ui/checkbox";
 import { StatusBadge } from "@/components/layout/AppShell";
 import { formatBRL, formatNumber } from "@/lib/utils/normalize";
@@ -130,6 +131,16 @@ export const IrpSecretariasTable = memo(function IrpSecretariasTable({
 }: IrpSecretariasTableProps) {
   const selectedSet = new Set(selectedKeys);
 
+  const {
+    paginated: paginatedRows,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+    totalPages,
+    total,
+  } = usePaginatedRows(rows, 25);
+
   const handleToggleAll = useCallback(
     (checked: boolean | "indeterminate") => {
       onToggleAll(checked === true);
@@ -161,7 +172,7 @@ export const IrpSecretariasTable = memo(function IrpSecretariasTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map((row) => (
+          {paginatedRows.map((row) => (
             <IrpSecretariasTableRow
               key={row.key}
               row={row}
@@ -175,6 +186,15 @@ export const IrpSecretariasTable = memo(function IrpSecretariasTable({
           ))}
         </TableBody>
       </Table>
+      <TablePagination
+        page={page}
+        pageSize={pageSize}
+        totalPages={totalPages}
+        total={total}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        label="unidade(s)"
+      />
     </div>
   );
 });

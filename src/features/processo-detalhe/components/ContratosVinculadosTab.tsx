@@ -31,6 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TablePagination, usePaginatedRows } from "@/components/ui/table-pagination";
 import { BRL, formatDateBR, type ContratoRow } from "../lib";
 import { M2AStatusBadge } from "./M2AStatusBadge";
 import { ContratosBulkActionsBar } from "./ContratosBulkActionsBar";
@@ -211,6 +212,16 @@ export function ContratosVinculadosTab({
     ataFilter !== "all" ||
     statusFilter !== "all";
 
+  const {
+    paginated: paginatedVisible,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+    totalPages,
+    total,
+  } = usePaginatedRows(visible, 25);
+
   return (
     <Card>
       <CardHeader className="border-b border-border/60">
@@ -372,7 +383,7 @@ export function ContratosVinculadosTab({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {visible.map((c) => {
+                {paginatedVisible.map((c) => {
                   const effectiveStatus =
                     batchStatus[c.id] ?? c.status_envio_m2a;
                   const isSelected = selected.has(c.id);
@@ -532,6 +543,15 @@ export function ContratosVinculadosTab({
                 </TableRow>
               </TableFooter>
             </Table>
+            <TablePagination
+              page={page}
+              pageSize={pageSize}
+              totalPages={totalPages}
+              total={total}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+              label="contrato(s)"
+            />
           </div>
         )}
       </CardContent>

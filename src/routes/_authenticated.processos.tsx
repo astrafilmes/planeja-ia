@@ -30,6 +30,7 @@ import {
  TableHeader,
  TableRow,
 } from"@/components/ui/table";
+import { TablePagination, usePaginatedRows } from"@/components/ui/table-pagination";
 import {
  Dialog,
  DialogContent,
@@ -214,6 +215,17 @@ function Page() {
  return data ?? [];
  },
  });
+
+  const {
+    paginated: paginatedProcessos,
+    page: processosPage,
+    setPage: setProcessosPage,
+    pageSize: processosPageSize,
+    setPageSize: setProcessosPageSize,
+    totalPages: processosTotalPages,
+    total: processosTotal,
+  } = usePaginatedRows<any>(processos ?? [], 25);
+
 
  useEffect(() => {
  setSelected(new Set());
@@ -679,7 +691,7 @@ function Page() {
  </TableCell>
  </TableRow>
  )}
- {processos?.map((p: any) => {
+ {paginatedProcessos.map((p: any) => {
  const parsed = parseNumeroProcesso(p.numero_processo);
  const objetoResumo = resumirObjetoProcesso(p.objeto);
  return (
@@ -760,6 +772,15 @@ function Page() {
  })}
  </TableBody>
  </Table>
+ <TablePagination
+   page={processosPage}
+   pageSize={processosPageSize}
+   totalPages={processosTotalPages}
+   total={processosTotal}
+   onPageChange={setProcessosPage}
+   onPageSizeChange={setProcessosPageSize}
+   label="processo(s)"
+ />
  </Card>
 
  <AlertDialog
