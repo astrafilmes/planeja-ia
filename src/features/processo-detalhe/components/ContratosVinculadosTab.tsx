@@ -543,6 +543,15 @@ export function ContratosVinculadosTab({
                 </TableRow>
               </TableFooter>
             </Table>
+            <TablePagination
+              page={page}
+              pageSize={pageSize}
+              totalPages={totalPages}
+              total={total}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+              label="contrato(s)"
+            />
           </div>
         )}
       </CardContent>
