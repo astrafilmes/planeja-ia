@@ -172,7 +172,7 @@ export const IrpSecretariasTable = memo(function IrpSecretariasTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map((row) => (
+          {paginatedRows.map((row) => (
             <IrpSecretariasTableRow
               key={row.key}
               row={row}
@@ -186,6 +186,15 @@ export const IrpSecretariasTable = memo(function IrpSecretariasTable({
           ))}
         </TableBody>
       </Table>
+      <TablePagination
+        page={page}
+        pageSize={pageSize}
+        totalPages={totalPages}
+        total={total}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        label="unidade(s)"
+      />
     </div>
   );
 });
