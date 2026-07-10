@@ -1,6 +1,6 @@
 import { memo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, CheckCircle2, ChevronDown, Clock, Loader2, Send, XCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, ChevronDown, Clock, Loader2, RefreshCw, Send, XCircle } from "lucide-react";
 import { ContractReportGenerator } from "@/components/contratos/ContractReportGenerator";
 import {
   DropdownMenu,
@@ -18,6 +18,9 @@ export interface ContratoHeaderActionsProps {
   enviando: boolean;
   connected: boolean;
   statusM2A: string;
+  hasM2AContrato: boolean;
+  sincronizando: boolean;
+  onSincronizar: () => void;
   onEnviar: () => void;
   onStatusChanged?: () => void;
 }
