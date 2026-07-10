@@ -24,6 +24,15 @@ export function ItensConsolidadosTab({
   search,
   onSearchChange,
 }: ItensConsolidadosTabProps) {
+  const {
+    paginated: paginatedItens,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+    totalPages,
+    total,
+  } = usePaginatedRows(itens, 25);
   return (
     <Card>
       <CardHeader className="border-b border-border/60">
