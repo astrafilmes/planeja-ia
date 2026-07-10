@@ -1142,6 +1142,15 @@ function Page() {
  </TableFooter>
  )}
  </Table>
+ <TablePagination
+   page={contratosPage}
+   pageSize={contratosPageSize}
+   totalPages={contratosTotalPages}
+   total={contratosTotal}
+   onPageChange={setContratosPage}
+   onPageSizeChange={setContratosPageSize}
+   label="contrato(s)"
+ />
  </div>
  </Card>
 
