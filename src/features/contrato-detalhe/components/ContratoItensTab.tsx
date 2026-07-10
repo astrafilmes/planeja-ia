@@ -185,6 +185,15 @@ export const ContratoItensTab = memo(function ContratoItensTab({
           </TableFooter>
         </Table>
       </div>
+      <TablePagination
+        page={page}
+        pageSize={pageSize}
+        totalPages={totalPages}
+        total={total}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        label="item(ns)"
+      />
     </Card>
   );
 });
