@@ -51,6 +51,9 @@ function Page() {
 
   const form = useContratoForm(id, contrato);
   const envio = useEnviarContratoM2A(id, contrato, refetch);
+  const sincro = useSincronizarContratoM2A(contrato, () => {
+    void refetch();
+  });
   const itemMut = useItemMutations(refetch);
 
   const itens = useMemo(() => contrato?.itens ?? [], [contrato?.itens]);
