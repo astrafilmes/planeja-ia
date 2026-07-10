@@ -212,6 +212,16 @@ export function ContratosVinculadosTab({
     ataFilter !== "all" ||
     statusFilter !== "all";
 
+  const {
+    paginated: paginatedVisible,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+    totalPages,
+    total,
+  } = usePaginatedRows(visible, 25);
+
   return (
     <Card>
       <CardHeader className="border-b border-border/60">
