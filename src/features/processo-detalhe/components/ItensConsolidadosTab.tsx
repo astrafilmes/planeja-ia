@@ -85,7 +85,7 @@ export function ItensConsolidadosTab({
                 </TableCell>
               </TableRow>
             ) : (
-              itens.map((item) => (
+              paginatedItens.map((item) => (
                 <TableRow key={`${item.codigo}-${item.descricao}`}>
                   <TableCell className="text-xs">{item.codigo}</TableCell>
                   <TableCell className="min-w-0">
