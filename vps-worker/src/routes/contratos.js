@@ -1,6 +1,7 @@
 // Rotas de automação de contrato. Streaming via Server-Sent Events.
 import { processarContratoCompleto } from "../m2a/orquestrador-contrato.js";
 import { diagnosticarContrato } from "../m2a/contrato.js";
+import { listarItensContrato } from "../m2a/atas-consumo.js";
 
 function sseInit(reply) {
   reply.raw.writeHead(200, {
