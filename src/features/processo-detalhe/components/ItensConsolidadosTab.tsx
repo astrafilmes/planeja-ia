@@ -110,6 +110,15 @@ export function ItensConsolidadosTab({
             )}
           </TableBody>
         </Table>
+        <TablePagination
+          page={page}
+          pageSize={pageSize}
+          totalPages={totalPages}
+          total={total}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          label="item(ns)"
+        />
       </CardContent>
     </Card>
   );
