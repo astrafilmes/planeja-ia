@@ -383,7 +383,7 @@ export function ContratosVinculadosTab({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {visible.map((c) => {
+                {paginatedVisible.map((c) => {
                   const effectiveStatus =
                     batchStatus[c.id] ?? c.status_envio_m2a;
                   const isSelected = selected.has(c.id);
