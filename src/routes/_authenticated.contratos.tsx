@@ -293,7 +293,17 @@ function Page() {
 
  return list.map((c: any) => ({ ...c, valor_total: totals[c.id] ?? 0 }));
  },
- });
+  });
+
+  const {
+    paginated: paginatedContratos,
+    page: contratosPage,
+    setPage: setContratosPage,
+    pageSize: contratosPageSize,
+    setPageSize: setContratosPageSize,
+    totalPages: contratosTotalPages,
+    total: contratosTotal,
+  } = usePaginatedRows<any>(contratos ?? [], 25);
 
  const stats = useMemo(() => {
  const list = contratos ?? [];
