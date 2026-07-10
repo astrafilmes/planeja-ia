@@ -131,6 +131,16 @@ export const IrpSecretariasTable = memo(function IrpSecretariasTable({
 }: IrpSecretariasTableProps) {
   const selectedSet = new Set(selectedKeys);
 
+  const {
+    paginated: paginatedRows,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+    totalPages,
+    total,
+  } = usePaginatedRows(rows, 25);
+
   const handleToggleAll = useCallback(
     (checked: boolean | "indeterminate") => {
       onToggleAll(checked === true);
