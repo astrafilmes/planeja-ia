@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TablePagination, usePaginatedRows } from "@/components/ui/table-pagination";
 import { FileText, Pencil, Trash2 } from "lucide-react";
 import { BRL, calcQuantidadeTotal, type ItemActionKind, type ItemRow } from "../lib";
 
