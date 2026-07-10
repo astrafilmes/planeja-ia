@@ -28,6 +28,15 @@ export const ContratoItensTab = memo(function ContratoItensTab({
   onItemAction,
 }: ContratoItensTabProps) {
   const quantidadeTotal = useMemo(() => calcQuantidadeTotal(itens), [itens]);
+  const {
+    paginated: paginatedItens,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+    totalPages,
+    total,
+  } = usePaginatedRows(itens, 25);
 
   if (itens.length === 0) {
     return (
