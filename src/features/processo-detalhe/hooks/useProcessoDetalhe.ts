@@ -59,12 +59,15 @@ export function useProcessoDetalhe(id: string) {
               "contrato_id, numero_item, ordem_item, descricao, m2a_item_id, quantidade, unidade, valor_unitario, valor_total",
             )
             .in("contrato_id", contratoIds)
+            .order("contrato_id", { ascending: true })
+            .order("id", { ascending: true })
             .range(from, from + PAGE - 1);
           if (itensError) throw itensError;
           const rows = page ?? [];
           itens.push(...rows);
           if (rows.length < PAGE) break;
         }
+
 
         const m2aItemIds = [
           ...new Set(
