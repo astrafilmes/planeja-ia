@@ -951,7 +951,7 @@ function Page() {
  </TableCell>
  </TableRow>
  )}
- {contratos?.map((c: any) => (
+ {paginatedContratos.map((c: any) => (
  <TableRow
  key={c.id}
  className="cursor-pointer hover:bg-muted/50"
