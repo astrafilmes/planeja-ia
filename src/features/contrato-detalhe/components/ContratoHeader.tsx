@@ -44,6 +44,9 @@ export const ContratoHeaderActions = memo(function ContratoHeaderActions({
   enviando,
   connected,
   statusM2A,
+  hasM2AContrato,
+  sincronizando,
+  onSincronizar,
   onEnviar,
   onStatusChanged,
 }: ContratoHeaderActionsProps) {
