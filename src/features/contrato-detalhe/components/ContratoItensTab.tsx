@@ -87,7 +87,7 @@ export const ContratoItensTab = memo(function ContratoItensTab({
               return (
                 <TableRow key={it.id} className="hover:bg-muted/40">
                   <TableCell className="pl-4 py-2 font-mono text-xs text-muted-foreground">
-                    {it.numero_item ?? i + 1}
+                    {it.numero_item ?? displayIndex + 1}
                   </TableCell>
                   <TableCell className="hidden py-2 text-xs sm:table-cell">
                     {it.lote ?? "—"}
