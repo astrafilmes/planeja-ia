@@ -9,6 +9,7 @@ import {
   useContratoForm,
   useEnviarContratoM2A,
   useItemMutations,
+  useSincronizarContratoM2A,
 } from "@/features/contrato-detalhe/hooks";
 import {
   ContratoAtoresTab,
@@ -50,6 +51,9 @@ function Page() {
 
   const form = useContratoForm(id, contrato);
   const envio = useEnviarContratoM2A(id, contrato, refetch);
+  const sincro = useSincronizarContratoM2A(contrato, () => {
+    void refetch();
+  });
   const itemMut = useItemMutations(refetch);
 
   const itens = useMemo(() => contrato?.itens ?? [], [contrato?.itens]);
@@ -79,6 +83,9 @@ function Page() {
           enviando={envio.enviando}
           connected={envio.connected}
           statusM2A={statusM2A}
+          hasM2AContrato={Boolean(c.m2a_contrato_id)}
+          sincronizando={sincro.sincronizando}
+          onSincronizar={sincro.sincronizar}
           onEnviar={envio.handleEnviar}
           onStatusChanged={() => refetch()}
         />

@@ -1,6 +1,7 @@
 // Rotas de automação de contrato. Streaming via Server-Sent Events.
 import { processarContratoCompleto } from "../m2a/orquestrador-contrato.js";
 import { diagnosticarContrato } from "../m2a/contrato.js";
+import { listarItensContrato } from "../m2a/atas-consumo.js";
 
 function sseInit(reply) {
   reply.raw.writeHead(200, {
@@ -64,6 +65,23 @@ export async function contratosRoutes(app) {
       return { ok: true, ...result };
     } catch (err) {
       return reply.code(400).send({ ok: false, error: err.message });
+    }
+  });
+
+  // POST /contratos/sincronizar — lê itens (id, número, descrição, quantidade)
+  // de um contrato já existente na M2A para o app espelhar quantidades alteradas
+  // diretamente no portal.
+  app.post("/contratos/sincronizar", async (req, reply) => {
+    const body = req.body || {};
+    const m2aContratoId = String(body.m2a_contrato_id ?? "").trim();
+    if (!/^\d+$/.test(m2aContratoId)) {
+      return reply.code(400).send({ error: "m2a_contrato_id inválido" });
+    }
+    try {
+      const itens = await listarItensContrato(m2aContratoId);
+      return { ok: true, m2a_contrato_id: m2aContratoId, itens };
+    } catch (err) {
+      return reply.code(502).send({ ok: false, error: err.message });
     }
   });
 }
