@@ -286,8 +286,9 @@ export const PreGeracaoValidacaoPanel = memo(function PreGeracaoValidacaoPanel({
               {result.participantes.bloqueadas.length} secretaria(s) sem
               vinculação na ata
             </summary>
-            <ul className="mt-2 max-h-40 list-disc overflow-auto pl-4 text-[12px]">
-              {result.participantes.bloqueadas.slice(0, 20).map((p, i) => (
+            <PaginatedList
+              items={result.participantes.bloqueadas}
+              renderItem={(p, i) => (
                 <li key={i}>
                   {ataUrl(p.ataId) ? (
                     <a
@@ -320,9 +321,8 @@ export const PreGeracaoValidacaoPanel = memo(function PreGeracaoValidacaoPanel({
                     </>
                   )}
                 </li>
-              ))}
-
-            </ul>
+              )}
+            />
             <p className="mt-2 text-[12px] text-muted-foreground">
               Corrija diretamente no M2A (cadastre a UG equivalente na ata do
               exercício) e clique em <strong>Revalidar</strong>.
