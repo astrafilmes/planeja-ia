@@ -4,22 +4,27 @@ import { Button } from "@/components/ui/button";
 
 /**
  * Hook de paginação local para listas já renderizadas em <Table>.
- * Reseta a página quando o total de itens muda (ex.: filtros).
+ * pageSize = -1 significa "Todos" (mostra a lista completa).
  */
 export function usePaginatedRows<T>(rows: T[], defaultPageSize = 25) {
   const [page, setPage] = React.useState(0);
-  const [pageSize, setPageSize] = React.useState(defaultPageSize);
+  const [pageSize, setPageSize] = React.useState<number>(defaultPageSize);
 
   const total = rows.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const showAll = pageSize <= 0;
+  const effectiveSize = showAll ? Math.max(1, total) : pageSize;
+  const totalPages = showAll ? 1 : Math.max(1, Math.ceil(total / effectiveSize));
 
   React.useEffect(() => {
     setPage(0);
   }, [total, pageSize]);
 
   const paginated = React.useMemo(
-    () => rows.slice(page * pageSize, page * pageSize + pageSize),
-    [rows, page, pageSize],
+    () =>
+      showAll
+        ? rows
+        : rows.slice(page * pageSize, page * pageSize + pageSize),
+    [rows, page, pageSize, showAll],
   );
 
   return { page, setPage, pageSize, setPageSize, totalPages, paginated, total };
@@ -49,8 +54,9 @@ export function TablePagination({
   className,
 }: TablePaginationProps) {
   if (total === 0) return null;
-  const from = page * pageSize + 1;
-  const to = Math.min((page + 1) * pageSize, total);
+  const showAll = pageSize <= 0;
+  const from = showAll ? 1 : page * pageSize + 1;
+  const to = showAll ? total : Math.min((page + 1) * pageSize, total);
   return (
     <div
       className={
@@ -74,6 +80,7 @@ export function TablePagination({
                 {opt}
               </option>
             ))}
+            <option value={-1}>Todos</option>
           </select>
         </label>
         <div className="flex items-center gap-1">
@@ -82,7 +89,7 @@ export function TablePagination({
             size="icon"
             variant="ghost"
             className="size-8"
-            disabled={page === 0}
+            disabled={showAll || page === 0}
             onClick={() => onPageChange(Math.max(0, page - 1))}
             aria-label="Página anterior"
           >
@@ -96,7 +103,7 @@ export function TablePagination({
             size="icon"
             variant="ghost"
             className="size-8"
-            disabled={page >= totalPages - 1}
+            disabled={showAll || page >= totalPages - 1}
             onClick={() => onPageChange(Math.min(totalPages - 1, page + 1))}
             aria-label="Próxima página"
           >
