@@ -1,9 +1,66 @@
-import { memo } from "react";
-import { AlertCircle, CheckCircle2, ExternalLink, Loader2, ShieldAlert, Sparkles } from "lucide-react";
+import { memo, useState, type ReactNode } from "react";
+import { AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, ExternalLink, Loader2, ShieldAlert, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { ValidacaoPreGeracao, ValidacaoProgress } from "../hooks/useValidacaoPreGeracao";
+
+const PAGE_SIZE = 25;
+
+function PaginatedList<T>({
+  items,
+  renderItem,
+  maxHeight = "max-h-72",
+}: {
+  items: T[];
+  renderItem: (item: T, index: number) => ReactNode;
+  maxHeight?: string;
+}) {
+  const [page, setPage] = useState(0);
+  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const current = Math.min(page, totalPages - 1);
+  const start = current * PAGE_SIZE;
+  const slice = items.slice(start, start + PAGE_SIZE);
+  return (
+    <>
+      <ul className={`mt-2 list-disc overflow-auto pl-4 text-[12px] ${maxHeight}`}>
+        {slice.map((item, i) => renderItem(item, start + i))}
+      </ul>
+      {items.length > PAGE_SIZE && (
+        <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
+          <span>
+            {start + 1}–{Math.min(start + PAGE_SIZE, items.length)} de {items.length}
+          </span>
+          <div className="flex items-center gap-1">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-6 px-2"
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              disabled={current === 0}
+            >
+              <ChevronLeft className="size-3" />
+            </Button>
+            <span className="px-1">
+              {current + 1} / {totalPages}
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-6 px-2"
+              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+              disabled={current >= totalPages - 1}
+            >
+              <ChevronRight className="size-3" />
+            </Button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
 
 type Props = {
   busy: boolean;
