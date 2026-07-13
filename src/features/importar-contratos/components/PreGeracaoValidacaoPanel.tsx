@@ -180,8 +180,9 @@ export const PreGeracaoValidacaoPanel = memo(function PreGeracaoValidacaoPanel({
             <summary className="cursor-pointer text-[12px] font-medium text-destructive">
               {result.saldos.bloqueados.length} item(ns) bloqueados por saldo
             </summary>
-            <ul className="mt-2 max-h-48 list-disc overflow-auto pl-4 text-[12px]">
-              {result.saldos.bloqueados.slice(0, 30).map((s, i) => (
+            <PaginatedList
+              items={result.saldos.bloqueados}
+              renderItem={(s, i) => (
                 <li key={i}>
                   <strong>{s.contratoLabel}</strong> ·{" "}
                   {ataUrl(s.ataId) ? (
@@ -230,8 +231,8 @@ export const PreGeracaoValidacaoPanel = memo(function PreGeracaoValidacaoPanel({
                     </span>
                   )}
                 </li>
-              ))}
-            </ul>
+              )}
+            />
           </details>
         )}
 
