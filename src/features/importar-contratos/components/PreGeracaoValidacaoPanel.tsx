@@ -1,9 +1,66 @@
-import { memo } from "react";
-import { AlertCircle, CheckCircle2, ExternalLink, Loader2, ShieldAlert, Sparkles } from "lucide-react";
+import { memo, useState, type ReactNode } from "react";
+import { AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, ExternalLink, Loader2, ShieldAlert, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { ValidacaoPreGeracao, ValidacaoProgress } from "../hooks/useValidacaoPreGeracao";
+
+const PAGE_SIZE = 25;
+
+function PaginatedList<T>({
+  items,
+  renderItem,
+  maxHeight = "max-h-72",
+}: {
+  items: T[];
+  renderItem: (item: T, index: number) => ReactNode;
+  maxHeight?: string;
+}) {
+  const [page, setPage] = useState(0);
+  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const current = Math.min(page, totalPages - 1);
+  const start = current * PAGE_SIZE;
+  const slice = items.slice(start, start + PAGE_SIZE);
+  return (
+    <>
+      <ul className={`mt-2 list-disc overflow-auto pl-4 text-[12px] ${maxHeight}`}>
+        {slice.map((item, i) => renderItem(item, start + i))}
+      </ul>
+      {items.length > PAGE_SIZE && (
+        <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
+          <span>
+            {start + 1}–{Math.min(start + PAGE_SIZE, items.length)} de {items.length}
+          </span>
+          <div className="flex items-center gap-1">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-6 px-2"
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              disabled={current === 0}
+            >
+              <ChevronLeft className="size-3" />
+            </Button>
+            <span className="px-1">
+              {current + 1} / {totalPages}
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-6 px-2"
+              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+              disabled={current >= totalPages - 1}
+            >
+              <ChevronRight className="size-3" />
+            </Button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
 
 type Props = {
   busy: boolean;
@@ -105,14 +162,16 @@ export const PreGeracaoValidacaoPanel = memo(function PreGeracaoValidacaoPanel({
             <summary className="cursor-pointer text-[12px] font-medium text-amber-900 dark:text-amber-200">
               {result.saldos.ajustados.length} item(ns) serão ajustados para o saldo disponível
             </summary>
-            <ul className="mt-2 max-h-40 list-disc overflow-auto pl-4 text-[12px]">
-              {result.saldos.ajustados.slice(0, 30).map((s, i) => (
+            <PaginatedList
+              items={result.saldos.ajustados}
+              renderItem={(s, i) => (
                 <li key={i}>
                   <strong>{s.contratoLabel}</strong> · item {s.numero ?? "?"} ·{" "}
                   {s.quantidadeSolicitada} → <strong>{s.saldoDisponivel}</strong>
                 </li>
-              ))}
-            </ul>
+              )}
+              maxHeight="max-h-60"
+            />
           </details>
         )}
 
@@ -121,8 +180,9 @@ export const PreGeracaoValidacaoPanel = memo(function PreGeracaoValidacaoPanel({
             <summary className="cursor-pointer text-[12px] font-medium text-destructive">
               {result.saldos.bloqueados.length} item(ns) bloqueados por saldo
             </summary>
-            <ul className="mt-2 max-h-48 list-disc overflow-auto pl-4 text-[12px]">
-              {result.saldos.bloqueados.slice(0, 30).map((s, i) => (
+            <PaginatedList
+              items={result.saldos.bloqueados}
+              renderItem={(s, i) => (
                 <li key={i}>
                   <strong>{s.contratoLabel}</strong> ·{" "}
                   {ataUrl(s.ataId) ? (
@@ -171,8 +231,8 @@ export const PreGeracaoValidacaoPanel = memo(function PreGeracaoValidacaoPanel({
                     </span>
                   )}
                 </li>
-              ))}
-            </ul>
+              )}
+            />
           </details>
         )}
 
@@ -181,8 +241,9 @@ export const PreGeracaoValidacaoPanel = memo(function PreGeracaoValidacaoPanel({
             <summary className="cursor-pointer text-[12px] font-medium text-amber-900 dark:text-amber-200">
               {result.saldos.avisos.length} aviso(s) na leitura de consumo
             </summary>
-            <ul className="mt-2 max-h-36 list-disc overflow-auto pl-4 text-[12px]">
-              {result.saldos.avisos.slice(0, 20).map((a, i) => (
+            <PaginatedList
+              items={result.saldos.avisos}
+              renderItem={(a, i) => (
                 <li key={i}>
                   {ataUrl(a.ataId) ? (
                     <a
@@ -213,8 +274,9 @@ export const PreGeracaoValidacaoPanel = memo(function PreGeracaoValidacaoPanel({
                   )}
                   {" — "}{a.mensagem}
                 </li>
-              ))}
-            </ul>
+              )}
+              maxHeight="max-h-56"
+            />
           </details>
         )}
 
@@ -224,8 +286,9 @@ export const PreGeracaoValidacaoPanel = memo(function PreGeracaoValidacaoPanel({
               {result.participantes.bloqueadas.length} secretaria(s) sem
               vinculação na ata
             </summary>
-            <ul className="mt-2 max-h-40 list-disc overflow-auto pl-4 text-[12px]">
-              {result.participantes.bloqueadas.slice(0, 20).map((p, i) => (
+            <PaginatedList
+              items={result.participantes.bloqueadas}
+              renderItem={(p, i) => (
                 <li key={i}>
                   {ataUrl(p.ataId) ? (
                     <a
@@ -258,9 +321,8 @@ export const PreGeracaoValidacaoPanel = memo(function PreGeracaoValidacaoPanel({
                     </>
                   )}
                 </li>
-              ))}
-
-            </ul>
+              )}
+            />
             <p className="mt-2 text-[12px] text-muted-foreground">
               Corrija diretamente no M2A (cadastre a UG equivalente na ata do
               exercício) e clique em <strong>Revalidar</strong>.
