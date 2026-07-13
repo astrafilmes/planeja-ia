@@ -162,14 +162,16 @@ export const PreGeracaoValidacaoPanel = memo(function PreGeracaoValidacaoPanel({
             <summary className="cursor-pointer text-[12px] font-medium text-amber-900 dark:text-amber-200">
               {result.saldos.ajustados.length} item(ns) serão ajustados para o saldo disponível
             </summary>
-            <ul className="mt-2 max-h-40 list-disc overflow-auto pl-4 text-[12px]">
-              {result.saldos.ajustados.slice(0, 30).map((s, i) => (
+            <PaginatedList
+              items={result.saldos.ajustados}
+              renderItem={(s, i) => (
                 <li key={i}>
                   <strong>{s.contratoLabel}</strong> · item {s.numero ?? "?"} ·{" "}
                   {s.quantidadeSolicitada} → <strong>{s.saldoDisponivel}</strong>
                 </li>
-              ))}
-            </ul>
+              )}
+              maxHeight="max-h-60"
+            />
           </details>
         )}
 
