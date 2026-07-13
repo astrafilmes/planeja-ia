@@ -241,8 +241,9 @@ export const PreGeracaoValidacaoPanel = memo(function PreGeracaoValidacaoPanel({
             <summary className="cursor-pointer text-[12px] font-medium text-amber-900 dark:text-amber-200">
               {result.saldos.avisos.length} aviso(s) na leitura de consumo
             </summary>
-            <ul className="mt-2 max-h-36 list-disc overflow-auto pl-4 text-[12px]">
-              {result.saldos.avisos.slice(0, 20).map((a, i) => (
+            <PaginatedList
+              items={result.saldos.avisos}
+              renderItem={(a, i) => (
                 <li key={i}>
                   {ataUrl(a.ataId) ? (
                     <a
@@ -273,8 +274,9 @@ export const PreGeracaoValidacaoPanel = memo(function PreGeracaoValidacaoPanel({
                   )}
                   {" — "}{a.mensagem}
                 </li>
-              ))}
-            </ul>
+              )}
+              maxHeight="max-h-56"
+            />
           </details>
         )}
 
