@@ -4,6 +4,7 @@ import {
   ChevronDown,
   ChevronUp,
   Loader2,
+  Minus,
   StopCircle,
   X,
   XCircle,
@@ -28,17 +29,39 @@ export function GlobalProgressTracker() {
   } = useProgress();
 
   const [expanded, setExpanded] = useState(false);
+  const [minimized, setMinimized] = useState(false);
 
   if (!isVisible) return null;
 
   const isDone =
     status === "success" || status === "error" || status === "cancelled";
 
+  if (minimized) {
+    return (
+      <button
+        type="button"
+        onClick={() => setMinimized(false)}
+        aria-label="Reabrir progresso"
+        className="fixed bottom-4 right-4 z-50 flex size-12 items-center justify-center rounded-full border border-border/60 bg-card/95 shadow-lg backdrop-blur-md transition hover:scale-105"
+      >
+        {status === "success" ? (
+          <CheckCircle className="size-5 text-emerald-500" />
+        ) : status === "error" ? (
+          <XCircle className="size-5 text-destructive" />
+        ) : status === "cancelled" ? (
+          <StopCircle className="size-5 text-amber-500" />
+        ) : (
+          <Loader2 className="size-5 animate-spin text-primary" />
+        )}
+      </button>
+    );
+  }
+
   return (
     <section
       aria-live="polite"
       aria-label="Progresso de tarefa"
-      className="fixed inset-x-4 bottom-4 z-50 overflow-hidden rounded-lg border border-border/60 bg-card/95 shadow-lg backdrop-blur-md transition-all sm:inset-x-auto sm:bottom-6 sm:right-6 sm:w-96"
+      className="fixed bottom-4 right-4 z-50 w-[calc(100vw-2rem)] max-w-sm overflow-hidden rounded-lg border border-border/60 bg-card/95 shadow-lg backdrop-blur-md transition-all sm:bottom-6 sm:right-6 sm:w-96"
     >
       <div className="flex items-center justify-between gap-3 border-b border-border/60 px-4 py-3">
         <div className="flex min-w-0 items-center gap-2">
@@ -72,6 +95,16 @@ export function GlobalProgressTracker() {
               )}
             </Button>
           )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-7"
+            onClick={() => setMinimized(true)}
+            aria-label="Minimizar progresso"
+          >
+            <Minus className="size-4" />
+          </Button>
           {isDone && (
             <Button
               type="button"
