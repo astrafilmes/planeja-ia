@@ -1,6 +1,6 @@
 import { memo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, CheckCircle2, ChevronDown, Clock, Loader2, RefreshCw, Send, XCircle } from "lucide-react";
+import { ArrowLeft, Ban, CheckCircle2, ChevronDown, Clock, Loader2, RefreshCw, Send, XCircle } from "lucide-react";
 import { ContractReportGenerator } from "@/components/contratos/ContractReportGenerator";
 import {
   DropdownMenu,
