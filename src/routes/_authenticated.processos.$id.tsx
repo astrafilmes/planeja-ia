@@ -276,6 +276,8 @@ function Page() {
         onOpenChange={m2a.setM2aDialogOpen}
         m2aContratoData={m2a.m2aContratoData}
         onDataChange={m2a.setM2aContratoData}
+        m2aContratoDataFim={m2a.m2aContratoDataFim}
+        onDataFimChange={m2a.setM2aContratoDataFim}
         m2aFiscalId={m2a.m2aFiscalId}
         onFiscalChange={m2a.setM2aFiscalId}
         shouldAskFiscal={m2a.shouldAskFiscal}

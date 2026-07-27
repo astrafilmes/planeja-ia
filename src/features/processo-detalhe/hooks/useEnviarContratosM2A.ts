@@ -14,6 +14,7 @@ import {
   buildM2AContractPayload,
   diagnoseM2A,
   extractM2AProcessoId,
+  getDataFimContrato,
   isNumericM2AId,
   listenAllM2AProgress,
   sendToM2A,
@@ -46,6 +47,20 @@ export function useEnviarContratosM2A({
   const [m2aDialogOpen, setM2aDialogOpen] = useState(false);
   const [m2aFiscalId, setM2aFiscalId] = useState<string>("");
   const [m2aContratoData, setM2aContratoData] = useState<string>("");
+  const [m2aContratoDataFim, setM2aContratoDataFim] = useState<string>("");
+  const dataFimTouchedRef = useRef(false);
+
+  const handleDataChange = useCallback((value: string) => {
+    setM2aContratoData(value);
+    if (!dataFimTouchedRef.current) {
+      setM2aContratoDataFim(value ? getDataFimContrato(value) : "");
+    }
+  }, []);
+
+  const handleDataFimChange = useCallback((value: string) => {
+    dataFimTouchedRef.current = true;
+    setM2aContratoDataFim(value);
+  }, []);
 
   const { data: m2aFiscais = [] } = useServidores("FISCAL");
 
@@ -331,7 +346,7 @@ export function useEnviarContratosM2A({
           m2a_contrato_id: contrato.m2a_contrato_id,
           objeto: contrato.objeto,
           data: dataContrato,
-          data_fim: contrato.data_fim ?? null,
+          data_fim: m2aContratoDataFim || contrato.data_fim || null,
           preposto: contrato.preposto,
         },
         itens: contrato.itens,
@@ -342,7 +357,14 @@ export function useEnviarContratosM2A({
         secretariaNome: contrato.secretaria_nome ?? null,
       });
     },
-    [contratos, m2aContratoData, processo?.m2a_url, shouldAskFiscal, m2aFiscalId],
+    [
+      contratos,
+      m2aContratoData,
+      m2aContratoDataFim,
+      processo?.m2a_url,
+      shouldAskFiscal,
+      m2aFiscalId,
+    ],
   );
 
   const handleDiagnoseM2A = useCallback(() => {
@@ -373,7 +395,10 @@ export function useEnviarContratosM2A({
 
     const { error: dataError } = await supabase
       .from("contratos")
-      .update({ data: m2aContratoData })
+      .update({
+        data: m2aContratoData,
+        ...(m2aContratoDataFim ? { data_fim: m2aContratoDataFim } : {}),
+      })
       .in("id", config.ids);
     if (dataError) {
       setSending(false);
@@ -440,6 +465,7 @@ export function useEnviarContratosM2A({
     validateM2AConfig,
     startTask,
     m2aContratoData,
+    m2aContratoDataFim,
     failTask,
     buildM2APayload,
     contratos,
@@ -460,7 +486,9 @@ export function useEnviarContratosM2A({
     m2aFiscalId,
     setM2aFiscalId,
     m2aContratoData,
-    setM2aContratoData,
+    setM2aContratoData: handleDataChange,
+    m2aContratoDataFim,
+    setM2aContratoDataFim: handleDataFimChange,
     // memos
     selectedContracts,
     selectedUnidadeIds,
