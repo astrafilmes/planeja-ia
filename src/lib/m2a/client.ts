@@ -263,8 +263,14 @@ async function callProxyJson<T = unknown>(
 // Envio de contrato (substitui sendToM2A da extensão)
 // ============================================================
 
-export function sendToM2A(payload: M2AAutomationPayload): void {
+/**
+ * Dispara o envio de um contrato ao portal.
+ * Retorna uma função `cancel()` que interrompe a escuta/stream do worker —
+ * usada pelo botão "Cancelar envio" da UI.
+ */
+export function sendToM2A(payload: M2AAutomationPayload): () => void {
   const contratoId = payload.contratoId;
+  const controller = new AbortController();
   let terminalEmitted = false;
   emitWindow({
     type: "M2A_PROGRESS",
