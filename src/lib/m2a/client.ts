@@ -159,7 +159,9 @@ async function callProxySse(
   path: string,
   body: unknown,
   cb: SseCallbacks,
+  signal?: AbortSignal,
 ): Promise<void> {
+  if (signal?.aborted) return;
   const { data: sessionData } = await supabase.auth.getSession();
   const token = sessionData.session?.access_token;
   if (!token) {
@@ -181,8 +183,10 @@ async function callProxySse(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ path, method: "POST", body }),
+      signal,
     });
   } catch (err) {
+    if (signal?.aborted) return;
     cb.onError?.(err instanceof Error ? err.message : String(err));
     return;
   }
@@ -195,7 +199,18 @@ async function callProxySse(
   const decoder = new TextDecoder();
   let buffer = "";
   while (true) {
-    const { value, done } = await reader.read();
+    if (signal?.aborted) {
+      void reader.cancel().catch(() => undefined);
+      return;
+    }
+    let value: Uint8Array | undefined;
+    let done = false;
+    try {
+      ({ value, done } = await reader.read());
+    } catch (err) {
+      if (signal?.aborted) return;
+      throw err;
+    }
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
     let idx;
