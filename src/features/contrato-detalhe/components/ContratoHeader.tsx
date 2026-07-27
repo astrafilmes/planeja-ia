@@ -22,6 +22,7 @@ export interface ContratoHeaderActionsProps {
   sincronizando: boolean;
   onSincronizar: () => void;
   onEnviar: () => void;
+  onCancelar: () => void;
   onStatusChanged?: () => void;
 }
 
