@@ -1,4 +1,4 @@
-import { Download, Loader2, Send, Trash2 } from "lucide-react";
+import { Ban, Download, Loader2, Send, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -20,6 +20,7 @@ export interface ContratosBulkActionsBarProps {
   onDownload: () => void;
   onOpenSend: () => void;
   onConfirmDelete: () => void;
+  onCancelSend?: () => void;
 }
 
 export function ContratosBulkActionsBar({
@@ -30,7 +31,15 @@ export function ContratosBulkActionsBar({
   onDownload,
   onOpenSend,
   onConfirmDelete,
+  onCancelSend,
 }: ContratosBulkActionsBarProps) {
+  if (sending && onCancelSend) {
+    return (
+      <Button size="sm" variant="destructive" onClick={onCancelSend}>
+        <Ban className="size-4" /> Cancelar envio
+      </Button>
+    );
+  }
   if (selectedCount === 0) return null;
   return (
     <>
