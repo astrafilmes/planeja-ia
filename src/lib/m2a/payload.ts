@@ -16,6 +16,7 @@ export type M2AContractPayloadInput = {
     numero?: string | null;
     objeto?: string | null;
     data?: string | null;
+    data_fim?: string | null;
     preposto?: string | null;
     m2a_contrato_id?: string | null;
   };
@@ -103,7 +104,9 @@ export function buildM2AContractPayload(input: M2AContractPayloadInput) {
     contrato: {
       ...input.contrato,
       data: dataContrato,
-      data_fim: getDataFimContrato(dataContrato),
+      data_fim:
+        String(input.contrato.data_fim ?? "").trim() ||
+        getDataFimContrato(dataContrato),
     },
     itens,
     dadosDotacao: input.dotacao,

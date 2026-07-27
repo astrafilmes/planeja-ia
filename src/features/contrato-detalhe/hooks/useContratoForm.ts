@@ -14,6 +14,7 @@ export function useContratoForm(
   const [editNumeroContrato, setEditNumeroContrato] = useState("");
   const [editAtaId, setEditAtaId] = useState("");
   const [editData, setEditData] = useState("");
+  const [editDataFim, setEditDataFim] = useState("");
   const [editObjeto, setEditObjeto] = useState("");
   const [editPreposto, setEditPreposto] = useState("");
   const [editFiscal, setEditFiscal] = useState("");
