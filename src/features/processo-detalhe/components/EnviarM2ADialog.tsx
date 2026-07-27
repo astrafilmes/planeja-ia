@@ -28,6 +28,8 @@ export interface EnviarM2ADialogProps {
   onOpenChange: (open: boolean) => void;
   m2aContratoData: string;
   onDataChange: (value: string) => void;
+  m2aContratoDataFim: string;
+  onDataFimChange: (value: string) => void;
   m2aFiscalId: string;
   onFiscalChange: (value: string) => void;
   shouldAskFiscal: boolean;
@@ -46,6 +48,8 @@ export function EnviarM2ADialog({
   onOpenChange,
   m2aContratoData,
   onDataChange,
+  m2aContratoDataFim,
+  onDataFimChange,
   m2aFiscalId,
   onFiscalChange,
   shouldAskFiscal,
