@@ -237,6 +237,7 @@ function Page() {
             onToggleOne={toggleOne}
             onDownloadSelected={handleDownloadSelected}
             onOpenSendDialog={() => m2a.setM2aDialogOpen(true)}
+            onCancelSend={m2a.cancelBatch}
             onConfirmDeleteSelected={handleConfirmDeleteSelected}
             onDownloadContrato={handleDownloadContratoDocs}
             onToggleImpresso={toggleImpresso}
