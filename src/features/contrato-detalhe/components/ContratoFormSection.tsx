@@ -19,6 +19,8 @@ export interface ContratoFormSectionProps {
   setEditNumeroContrato: (v: string) => void;
   editData: string;
   setEditData: (v: string) => void;
+  editDataFim: string;
+  setEditDataFim: (v: string) => void;
   editAtaId: string;
   setEditAtaId: (v: string) => void;
   editPreposto: string;
@@ -37,6 +39,8 @@ export const ContratoFormSection = memo(function ContratoFormSection({
   setEditNumeroContrato,
   editData,
   setEditData,
+  editDataFim,
+  setEditDataFim,
   editAtaId,
   setEditAtaId,
   editPreposto,
