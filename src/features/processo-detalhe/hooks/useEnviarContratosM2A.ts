@@ -14,6 +14,7 @@ import {
   buildM2AContractPayload,
   diagnoseM2A,
   extractM2AProcessoId,
+  getDataFimContrato,
   isNumericM2AId,
   listenAllM2AProgress,
   sendToM2A,
@@ -46,6 +47,20 @@ export function useEnviarContratosM2A({
   const [m2aDialogOpen, setM2aDialogOpen] = useState(false);
   const [m2aFiscalId, setM2aFiscalId] = useState<string>("");
   const [m2aContratoData, setM2aContratoData] = useState<string>("");
+  const [m2aContratoDataFim, setM2aContratoDataFim] = useState<string>("");
+  const dataFimTouchedRef = useRef(false);
+
+  const handleDataChange = useCallback((value: string) => {
+    setM2aContratoData(value);
+    if (!dataFimTouchedRef.current) {
+      setM2aContratoDataFim(value ? getDataFimContrato(value) : "");
+    }
+  }, []);
+
+  const handleDataFimChange = useCallback((value: string) => {
+    dataFimTouchedRef.current = true;
+    setM2aContratoDataFim(value);
+  }, []);
 
   const { data: m2aFiscais = [] } = useServidores("FISCAL");
 
