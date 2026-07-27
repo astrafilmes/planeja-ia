@@ -127,6 +127,7 @@ export function useEnviarContratosM2A({
   // Listener global de progresso — registrado UMA vez no mount.
   useEffect(() => {
     const off = listenAllM2AProgress(async (event) => {
+      if (cancelledRef.current) return;
       const contratoAtual = contratosRef.current.find(
         (c) => c.id === event.contratoId,
       );
