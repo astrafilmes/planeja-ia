@@ -331,6 +331,7 @@ export function useEnviarContratosM2A({
           m2a_contrato_id: contrato.m2a_contrato_id,
           objeto: contrato.objeto,
           data: dataContrato,
+          data_fim: contrato.data_fim ?? null,
           preposto: contrato.preposto,
         },
         itens: contrato.itens,
