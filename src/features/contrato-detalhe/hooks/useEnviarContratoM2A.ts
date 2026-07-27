@@ -38,6 +38,7 @@ export function useEnviarContratoM2A(
   // vazamento de memória enquanto atualizações do M2A ainda estão em curso.
   useEffect(() => {
     const off = listenM2AProgress(id, async (e) => {
+      if (cancelledRef.current) return;
       setLogs((l) => [...l, e]);
       setEtapaAtual(e.etapa);
       if (e.m2a_contrato_id && e.m2a_contrato_id !== contrato?.contrato.m2a_contrato_id) {
