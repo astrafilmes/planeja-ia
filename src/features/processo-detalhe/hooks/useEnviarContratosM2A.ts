@@ -384,10 +384,12 @@ export function useEnviarContratosM2A({
 
     setSending(true);
     setM2aDialogOpen(false);
+    cancelledRef.current = false;
     m2aBatchRef.current = { total: config.ids.length, finished: 0 };
     startTask(
       "Enviando contratos ao portal",
       `Preparando ${config.ids.length} contrato(s)...`,
+      { onCancel: () => cancelBatchRef.current() },
     );
     notify.info(
       `Iniciando envio sequencial de ${config.ids.length} contrato(s)...`,
@@ -409,7 +411,13 @@ export function useEnviarContratosM2A({
       return;
     }
 
+    let cancelados = 0;
     for (const cid of config.ids) {
+      if (cancelledRef.current) {
+        cancelados += 1;
+        setBatchStatus((s) => ({ ...s, [cid]: "cancelado" }));
+        continue;
+      }
       setBatchStatus((s) => ({ ...s, [cid]: "processando" }));
       const payload = buildM2APayload(cid);
       if (!payload) continue;
@@ -451,14 +459,23 @@ export function useEnviarContratosM2A({
           }
         }, 8 * 60 * 1000);
       });
-      sendToM2A(payload as any);
+      currentCancelRef.current = sendToM2A(payload as any);
       await waitTerminal;
+      currentCancelRef.current = null;
     }
 
     setSending(false);
-    notify.success(
-      `${config.ids.length} envio(s) iniciado(s) no worker M2A.`,
-    );
+    if (cancelledRef.current) {
+      notify.info(
+        cancelados > 0
+          ? `Envio cancelado. ${cancelados} contrato(s) não foram enviados.`
+          : "Envio cancelado.",
+      );
+    } else {
+      notify.success(
+        `${config.ids.length} envio(s) iniciado(s) no worker M2A.`,
+      );
+    }
     qc.invalidateQueries({ queryKey: ["processo-detail", processoId] });
   }, [
     ensureConnected,
