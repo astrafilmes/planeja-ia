@@ -87,6 +87,7 @@ function Page() {
           sincronizando={sincro.sincronizando}
           onSincronizar={sincro.sincronizar}
           onEnviar={envio.handleEnviar}
+          onCancelar={envio.cancelarEnvio}
           onStatusChanged={() => refetch()}
         />
       }
