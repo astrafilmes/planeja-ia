@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FileSignature, Loader2, Save } from "lucide-react";
+import { getDataFimContrato } from "@/lib/m2a";
 import type { M2AAtaOption } from "../lib";
 
 export interface ContratoFormSectionProps {

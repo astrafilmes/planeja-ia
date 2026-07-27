@@ -106,6 +106,8 @@ function Page() {
         setEditNumeroContrato={form.setEditNumeroContrato}
         editData={form.editData}
         setEditData={form.setEditData}
+        editDataFim={form.editDataFim}
+        setEditDataFim={form.setEditDataFim}
         editAtaId={form.editAtaId}
         setEditAtaId={form.setEditAtaId}
         editPreposto={form.editPreposto}
