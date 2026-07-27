@@ -15,6 +15,28 @@ const DOC_GENERATE_SETTLE_MS = 700;
 const DOC_POST_PAUSE_MS = 75;
 const TRANSIENT_ATTEMPTS = 5;
 const TRANSIENT_BACKOFF_MS = [0, 1500, 4000, 8000, 12000];
+const ACTOR_CHECK_ATTEMPTS = 3;
+
+const ACTOR_ROUTES = {
+  fiscal: {
+    include: (contratoId) => `/contratos/fiscais/incluir/${contratoId}/`,
+    plural: "fiscais",
+    sectionWords: ["fiscal", "fiscais"],
+    expectedMissingAlert: "não existe fiscal ativo",
+  },
+  gestor: {
+    include: (contratoId) => `/contratos/gestores/incluir/${contratoId}/`,
+    plural: "gestores",
+    sectionWords: ["gestor", "gestores"],
+    expectedMissingAlert: "não existe gestor ativo",
+  },
+  preposto: {
+    include: (contratoId) => `/contratos/prepostos/incluir/${contratoId}/`,
+    plural: "prepostos",
+    sectionWords: ["preposto", "prepostos"],
+    expectedMissingAlert: "não existe preposto ativo",
+  },
+};
 
 // --- helpers locais ---
 function shortLogText(value, max = 160) {
@@ -46,6 +68,125 @@ function isTransientM2AError(err) {
   if ([0, 408, 425, 429, 500, 502, 503, 504].includes(status)) return true;
   const msg = String(err?.message || "");
   return /timeout|ECONNRESET|ETIMEDOUT|EAI_AGAIN|socket hang up|status code 5\d\d/i.test(msg);
+}
+
+function escapeAttr(value) {
+  return String(value ?? "").replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
+
+function normalizeActorText(value) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function actorLinkLooksRelated(href, actorKind, expectedId) {
+  const raw = String(href ?? "").toLowerCase();
+  if (!raw || !String(raw).includes(String(expectedId))) return false;
+  const cfg = ACTOR_ROUTES[actorKind];
+  return (
+    raw.includes(`/${cfg.plural}/`) ||
+    raw.includes(actorKind) ||
+    raw.includes("servidor") ||
+    raw.includes("pessoa")
+  );
+}
+
+function sectionLooksLikeActor($, element, actorKind) {
+  const cfg = ACTOR_ROUTES[actorKind];
+  const sectionText = normalizeActorText(
+    $(element)
+      .closest("tr, li, fieldset, form, .kt-portlet, .card, .modal, .tab-pane, section, div")
+      .text(),
+  );
+  return cfg.sectionWords.some((word) => sectionText.includes(word));
+}
+
+function docHasActorLinked($, actorKind, expectedId, expectedName = "") {
+  const cfg = ACTOR_ROUTES[actorKind];
+  const diagnostics = extractFormDiagnostics($);
+  const allMessages = [...diagnostics.errors, ...diagnostics.alerts].join(" | ");
+  if (allMessages.toLowerCase().includes(cfg.expectedMissingAlert.toLowerCase())) {
+    return false;
+  }
+
+  const id = String(expectedId ?? "").trim();
+  if (id) {
+    const escaped = escapeAttr(id);
+    const valueSelectors = [
+      `input[value="${escaped}"]`,
+      `option[value="${escaped}"]`,
+      `select option[value="${escaped}"]`,
+      `[data-id="${escaped}"]`,
+      `[data-pk="${escaped}"]`,
+    ].join(",");
+
+    const valueHit = $(valueSelectors)
+      .toArray()
+      .some((el) => sectionLooksLikeActor($, el, actorKind));
+    if (valueHit) return true;
+
+    const linkHit = $("a[href]")
+      .toArray()
+      .some((a) => actorLinkLooksRelated($(a).attr("href"), actorKind, id));
+    if (linkHit) return true;
+  }
+
+  const name = normalizeActorText(expectedName);
+  if (name && name.length >= 5) {
+    const sectionHit = $("tr, li, fieldset, .kt-portlet, .card, .tab-pane, section, div")
+      .toArray()
+      .some((el) => {
+        const text = normalizeActorText($(el).text());
+        return text.includes(name) && cfg.sectionWords.some((word) => text.includes(word));
+      });
+    if (sectionHit) return true;
+  }
+
+  return false;
+}
+
+async function verificarAtorJaVinculado(contratoId, actorKind, expectedId, expectedName = "") {
+  const cfg = ACTOR_ROUTES[actorKind];
+  const urls = unique([
+    `/contratos/${contratoId}/`,
+    `/contratos/${contratoId}`,
+    `/contratos/${cfg.plural}/${contratoId}/`,
+    `/contratos/${cfg.plural}/listar/${contratoId}/`,
+    `/contratos/${cfg.plural}/tabela/${contratoId}/`,
+  ]);
+
+  let lastErr = null;
+  for (const url of urls) {
+    for (let attempt = 1; attempt <= ACTOR_CHECK_ATTEMPTS; attempt += 1) {
+      try {
+        const r = await m2a.get(url, {
+          headers: { "X-Requested-With": "XMLHttpRequest" },
+          retries: 1,
+        });
+        if (docHasActorLinked(loadDoc(r.html), actorKind, expectedId, expectedName)) {
+          console.log(
+            `[m2a-contrato] ${actorKind} já vinculado ao contrato ${contratoId} (detectado em ${url})`,
+          );
+          return true;
+        }
+        break;
+      } catch (err) {
+        lastErr = err;
+        if (!isTransientM2AError(err) || attempt === ACTOR_CHECK_ATTEMPTS) break;
+        await sleep(TRANSIENT_BACKOFF_MS[attempt] ?? 4000);
+      }
+    }
+  }
+  if (lastErr) {
+    console.warn(
+      `[m2a-contrato] não consegui verificar vínculo ${actorKind} já existente no contrato ${contratoId}: ${lastErr.message}`,
+    );
+  }
+  return false;
 }
 
 async function waitBeforeRetry(label, attempt, maxAttempts = TRANSIENT_ATTEMPTS) {
@@ -267,42 +408,63 @@ export async function criarCabecalhoContrato(ataId, dados, options = {}) {
 // seguro. Se por acaso o primeiro POST tiver criado o vínculo antes de o proxy
 // devolver 5xx, a segunda tentativa devolverá o alerta de duplicidade, que o
 // ensureActorLinked trata como sucesso (mensagem informativa).
-async function postFormWithRetry(url, form, label) {
+async function postFormWithRetry(url, form, label, options = {}) {
   let lastErr;
   for (let attempt = 1; attempt <= TRANSIENT_ATTEMPTS; attempt++) {
     try {
+      if (await options.isAlreadyLinked?.()) {
+        return { status: 200, html: "", finalUrl: url, alreadyLinked: true };
+      }
       const csrf = await m2a.getCsrf(url, { force: attempt > 1 });
-      return await m2a.postForm(url, { ...form, csrfmiddlewaretoken: csrf }, { retries: 1 });
+      const response = await m2a.postForm(url, { ...form, csrfmiddlewaretoken: csrf }, { retries: 1 });
+      if (await options.isAlreadyLinked?.()) {
+        return { ...response, alreadyLinked: true };
+      }
+      return response;
     } catch (e) {
       lastErr = e;
+      if (await options.isAlreadyLinked?.()) {
+        return { status: 200, html: "", finalUrl: url, alreadyLinked: true };
+      }
       if (!isTransientM2AError(e) || attempt === TRANSIENT_ATTEMPTS) break;
       await waitBeforeRetry(`vínculo ${label} falhou (${e.message})`, attempt);
     }
+  }
+  if (await options.isAlreadyLinked?.()) {
+    return { status: 200, html: "", finalUrl: url, alreadyLinked: true };
   }
   throw lastErr;
 }
 
 export async function vincularFiscal(contratoId, fiscalId, dataBatch) {
-  const url = `/contratos/fiscais/incluir/${contratoId}/`;
+  const url = ACTOR_ROUTES.fiscal.include(contratoId);
   const r = await postFormWithRetry(url, {
     tipo: "1",
     data_nomeacao: dataBatch,
     servidor: fiscalId,
     ativo: "on",
     _salvar: "",
-  }, "fiscal");
+  }, "fiscal", {
+    isAlreadyLinked: () => verificarAtorJaVinculado(contratoId, "fiscal", fiscalId),
+  });
+  if (r.alreadyLinked) return { alreadyLinked: true };
   ensureActorLinked(loadDoc(r.html), "fiscal", "não existe fiscal ativo");
+  return { linked: true };
 }
 
 export async function vincularGestor(contratoId, gestorId, dataBatch) {
-  const url = `/contratos/gestores/incluir/${contratoId}/`;
+  const url = ACTOR_ROUTES.gestor.include(contratoId);
   const r = await postFormWithRetry(url, {
     data_nomeacao: dataBatch,
     servidor: gestorId,
     ativo: "on",
     _salvar: "",
-  }, "gestor");
+  }, "gestor", {
+    isAlreadyLinked: () => verificarAtorJaVinculado(contratoId, "gestor", gestorId),
+  });
+  if (r.alreadyLinked) return { alreadyLinked: true };
   ensureActorLinked(loadDoc(r.html), "gestor", "não existe gestor ativo");
+  return { linked: true };
 }
 
 export async function vincularPreposto(contratoId, nomePreposto, dataBatch, prepostoIdInformado) {
@@ -321,14 +483,18 @@ export async function vincularPreposto(contratoId, nomePreposto, dataBatch, prep
     }
     prepostoId = json.suggestions[0].id;
   }
-  const url = `/contratos/prepostos/incluir/${contratoId}/`;
+  const url = ACTOR_ROUTES.preposto.include(contratoId);
   const r = await postFormWithRetry(url, {
     data_nomeacao: dataBatch,
     pessoa_fisica: prepostoId,
     ativo: "on",
     _salvar: "",
-  }, "preposto");
+  }, "preposto", {
+    isAlreadyLinked: () => verificarAtorJaVinculado(contratoId, "preposto", prepostoId, nomePreposto),
+  });
+  if (r.alreadyLinked) return { alreadyLinked: true };
   ensureActorLinked(loadDoc(r.html), "preposto", "não existe preposto ativo");
+  return { linked: true };
 }
 
 // --- Módulo 4: adicionar itens ---
