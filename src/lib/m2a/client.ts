@@ -326,8 +326,11 @@ export function sendToM2A(payload: M2AAutomationPayload): () => void {
           ?.m2a_contrato_id,
       } satisfies M2AProgressEvent);
     },
-  });
+  }, controller.signal);
+
+  return () => controller.abort();
 }
+
 
 export function diagnoseM2A(payload: M2AAutomationPayload): void {
   const contratoId = payload.contratoId;
