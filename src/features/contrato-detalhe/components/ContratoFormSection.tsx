@@ -75,9 +75,41 @@ export const ContratoFormSection = memo(function ContratoFormSection({
           <Input
             type="date"
             value={editData}
-            onChange={(e) => setEditData(e.target.value)}
+            onChange={(e) => {
+              const v = e.target.value;
+              setEditData(v);
+              // Mantém o padrão de 12 meses enquanto o usuário não fixar
+              // manualmente uma data fim diferente.
+              if (v && (!editDataFim || editDataFim === defaultDataFim)) {
+                setEditDataFim(getDataFimContrato(v));
+              }
+            }}
           />
         </div>
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <Label>Fim vigência</Label>
+            {editData && editDataFim !== defaultDataFim && (
+              <button
+                type="button"
+                className="text-[11px] text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                onClick={() => setEditDataFim(getDataFimContrato(editData))}
+              >
+                usar 12 meses
+              </button>
+            )}
+          </div>
+          <Input
+            type="date"
+            value={editDataFim}
+            min={editData || undefined}
+            onChange={(e) => setEditDataFim(e.target.value)}
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Padrão: 12 meses após o início. Enviado à M2A ao publicar.
+          </p>
+        </div>
+
         <div className="flex flex-col gap-1.5">
           <Label>Ata</Label>
           <Select value={editAtaId} onValueChange={setEditAtaId}>
