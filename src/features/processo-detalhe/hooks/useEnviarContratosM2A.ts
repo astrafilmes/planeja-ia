@@ -346,7 +346,7 @@ export function useEnviarContratosM2A({
           m2a_contrato_id: contrato.m2a_contrato_id,
           objeto: contrato.objeto,
           data: dataContrato,
-          data_fim: contrato.data_fim ?? null,
+          data_fim: m2aContratoDataFim || contrato.data_fim || null,
           preposto: contrato.preposto,
         },
         itens: contrato.itens,
@@ -388,7 +388,10 @@ export function useEnviarContratosM2A({
 
     const { error: dataError } = await supabase
       .from("contratos")
-      .update({ data: m2aContratoData })
+      .update({
+        data: m2aContratoData,
+        ...(m2aContratoDataFim ? { data_fim: m2aContratoDataFim } : {}),
+      })
       .in("id", config.ids);
     if (dataError) {
       setSending(false);
