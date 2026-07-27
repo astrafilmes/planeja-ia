@@ -177,6 +177,21 @@ export function useEnviarContratoM2A(
     startTask(
       "Enviando contrato ao portal",
       `Preparando ${contrato.contrato.numero_contrato}...`,
+      {
+        onCancel: () => {
+          cancelRef.current?.();
+          cancelRef.current = null;
+          cancelledRef.current = true;
+          setEnviando(false);
+          setEtapaAtual(null);
+          void supabase
+            .from("contratos")
+            .update({ status_envio_m2a: "pendente" })
+            .eq("id", id);
+          notify.info("Envio cancelado.");
+          refetch();
+        },
+      },
     );
     await supabase
       .from("contratos")
@@ -191,15 +206,31 @@ export function useEnviarContratoM2A(
       gestor_id: payload.dadosM2A.gestor_id as string,
     });
 
-    sendToM2A(payload as any);
+    cancelledRef.current = false;
+    cancelRef.current = sendToM2A(payload as any);
   }, [
     contrato,
     ensureConnected,
     id,
     preference,
+    refetch,
     savePreference,
     startTask,
   ]);
+
+  const cancelarEnvio = useCallback(() => {
+    cancelRef.current?.();
+    cancelRef.current = null;
+    cancelledRef.current = true;
+    setEnviando(false);
+    setEtapaAtual(null);
+    void supabase
+      .from("contratos")
+      .update({ status_envio_m2a: "pendente" })
+      .eq("id", id)
+      .then(() => refetch());
+    notify.info("Envio cancelado.");
+  }, [id, refetch]);
 
   return {
     logs,
@@ -208,5 +239,7 @@ export function useEnviarContratoM2A(
     pct,
     connected,
     handleEnviar,
+    cancelarEnvio,
   };
 }
+
