@@ -49,6 +49,7 @@ export const ContratoHeaderActions = memo(function ContratoHeaderActions({
   sincronizando,
   onSincronizar,
   onEnviar,
+  onCancelar,
   onStatusChanged,
 }: ContratoHeaderActionsProps) {
   const [salvandoStatus, setSalvandoStatus] = useState(false);
