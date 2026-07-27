@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { notify } from "@/lib/notify";
-import { isNumericM2AId } from "@/lib/m2a";
+import { getDataFimContrato, isNumericM2AId } from "@/lib/m2a";
 import type { ContratoFull } from "../lib";
 
 export function useContratoForm(
@@ -25,7 +25,15 @@ export function useContratoForm(
     const cc = contrato.contrato;
     setEditNumeroContrato(cc.numero_contrato ?? "");
     setEditAtaId(cc.m2a_ata_id ?? "");
-    setEditData(cc.data ? String(cc.data).slice(0, 10) : "");
+    const dataIni = cc.data ? String(cc.data).slice(0, 10) : "";
+    setEditData(dataIni);
+    setEditDataFim(
+      cc.data_fim
+        ? String(cc.data_fim).slice(0, 10)
+        : dataIni
+          ? getDataFimContrato(dataIni)
+          : "",
+    );
     setEditObjeto(cc.objeto ?? "");
     setEditPreposto(cc.preposto ?? "");
     setEditFiscal(cc.fiscal ?? "");
