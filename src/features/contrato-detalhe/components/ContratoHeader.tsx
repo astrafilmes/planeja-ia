@@ -146,6 +146,12 @@ export const ContratoHeaderActions = memo(function ContratoHeaderActions({
         {sincronizando ? "Sincronizando..." : "Sincronizar da M2A"}
       </Button>
 
+      {enviando ? (
+        <Button size="sm" variant="destructive" onClick={onCancelar}>
+          <Ban className="size-4" /> Cancelar envio
+        </Button>
+      ) : null}
+
       <Button size="sm" onClick={onEnviar} disabled={enviando || !connected}>
         {enviando ? (
           <Loader2 className="size-4 animate-spin" />
