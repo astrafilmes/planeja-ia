@@ -84,6 +84,18 @@ export function EnviarM2ADialog({
                   onChange={(event) => onDataChange(event.target.value)}
                 />
               </div>
+              <div className="flex flex-col gap-2">
+                <Label>Fim da vigência *</Label>
+                <Input
+                  type="date"
+                  value={m2aContratoDataFim}
+                  onChange={(event) => onDataFimChange(event.target.value)}
+                />
+                <p className="text-[12px] text-muted-foreground">
+                  Preenchida automaticamente com 12 meses após a assinatura —
+                  altere se necessário.
+                </p>
+              </div>
               {shouldAskFiscal ? (
                 <div className="flex flex-col gap-2">
                   <Label>Fiscal do contrato *</Label>
