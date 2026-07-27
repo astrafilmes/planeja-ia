@@ -41,6 +41,8 @@ export function useEnviarContratosM2A({
   const { connected, ensureConnected } = useM2AConnection();
   const { startTask, updateProgress, finishTask, failTask } = useProgress();
   const m2aBatchRef = useRef({ total: 0, finished: 0 });
+  const cancelledRef = useRef(false);
+  const currentCancelRef = useRef<(() => void) | null>(null);
 
   const [batchStatus, setBatchStatus] = useState<Record<string, string>>({});
   const [sending, setSending] = useState(false);
