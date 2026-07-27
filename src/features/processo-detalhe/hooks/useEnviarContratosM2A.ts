@@ -357,7 +357,14 @@ export function useEnviarContratosM2A({
         secretariaNome: contrato.secretaria_nome ?? null,
       });
     },
-    [contratos, m2aContratoData, processo?.m2a_url, shouldAskFiscal, m2aFiscalId],
+    [
+      contratos,
+      m2aContratoData,
+      m2aContratoDataFim,
+      processo?.m2a_url,
+      shouldAskFiscal,
+      m2aFiscalId,
+    ],
   );
 
   const handleDiagnoseM2A = useCallback(() => {
@@ -458,6 +465,7 @@ export function useEnviarContratosM2A({
     validateM2AConfig,
     startTask,
     m2aContratoData,
+    m2aContratoDataFim,
     failTask,
     buildM2APayload,
     contratos,
@@ -478,7 +486,9 @@ export function useEnviarContratosM2A({
     m2aFiscalId,
     setM2aFiscalId,
     m2aContratoData,
-    setM2aContratoData,
+    setM2aContratoData: handleDataChange,
+    m2aContratoDataFim,
+    setM2aContratoDataFim: handleDataFimChange,
     // memos
     selectedContracts,
     selectedUnidadeIds,
