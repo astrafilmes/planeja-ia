@@ -244,6 +244,7 @@ export function ContratosVinculadosTab({
             onDownload={onDownloadSelected}
             onOpenSend={onOpenSendDialog}
             onConfirmDelete={onConfirmDeleteSelected}
+            onCancelSend={onCancelSend}
           />
         </div>
 
