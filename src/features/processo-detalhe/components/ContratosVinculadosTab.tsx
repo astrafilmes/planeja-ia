@@ -100,6 +100,7 @@ export function ContratosVinculadosTab({
   onToggleOne,
   onDownloadSelected,
   onOpenSendDialog,
+  onCancelSend,
   onConfirmDeleteSelected,
   onDownloadContrato,
   onToggleImpresso,
