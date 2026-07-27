@@ -54,6 +54,7 @@ export const ContratoFormSection = memo(function ContratoFormSection({
   salvando,
   onSalvar,
 }: ContratoFormSectionProps) {
+  const defaultDataFim = editData ? getDataFimContrato(editData) : "";
   return (
     <FormSection
       id="dados-contrato"
