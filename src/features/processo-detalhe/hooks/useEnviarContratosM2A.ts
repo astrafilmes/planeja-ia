@@ -41,6 +41,8 @@ export function useEnviarContratosM2A({
   const { connected, ensureConnected } = useM2AConnection();
   const { startTask, updateProgress, finishTask, failTask } = useProgress();
   const m2aBatchRef = useRef({ total: 0, finished: 0 });
+  const cancelledRef = useRef(false);
+  const currentCancelRef = useRef<(() => void) | null>(null);
 
   const [batchStatus, setBatchStatus] = useState<Record<string, string>>({});
   const [sending, setSending] = useState(false);
@@ -125,6 +127,7 @@ export function useEnviarContratosM2A({
   // Listener global de progresso — registrado UMA vez no mount.
   useEffect(() => {
     const off = listenAllM2AProgress(async (event) => {
+      if (cancelledRef.current) return;
       const contratoAtual = contratosRef.current.find(
         (c) => c.id === event.contratoId,
       );
@@ -377,6 +380,26 @@ export function useEnviarContratosM2A({
     diagnoseM2A(payload as any);
   }, [ensureConnected, validateM2AConfig, buildM2APayload]);
 
+  /** Interrompe o lote: aborta o contrato em curso e pula os restantes. */
+  const cancelBatch = useCallback(() => {
+    cancelledRef.current = true;
+    currentCancelRef.current?.();
+    currentCancelRef.current = null;
+    // Libera o loop sequencial imediatamente.
+    for (const [cid, resolve] of pendingResolversRef.current.entries()) {
+      pendingResolversRef.current.delete(cid);
+      resolve({} as M2AProgressEvent);
+      void supabase
+        .from("contratos")
+        .update({ status_envio_m2a: "pendente" })
+        .eq("id", cid);
+      setBatchStatus((s) => ({ ...s, [cid]: "cancelado" }));
+    }
+    setSending(false);
+    notify.info("Cancelando envio…");
+    qc.invalidateQueries({ queryKey: ["processo-detail", processoId] });
+  }, [processoId, qc]);
+
   const handleSendSelectedToM2A = useCallback(async () => {
     if (!ensureConnected()) return;
     const config = validateM2AConfig();
@@ -384,10 +407,12 @@ export function useEnviarContratosM2A({
 
     setSending(true);
     setM2aDialogOpen(false);
+    cancelledRef.current = false;
     m2aBatchRef.current = { total: config.ids.length, finished: 0 };
     startTask(
       "Enviando contratos ao portal",
       `Preparando ${config.ids.length} contrato(s)...`,
+      { onCancel: cancelBatch },
     );
     notify.info(
       `Iniciando envio sequencial de ${config.ids.length} contrato(s)...`,
@@ -409,7 +434,13 @@ export function useEnviarContratosM2A({
       return;
     }
 
+    let cancelados = 0;
     for (const cid of config.ids) {
+      if (cancelledRef.current) {
+        cancelados += 1;
+        setBatchStatus((s) => ({ ...s, [cid]: "cancelado" }));
+        continue;
+      }
       setBatchStatus((s) => ({ ...s, [cid]: "processando" }));
       const payload = buildM2APayload(cid);
       if (!payload) continue;
@@ -451,14 +482,23 @@ export function useEnviarContratosM2A({
           }
         }, 8 * 60 * 1000);
       });
-      sendToM2A(payload as any);
+      currentCancelRef.current = sendToM2A(payload as any);
       await waitTerminal;
+      currentCancelRef.current = null;
     }
 
     setSending(false);
-    notify.success(
-      `${config.ids.length} envio(s) iniciado(s) no worker M2A.`,
-    );
+    if (cancelledRef.current) {
+      notify.info(
+        cancelados > 0
+          ? `Envio cancelado. ${cancelados} contrato(s) não foram enviados.`
+          : "Envio cancelado.",
+      );
+    } else {
+      notify.success(
+        `${config.ids.length} envio(s) iniciado(s) no worker M2A.`,
+      );
+    }
     qc.invalidateQueries({ queryKey: ["processo-detail", processoId] });
   }, [
     ensureConnected,
@@ -474,6 +514,7 @@ export function useEnviarContratosM2A({
     savePreference,
     qc,
     processoId,
+    cancelBatch,
   ]);
 
   return {
@@ -497,5 +538,6 @@ export function useEnviarContratosM2A({
     // actions
     handleDiagnoseM2A,
     handleSendSelectedToM2A,
+    cancelBatch,
   };
 }

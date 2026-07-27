@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { notify } from "@/lib/notify";
 import { useProgress } from "@/contexts/ProgressContext";
@@ -28,6 +28,8 @@ export function useEnviarContratoM2A(
   const [logs, setLogs] = useState<M2AProgressEvent[]>([]);
   const [etapaAtual, setEtapaAtual] = useState<M2AEtapa | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const cancelRef = useRef<(() => void) | null>(null);
+  const cancelledRef = useRef(false);
 
   const unidadeGestoraId = contrato?.secretaria?.m2a_orgao_id ?? null;
   const { preference, savePreference } = useM2APreferences(unidadeGestoraId);
@@ -36,6 +38,7 @@ export function useEnviarContratoM2A(
   // vazamento de memória enquanto atualizações do M2A ainda estão em curso.
   useEffect(() => {
     const off = listenM2AProgress(id, async (e) => {
+      if (cancelledRef.current) return;
       setLogs((l) => [...l, e]);
       setEtapaAtual(e.etapa);
       if (e.m2a_contrato_id && e.m2a_contrato_id !== contrato?.contrato.m2a_contrato_id) {
@@ -177,6 +180,21 @@ export function useEnviarContratoM2A(
     startTask(
       "Enviando contrato ao portal",
       `Preparando ${contrato.contrato.numero_contrato}...`,
+      {
+        onCancel: () => {
+          cancelRef.current?.();
+          cancelRef.current = null;
+          cancelledRef.current = true;
+          setEnviando(false);
+          setEtapaAtual(null);
+          void supabase
+            .from("contratos")
+            .update({ status_envio_m2a: "pendente" })
+            .eq("id", id);
+          notify.info("Envio cancelado.");
+          refetch();
+        },
+      },
     );
     await supabase
       .from("contratos")
@@ -191,15 +209,31 @@ export function useEnviarContratoM2A(
       gestor_id: payload.dadosM2A.gestor_id as string,
     });
 
-    sendToM2A(payload as any);
+    cancelledRef.current = false;
+    cancelRef.current = sendToM2A(payload as any);
   }, [
     contrato,
     ensureConnected,
     id,
     preference,
+    refetch,
     savePreference,
     startTask,
   ]);
+
+  const cancelarEnvio = useCallback(() => {
+    cancelRef.current?.();
+    cancelRef.current = null;
+    cancelledRef.current = true;
+    setEnviando(false);
+    setEtapaAtual(null);
+    void supabase
+      .from("contratos")
+      .update({ status_envio_m2a: "pendente" })
+      .eq("id", id)
+      .then(() => refetch());
+    notify.info("Envio cancelado.");
+  }, [id, refetch]);
 
   return {
     logs,
@@ -208,5 +242,7 @@ export function useEnviarContratoM2A(
     pct,
     connected,
     handleEnviar,
+    cancelarEnvio,
   };
 }
+

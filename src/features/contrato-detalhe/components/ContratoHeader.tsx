@@ -1,6 +1,6 @@
 import { memo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, CheckCircle2, ChevronDown, Clock, Loader2, RefreshCw, Send, XCircle } from "lucide-react";
+import { ArrowLeft, Ban, CheckCircle2, ChevronDown, Clock, Loader2, RefreshCw, Send, XCircle } from "lucide-react";
 import { ContractReportGenerator } from "@/components/contratos/ContractReportGenerator";
 import {
   DropdownMenu,
@@ -22,6 +22,7 @@ export interface ContratoHeaderActionsProps {
   sincronizando: boolean;
   onSincronizar: () => void;
   onEnviar: () => void;
+  onCancelar: () => void;
   onStatusChanged?: () => void;
 }
 
@@ -48,6 +49,7 @@ export const ContratoHeaderActions = memo(function ContratoHeaderActions({
   sincronizando,
   onSincronizar,
   onEnviar,
+  onCancelar,
   onStatusChanged,
 }: ContratoHeaderActionsProps) {
   const [salvandoStatus, setSalvandoStatus] = useState(false);
@@ -145,6 +147,12 @@ export const ContratoHeaderActions = memo(function ContratoHeaderActions({
         )}
         {sincronizando ? "Sincronizando..." : "Sincronizar da M2A"}
       </Button>
+
+      {enviando ? (
+        <Button size="sm" variant="destructive" onClick={onCancelar}>
+          <Ban className="size-4" /> Cancelar envio
+        </Button>
+      ) : null}
 
       <Button size="sm" onClick={onEnviar} disabled={enviando || !connected}>
         {enviando ? (

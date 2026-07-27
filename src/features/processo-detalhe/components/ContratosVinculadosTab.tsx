@@ -49,6 +49,7 @@ export interface ContratosVinculadosTabProps {
   onToggleOne: (id: string, checked: boolean) => void;
   onDownloadSelected: () => void;
   onOpenSendDialog: () => void;
+  onCancelSend?: () => void;
   onConfirmDeleteSelected: () => void;
   onDownloadContrato: (c: ContratoRow) => void;
   onToggleImpresso: (c: ContratoRow) => void;
@@ -99,6 +100,7 @@ export function ContratosVinculadosTab({
   onToggleOne,
   onDownloadSelected,
   onOpenSendDialog,
+  onCancelSend,
   onConfirmDeleteSelected,
   onDownloadContrato,
   onToggleImpresso,
@@ -242,6 +244,7 @@ export function ContratosVinculadosTab({
             onDownload={onDownloadSelected}
             onOpenSend={onOpenSendDialog}
             onConfirmDelete={onConfirmDeleteSelected}
+            onCancelSend={onCancelSend}
           />
         </div>
 

@@ -159,7 +159,9 @@ async function callProxySse(
   path: string,
   body: unknown,
   cb: SseCallbacks,
+  signal?: AbortSignal,
 ): Promise<void> {
+  if (signal?.aborted) return;
   const { data: sessionData } = await supabase.auth.getSession();
   const token = sessionData.session?.access_token;
   if (!token) {
@@ -181,8 +183,10 @@ async function callProxySse(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ path, method: "POST", body }),
+      signal,
     });
   } catch (err) {
+    if (signal?.aborted) return;
     cb.onError?.(err instanceof Error ? err.message : String(err));
     return;
   }
@@ -195,7 +199,18 @@ async function callProxySse(
   const decoder = new TextDecoder();
   let buffer = "";
   while (true) {
-    const { value, done } = await reader.read();
+    if (signal?.aborted) {
+      void reader.cancel().catch(() => undefined);
+      return;
+    }
+    let value: Uint8Array | undefined;
+    let done = false;
+    try {
+      ({ value, done } = await reader.read());
+    } catch (err) {
+      if (signal?.aborted) return;
+      throw err;
+    }
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
     let idx;
@@ -248,8 +263,14 @@ async function callProxyJson<T = unknown>(
 // Envio de contrato (substitui sendToM2A da extensão)
 // ============================================================
 
-export function sendToM2A(payload: M2AAutomationPayload): void {
+/**
+ * Dispara o envio de um contrato ao portal.
+ * Retorna uma função `cancel()` que interrompe a escuta/stream do worker —
+ * usada pelo botão "Cancelar envio" da UI.
+ */
+export function sendToM2A(payload: M2AAutomationPayload): () => void {
   const contratoId = payload.contratoId;
+  const controller = new AbortController();
   let terminalEmitted = false;
   emitWindow({
     type: "M2A_PROGRESS",
@@ -305,8 +326,11 @@ export function sendToM2A(payload: M2AAutomationPayload): void {
           ?.m2a_contrato_id,
       } satisfies M2AProgressEvent);
     },
-  });
+  }, controller.signal);
+
+  return () => controller.abort();
 }
+
 
 export function diagnoseM2A(payload: M2AAutomationPayload): void {
   const contratoId = payload.contratoId;
