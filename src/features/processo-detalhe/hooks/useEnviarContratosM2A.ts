@@ -379,6 +379,26 @@ export function useEnviarContratosM2A({
     diagnoseM2A(payload as any);
   }, [ensureConnected, validateM2AConfig, buildM2APayload]);
 
+  /** Interrompe o lote: aborta o contrato em curso e pula os restantes. */
+  const cancelBatch = useCallback(() => {
+    cancelledRef.current = true;
+    currentCancelRef.current?.();
+    currentCancelRef.current = null;
+    // Libera o loop sequencial imediatamente.
+    for (const [cid, resolve] of pendingResolversRef.current.entries()) {
+      pendingResolversRef.current.delete(cid);
+      resolve({} as M2AProgressEvent);
+      void supabase
+        .from("contratos")
+        .update({ status_envio_m2a: "pendente" })
+        .eq("id", cid);
+      setBatchStatus((s) => ({ ...s, [cid]: "cancelado" }));
+    }
+    setSending(false);
+    notify.info("Cancelando envio…");
+    qc.invalidateQueries({ queryKey: ["processo-detail", processoId] });
+  }, [processoId, qc]);
+
   const handleSendSelectedToM2A = useCallback(async () => {
     if (!ensureConnected()) return;
     const config = validateM2AConfig();
@@ -391,7 +411,7 @@ export function useEnviarContratosM2A({
     startTask(
       "Enviando contratos ao portal",
       `Preparando ${config.ids.length} contrato(s)...`,
-      { onCancel: () => cancelBatchRef.current() },
+      { onCancel: cancelBatch },
     );
     notify.info(
       `Iniciando envio sequencial de ${config.ids.length} contrato(s)...`,
