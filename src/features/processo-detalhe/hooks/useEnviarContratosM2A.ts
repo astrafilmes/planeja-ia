@@ -513,6 +513,7 @@ export function useEnviarContratosM2A({
     savePreference,
     qc,
     processoId,
+    cancelBatch,
   ]);
 
   return {
@@ -536,5 +537,6 @@ export function useEnviarContratosM2A({
     // actions
     handleDiagnoseM2A,
     handleSendSelectedToM2A,
+    cancelBatch,
   };
 }
