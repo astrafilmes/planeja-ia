@@ -28,6 +28,8 @@ export function useEnviarContratoM2A(
   const [logs, setLogs] = useState<M2AProgressEvent[]>([]);
   const [etapaAtual, setEtapaAtual] = useState<M2AEtapa | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const cancelRef = useRef<(() => void) | null>(null);
+  const cancelledRef = useRef(false);
 
   const unidadeGestoraId = contrato?.secretaria?.m2a_orgao_id ?? null;
   const { preference, savePreference } = useM2APreferences(unidadeGestoraId);
