@@ -49,6 +49,7 @@ export interface ContratosVinculadosTabProps {
   onToggleOne: (id: string, checked: boolean) => void;
   onDownloadSelected: () => void;
   onOpenSendDialog: () => void;
+  onCancelSend?: () => void;
   onConfirmDeleteSelected: () => void;
   onDownloadContrato: (c: ContratoRow) => void;
   onToggleImpresso: (c: ContratoRow) => void;
