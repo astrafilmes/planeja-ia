@@ -53,6 +53,7 @@ export type ContratoRow = {
   objeto: string;
   status: string;
   data: string | null;
+  data_fim?: string | null;
   data_texto_legado?: string | null;
   status_envio_m2a: string;
   ultimo_erro_m2a: string | null;

@@ -532,6 +532,7 @@ export type Database = {
           created_by: string | null
           data: string | null
           data_criacao_legada: string | null
+          data_fim: string | null
           data_texto_legado: string | null
           deleted_at: string | null
           dotacao: string | null
@@ -568,6 +569,7 @@ export type Database = {
           created_by?: string | null
           data?: string | null
           data_criacao_legada?: string | null
+          data_fim?: string | null
           data_texto_legado?: string | null
           deleted_at?: string | null
           dotacao?: string | null
@@ -604,6 +606,7 @@ export type Database = {
           created_by?: string | null
           data?: string | null
           data_criacao_legada?: string | null
+          data_fim?: string | null
           data_texto_legado?: string | null
           deleted_at?: string | null
           dotacao?: string | null

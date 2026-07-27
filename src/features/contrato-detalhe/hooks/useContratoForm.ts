@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { notify } from "@/lib/notify";
-import { isNumericM2AId } from "@/lib/m2a";
+import { getDataFimContrato, isNumericM2AId } from "@/lib/m2a";
 import type { ContratoFull } from "../lib";
 
 export function useContratoForm(
@@ -14,6 +14,7 @@ export function useContratoForm(
   const [editNumeroContrato, setEditNumeroContrato] = useState("");
   const [editAtaId, setEditAtaId] = useState("");
   const [editData, setEditData] = useState("");
+  const [editDataFim, setEditDataFim] = useState("");
   const [editObjeto, setEditObjeto] = useState("");
   const [editPreposto, setEditPreposto] = useState("");
   const [editFiscal, setEditFiscal] = useState("");
@@ -24,7 +25,15 @@ export function useContratoForm(
     const cc = contrato.contrato;
     setEditNumeroContrato(cc.numero_contrato ?? "");
     setEditAtaId(cc.m2a_ata_id ?? "");
-    setEditData(cc.data ? String(cc.data).slice(0, 10) : "");
+    const dataIni = cc.data ? String(cc.data).slice(0, 10) : "";
+    setEditData(dataIni);
+    setEditDataFim(
+      cc.data_fim
+        ? String(cc.data_fim).slice(0, 10)
+        : dataIni
+          ? getDataFimContrato(dataIni)
+          : "",
+    );
     setEditObjeto(cc.objeto ?? "");
     setEditPreposto(cc.preposto ?? "");
     setEditFiscal(cc.fiscal ?? "");
@@ -53,6 +62,7 @@ export function useContratoForm(
         m2a_ata_numero: ataSelecionada?.numero_ata ?? undefined,
         fornecedor_nome: ataSelecionada?.fornecedor_nome ?? undefined,
         data: editData ? editData : undefined,
+        data_fim: editDataFim ? editDataFim : null,
         objeto: editObjeto.trim() || undefined,
         preposto: editPreposto.trim() || undefined,
         fiscal: editFiscal.trim() || undefined,
@@ -74,6 +84,7 @@ export function useContratoForm(
     editNumeroContrato,
     editAtaId,
     editData,
+    editDataFim,
     editObjeto,
     editPreposto,
     editFiscal,
@@ -88,6 +99,8 @@ export function useContratoForm(
     setEditAtaId,
     editData,
     setEditData,
+    editDataFim,
+    setEditDataFim,
     editObjeto,
     setEditObjeto,
     editPreposto,
