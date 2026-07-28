@@ -55,6 +55,27 @@ Deno.serve(async (req) => {
     return jsonResponse(401, { error: "Unauthorized" });
   }
 
+  // Autorização: só operador/gestor/admin podem acionar a automação M2A.
+  const userId = claimsData.claims.sub as string;
+  const admin = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    { auth: { persistSession: false } },
+  );
+  const { data: roles, error: rolesErr } = await admin
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId);
+  if (rolesErr) {
+    return jsonResponse(500, { error: "Falha ao verificar permissões" });
+  }
+  const allowed = new Set(["admin", "gestor", "operador"]);
+  if (!(roles ?? []).some((r: { role: string }) => allowed.has(r.role))) {
+    return jsonResponse(403, {
+      error: "Acesso negado: permissão insuficiente para acionar o portal M2A.",
+    });
+  }
+
   const workerUrl = Deno.env.get("M2A_WORKER_URL");
   const sharedSecret = Deno.env.get("M2A_WORKER_SHARED_SECRET");
   if (!workerUrl || !sharedSecret) {
@@ -72,8 +93,10 @@ Deno.serve(async (req) => {
   }
   const path = String(payload.path ?? "");
   const method = String(payload.method ?? "GET").toUpperCase();
-  if (!path.startsWith("/")) {
-    return jsonResponse(400, { error: "path deve começar com /" });
+  if (!path.startsWith("/") || path.startsWith("//") || /^\/+\w+:/.test(path)) {
+    return jsonResponse(400, {
+      error: "path deve ser um caminho relativo começando com /",
+    });
   }
 
   const hasBody = payload.body !== undefined && payload.body !== null;

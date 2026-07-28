@@ -56,8 +56,18 @@ function retryDelayMs(attempt) {
   return base + Math.floor(Math.random() * 500);
 }
 
+function assertSafePath(path) {
+  const p = String(path ?? "");
+  if (!p.startsWith("/") || p.startsWith("//")) {
+    throw new Error(
+      `M2A_INVALID_PATH: apenas caminhos relativos ao portal são permitidos (recebido: ${p.slice(0, 80)})`,
+    );
+  }
+  return p;
+}
+
 function absoluteUrl(path) {
-  return path.startsWith("http") ? path : `${config.m2a.baseUrl}${path}`;
+  return `${config.m2a.baseUrl}${assertSafePath(path)}`;
 }
 
 function normalizeCacheUrl(url) {
@@ -225,6 +235,7 @@ class M2aClient {
 
 
   async _raw(method, path, opts = {}) {
+    assertSafePath(path);
     const binary = opts.responseType === "arraybuffer";
     const headers = {
       Accept: binary
