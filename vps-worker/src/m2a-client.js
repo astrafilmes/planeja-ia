@@ -235,6 +235,7 @@ class M2aClient {
 
 
   async _raw(method, path, opts = {}) {
+    assertSafePath(path);
     const binary = opts.responseType === "arraybuffer";
     const headers = {
       Accept: binary
