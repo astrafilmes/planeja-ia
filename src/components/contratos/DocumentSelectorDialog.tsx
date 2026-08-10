@@ -20,12 +20,13 @@ export type DocumentTypeOption = {
 
 // Posições 1 a 6 são os tipos de documentos comuns no M2A
 export const M2A_DOC_TYPES: DocumentTypeOption[] = [
-  { id: "despacho_autorizacao", label: "DESPACHO DE AUTORIZAÇÃO", position: 1 },
-  { id: "termo_referencia", label: "TERMO DE REFERÊNCIA", position: 2 },
-  { id: "minuta_contrato", label: "MINUTA DO CONTRATO", position: 3 },
-  { id: "convocacao", label: "CONVOCAÇÃO", position: 4 },
-  { id: "contrato", label: "CONTRATO", position: 5 },
-  { id: "publicacao", label: "PUBLICAÇÃO", position: 6 },
+  { id: "despacho", label: "DESPACHO", position: 1 },
+  { id: "comunicacao_interna", label: "COMUNICAÇÃO INTERNA", position: 2 },
+  { id: "declaracao_adequacao", label: "DECLARAÇÃO DE ADEQUAÇÃO ORÇAMENTÁRIA E FINANCEIRA", position: 3 },
+  { id: "convocacao", label: "CONVOCAÇÃO ASSINATURA DO CONTRATO", position: 4 },
+  { id: "contrato", label: "CONTRATO - 14.133", position: 5 },
+  { id: "extrato", label: "EXTRATO DE CONTRATO", position: 6 },
+  { id: "certidao_afixacao", label: "CERTIDÃO DE AFIXAÇÃO DO EXTRATO DO CONTRATO", position: 7 },
 ];
 
 interface DocumentSelectorDialogProps {
