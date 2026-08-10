@@ -17,7 +17,7 @@ export interface ContratosBulkActionsBarProps {
   sending: boolean;
   connected: boolean;
   deletePending: boolean;
-  onDownload: () => void;
+  onDownload: (ids?: string[]) => void;
   onOpenSend: () => void;
   onConfirmDelete: () => void;
   onCancelSend?: () => void;
@@ -43,8 +43,8 @@ export function ContratosBulkActionsBar({
   if (selectedCount === 0) return null;
   return (
     <>
-      <Button size="sm" variant="outline" onClick={onDownload}>
-        <Download className="size-4" /> Baixar convocação e contrato (
+      <Button size="sm" variant="outline" onClick={() => onDownload()}>
+        <Download className="size-4" /> Baixar documentos (
         {selectedCount})
       </Button>
       <AlertDialog>

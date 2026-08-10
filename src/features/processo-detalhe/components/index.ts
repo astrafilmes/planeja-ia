@@ -7,3 +7,4 @@ export { ContratosBulkActionsBar } from "./ContratosBulkActionsBar";
 export { ContratosVinculadosTab } from "./ContratosVinculadosTab";
 export { ItensConsolidadosTab } from "./ItensConsolidadosTab";
 export { EnviarM2ADialog } from "./EnviarM2ADialog";
+export { DownloadDocumentosDialog } from "./DownloadDocumentosDialog";

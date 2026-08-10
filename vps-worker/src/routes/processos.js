@@ -1,5 +1,6 @@
 import * as cheerio from "cheerio";
 import { m2a } from "../m2a-client.js";
+import { obterDocumentosContrato } from "../m2a/contrato.js";
 import { config } from "../config.js";
 
 // =====================================================================
@@ -1506,6 +1507,50 @@ export async function processosRoutes(app) {
       const status = err.status && err.status >= 400 ? err.status : 500;
       return reply.code(status).send({ error: String(err?.message ?? err) });
     }
+  });
+
+  // Sincroniza apenas documentos de todos os contratos do processo.
+  app.post("/processos/:id/sincronizar-documentos", async (req, reply) => {
+    const id = String(req.params.id || "").trim();
+    if (!id) return reply.code(400).send({ error: "id obrigatório" });
+    try {
+      const trace = [];
+      const atas = await fetchAtasValidasDoProcesso(id, trace);
+      const resultados = {};
+
+      for (const ata of atas) {
+        const contratos = await fetchContratosDaAta(ata, trace, id);
+        for (const contrato of contratos) {
+          try {
+            const { metadados } = await obterDocumentosContrato(contrato.id_contrato_m2a);
+            resultados[contrato.numero_contrato] = metadados;
+          } catch (e) {
+            console.error(`[m2a-vps] erro ao ler docs do contrato ${contrato.numero_contrato}:`, e.message);
+            resultados[contrato.numero_contrato] = [];
+          }
+        }
+      }
+      return { processo_id: id, documentos: resultados };
+    } catch (err) {
+      console.error(`[m2a-vps] erro fatal em /sincronizar-documentos/${id}:`, err);
+      const status = err.status && err.status >= 400 ? err.status : 500;
+      return reply.code(status).send({ error: String(err?.message ?? err) });
+    }
+  });
+
+  // Exportar função interna para uso pelo orquestrador se necessário
+  app.decorate("sincronizarDocumentosProcesso", async (m2aProcessoId) => {
+    const trace = [];
+    const atas = await fetchAtasValidasDoProcesso(m2aProcessoId, trace);
+    const resultados = {};
+    for (const ata of atas) {
+      const contratos = await fetchContratosDaAta(ata, trace, m2aProcessoId);
+      for (const contrato of contratos) {
+        const { metadados } = await obterDocumentosContrato(contrato.id_contrato_m2a);
+        resultados[contrato.numero_contrato] = metadados;
+      }
+    }
+    return resultados;
   });
 
   // DEBUG: endpoint de inspeção de HTML cru removido — permitia SSRF
