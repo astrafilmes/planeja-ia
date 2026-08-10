@@ -81,9 +81,9 @@ import {
  Pencil,
  CheckCircle2,
  Circle,
- Printer,
- Megaphone,
-
+  Printer,
+  Megaphone,
+  FileArchive,
 } from"lucide-react";
 import { notify } from"@/lib/notify";
 import { logAudit } from"@/lib/audit";
@@ -97,6 +97,7 @@ import {
 import { downloadM2ADocuments } from"@/lib/m2a";
 import { ContractReportGenerator } from"@/components/contratos/ContractReportGenerator";
 import { PautaConsolidadaExporter } from"@/components/contratos/PautaConsolidadaExporter";
+import { DocumentSelectorDialog, type DocumentTypeOption, M2A_DOC_TYPES } from "@/components/contratos/DocumentSelectorDialog";
 
 export const Route = createFileRoute("/_authenticated/contratos")({
  component: Page,
@@ -214,8 +215,9 @@ function Page() {
  const [deleting, setDeleting] = useState<any | null>(null);
  const [selected, setSelected] = useState<Set<string>>(new Set());
  const [bulkOpen, setBulkOpen] = useState(false);
- const [downloadingDocs, setDownloadingDocs] = useState(false);
- const { startTask, updateProgress, finishTask, failTask } = useProgress();
+  const [downloadingDocs, setDownloadingDocs] = useState(false);
+  const [selectorOpen, setSelectorOpen] = useState(false);
+  const { startTask, updateProgress, finishTask, failTask } = useProgress();
 
  const form = useForm<z.infer<typeof schema>>({
  resolver: zodResolver(schema) as any,
@@ -517,47 +519,69 @@ function Page() {
  notify.success(`${rows.length} contratos exportados`);
  }
 
- async function handleBulkDownloadDocumentos() {
- const docs = (contratos ?? [])
- .filter((contrato: any) => selected.has(contrato.id))
- .flatMap((contrato: any) =>
- normalizeDocumentosM2A(contrato.m2a_documentos_gerados, contrato),
- );
+  async function handleBulkDownloadDocumentos(selectedTypes: DocumentTypeOption[]) {
+  const positions = new Set(selectedTypes.map(t => t.position));
+  const docs = (contratos ?? [])
+  .filter((contrato: any) => selected.has(contrato.id))
+  .flatMap((contrato: any) => {
+    if (!Array.isArray(contrato.m2a_documentos_gerados)) return [];
+    return (contrato.m2a_documentos_gerados as any[])
+      .map((item, index) => {
+        const pos = index + 1;
+        if (!positions.has(pos)) return null;
+        if (!item || typeof item !== "object") return null;
+        const doc = item as { id_m2a?: unknown; id?: unknown; nome?: unknown };
+        const id_m2a = String(doc.id_m2a ?? doc.id ?? "").trim();
+        const nome = String(doc.nome ?? `Documento ${id_m2a}`).trim();
+        if (!/^\d+$/.test(id_m2a)) return null;
+        return {
+          id_m2a,
+          nome: `${nome} - ${contrato.numero_contrato}`,
+          contratoId: contrato.id,
+          contratoNumero: contrato.numero_contrato,
+          m2aContratoId: contrato.m2a_contrato_id ?? undefined,
+        };
+      })
+      .filter(Boolean) as M2ADocumentoGerado[];
+  });
 
- if (!selected.size) return;
- if (!docs.length) {
- notify.error("Nenhuma convocação ou contrato encontrado nos contratos selecionados.",
- );
- return;
- }
+  if (!selected.size) return;
+  if (!docs.length) {
+  notify.error("Nenhuma convocação ou contrato encontrado nos contratos selecionados.",
+  );
+  setSelectorOpen(false);
+  return;
+  }
 
- setDownloadingDocs(true);
- startTask("Compactando documentos",
- `Compactando ${docs.length} documento(s) no servidor...`,
- );
- try {
-      await downloadM2ADocuments(docs, {
-        archive: true,
-        filename: `contratos-documentos-${new Date().toISOString().slice(0, 10)}.zip`,
-      }, (e) => {
-        if (e.mensagem && (e.status === "documento" || e.status === "compactando" || e.status === "preparado" || e.status === "iniciado")) {
-          updateProgress(e.percent ?? 0, e.mensagem, { isIndeterminate: e.percent == null });
-        }
-        if (e.status === "concluido") {
-          finishTask(`${e.total} documento(s) compactado(s).`);
-          notify.success(`${e.total} documento(s) enviados para download.`);
-        }
-        if (e.status === "erro") {
-          failTask(e.mensagem ?? "Falha");
-          notify.error("Falha no download em lote", { description: e.mensagem });
-        }
-      });
- } catch (err: any) {
- notify.error(err?.message ??"Falha ao gerar ZIP");
- } finally {
- setDownloadingDocs(false);
- }
- }
+  setDownloadingDocs(true);
+  startTask("Compactando documentos",
+  `Compactando ${docs.length} documento(s) no servidor...`,
+  );
+  try {
+       await downloadM2ADocuments(docs, {
+         archive: true,
+         filename: `contratos-documentos-${new Date().toISOString().slice(0, 10)}.zip`,
+       }, (e) => {
+         if (e.mensagem && (e.status === "documento" || e.status === "compactando" || e.status === "preparado" || e.status === "iniciado")) {
+           updateProgress(e.percent ?? 0, e.mensagem, { isIndeterminate: e.percent == null });
+         }
+         if (e.status === "concluido") {
+           finishTask(`${e.total} documento(s) compactado(s).`);
+           notify.success(`${e.total} documento(s) enviados para download.`);
+           setDownloadingDocs(false);
+           setSelectorOpen(false);
+         }
+         if (e.status === "erro") {
+           failTask(e.mensagem ?? "Falha");
+           notify.error("Falha no download em lote", { description: e.mensagem });
+           setDownloadingDocs(false);
+         }
+       });
+  } catch (err: any) {
+  notify.error(err?.message ??"Falha ao gerar ZIP");
+  setDownloadingDocs(false);
+  }
+  }
 
  if (isDetailRoute) return <Outlet />;
 
@@ -571,10 +595,10 @@ function Page() {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={handleBulkDownloadDocumentos}
+                onClick={() => setSelectorOpen(true)}
                 disabled={downloadingDocs}
               >
-                <Download className="size-4" /> Baixar documentos
+                <FileArchive className="size-4" /> Baixar arquivos ({selected.size})
               </Button>
             )}
             {selected.size > 0 ? (
@@ -1071,9 +1095,18 @@ function Page() {
  }
  >
  <Pencil className="size-4" />
- Abrir
- </DropdownMenuItem>
- <DropdownMenuItem
+  Abrir
+  </DropdownMenuItem>
+  <DropdownMenuItem
+  onClick={() => {
+    setSelected(new Set([c.id]));
+    setSelectorOpen(true);
+  }}
+  >
+  <Download className="size-4" />
+  Baixar arquivos
+  </DropdownMenuItem>
+  <DropdownMenuItem
  className="text-destructive focus:text-destructive"
  onClick={() => setDeleting(c)}
  >
@@ -1198,6 +1231,13 @@ function Page() {
  </AlertDialogFooter>
  </AlertDialogContent>
  </AlertDialog>
- </AppShell>
- );
+      <DocumentSelectorDialog
+        open={selectorOpen}
+        onOpenChange={setSelectorOpen}
+        onConfirm={handleBulkDownloadDocumentos}
+        isDownloading={downloadingDocs}
+        selectedCount={selected.size}
+      />
+    </AppShell>
+  );
 }

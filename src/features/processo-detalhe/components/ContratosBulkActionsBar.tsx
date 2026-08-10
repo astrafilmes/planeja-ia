@@ -1,4 +1,4 @@
-import { Ban, Download, Loader2, Send, Trash2 } from "lucide-react";
+import { Ban, Download, FileArchive, Loader2, Send, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -44,8 +44,7 @@ export function ContratosBulkActionsBar({
   return (
     <>
       <Button size="sm" variant="outline" onClick={onDownload}>
-        <Download className="size-4" /> Baixar convocação e contrato (
-        {selectedCount})
+        <FileArchive className="size-4" /> Baixar arquivos ({selectedCount})
       </Button>
       <AlertDialog>
         <AlertDialogTrigger asChild>
