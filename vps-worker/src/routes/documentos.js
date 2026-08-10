@@ -390,8 +390,16 @@ function sseInit(reply) {
   });
 }
 function sseSend(reply, event, data) {
+  if (reply.raw.writableEnded) return;
   reply.raw.write(`event: ${event}\n`);
   reply.raw.write(`data: ${JSON.stringify(data)}\n\n`);
+  if (typeof reply.raw.flush === "function") reply.raw.flush();
+}
+
+function sseHeartbeat(reply) {
+  if (reply.raw.writableEnded) return;
+  reply.raw.write(": heartbeat\n\n");
+  if (typeof reply.raw.flush === "function") reply.raw.flush();
 }
 
 
