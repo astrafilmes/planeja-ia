@@ -96,7 +96,7 @@ export const BRL = new Intl.NumberFormat("pt-BR", {
   currency: "BRL",
 });
 
-export const DOCUMENTOS_DOWNLOAD_POSICOES = new Set([4, 5]);
+export const DOCUMENTOS_DOWNLOAD_POSICOES = new Set([1, 2, 3, 4, 5, 6, 7]);
 
 /* ----------------------------- Utilitários ----------------------------- */
 
