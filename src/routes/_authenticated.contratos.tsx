@@ -95,7 +95,6 @@ import {
  type M2ADocumentoGerado,
 } from"@/lib/m2a";
 import { downloadM2ADocuments } from"@/lib/m2a";
-import { downloadM2ADocuments } from"@/lib/m2a";
 import { ContractReportGenerator } from"@/components/contratos/ContractReportGenerator";
 import { PautaConsolidadaExporter } from"@/components/contratos/PautaConsolidadaExporter";
 import { DownloadDocumentosDialog } from "@/features/processo-detalhe/components/DownloadDocumentosDialog";
