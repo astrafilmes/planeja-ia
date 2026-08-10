@@ -61,25 +61,6 @@ export interface WorkerProcessoResponse extends M2aSyncPayload {
   itens_mestre?: Array<Record<string, unknown>>;
 }
 
-/** Espelho do POST /processos/:id/sincronizar-documentos da VPS. */
-export function syncDocumentosFromWorker(
-  m2aProcessoUrlOrId: string,
-): Promise<{ documentos: Record<string, any[]> }> {
-  const id = extractProcessoIdFromUrl(m2aProcessoUrlOrId);
-  return callWorker<{ documentos: Record<string, any[]> }>({
-    path: `/processos/${id}/sincronizar-documentos`,
-    method: "POST",
-  });
-}
-
-function extractProcessoIdFromUrl(input: string) {
-  const s = String(input ?? "").trim();
-  if (!s) return null;
-  if (/^\d+$/.test(s)) return s;
-  const m = s.match(/\/processo_administrativo\/(\d+)/);
-  return m ? m[1] : s;
-}
-
 /** Espelho do POST /processos/sync da VPS. */
 export function fetchProcessoFromWorker(
   m2aProcessoUrlOrId: string,

@@ -97,7 +97,6 @@ import {
 import { downloadM2ADocuments } from"@/lib/m2a";
 import { ContractReportGenerator } from"@/components/contratos/ContractReportGenerator";
 import { PautaConsolidadaExporter } from"@/components/contratos/PautaConsolidadaExporter";
-import { DownloadDocumentosDialog } from "@/features/processo-detalhe/components/DownloadDocumentosDialog";
 
 export const Route = createFileRoute("/_authenticated/contratos")({
  component: Page,
@@ -215,8 +214,7 @@ function Page() {
  const [deleting, setDeleting] = useState<any | null>(null);
  const [selected, setSelected] = useState<Set<string>>(new Set());
  const [bulkOpen, setBulkOpen] = useState(false);
-  const [downloadingDocs, setDownloadingDocs] = useState(false);
-  const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
+ const [downloadingDocs, setDownloadingDocs] = useState(false);
  const { startTask, updateProgress, finishTask, failTask } = useProgress();
 
  const form = useForm<z.infer<typeof schema>>({
@@ -519,18 +517,12 @@ function Page() {
  notify.success(`${rows.length} contratos exportados`);
  }
 
-  async function handleBulkDownloadDocumentos() {
-    if (!selected.size) return;
-    setDownloadDialogOpen(true);
-  }
-
-  async function handleConfirmDownload(docIds: string[]) {
-    const docs = (contratos ?? [])
-      .filter((contrato: any) => selected.has(contrato.id))
-      .flatMap((contrato: any) =>
-        normalizeDocumentosM2A(contrato.m2a_documentos_gerados, contrato),
-      )
-      .filter(d => docIds.includes(d.id_m2a));
+ async function handleBulkDownloadDocumentos() {
+ const docs = (contratos ?? [])
+ .filter((contrato: any) => selected.has(contrato.id))
+ .flatMap((contrato: any) =>
+ normalizeDocumentosM2A(contrato.m2a_documentos_gerados, contrato),
+ );
 
  if (!selected.size) return;
  if (!docs.length) {
@@ -1205,14 +1197,7 @@ function Page() {
  </AlertDialogAction>
  </AlertDialogFooter>
  </AlertDialogContent>
-  </AlertDialog>
-
-  <DownloadDocumentosDialog
-    open={downloadDialogOpen}
-    onOpenChange={setDownloadDialogOpen}
-    selectedContracts={(contratos ?? []).filter((c: any) => selected.has(c.id))}
-    onConfirm={handleConfirmDownload}
-  />
-  </AppShell>
+ </AlertDialog>
+ </AppShell>
  );
 }

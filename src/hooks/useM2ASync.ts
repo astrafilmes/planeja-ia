@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { notify } from "@/lib/notify";
 import { useQueryClient } from "@tanstack/react-query";
 import { persistM2ASnapshot } from "@/lib/m2a";
-import { fetchProcessoFromWorker, syncDocumentosFromWorker } from "@/lib/m2a";
+import { fetchProcessoFromWorker } from "@/lib/m2a";
 import { extractM2AProcessoId } from "@/lib/m2a";
 
 interface UseM2aSyncOpts {
@@ -57,14 +57,6 @@ export function useM2ASync({
         console.groupEnd();
       }
 
-      notify.loading("Sincronizando arquivos e documentos...", {
-        id: toastIdRef.current ?? undefined,
-      });
-
-      console.log(`${LOG} → syncDocumentosFromWorker`);
-      const docResult = await syncDocumentosFromWorker(m2aProcessoUrl);
-      const docsMap = docResult.documentos || {};
-
       notify.loading("Salvando atas, itens e contratos…", {
         id: toastIdRef.current ?? undefined,
       });
@@ -74,10 +66,7 @@ export function useM2ASync({
         processo_id: payload.processo_id,
         atas: payload.atas ?? [],
         itens: payload.itens ?? [],
-        contratos_existentes: (payload.contratos_existentes ?? []).map(c => ({
-          ...c,
-          m2a_documentos_gerados: docsMap[c.numero_contrato] || []
-        })),
+        contratos_existentes: payload.contratos_existentes ?? [],
       }, {
         expectedM2aProcessoId: extractM2AProcessoId(m2aProcessoUrl),
       });

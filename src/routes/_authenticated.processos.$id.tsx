@@ -31,7 +31,6 @@ import {
 } from "@/features/processo-detalhe/hooks";
 import {
   ContratosVinculadosTab,
-  DownloadDocumentosDialog,
   EnviarM2ADialog,
   ItensConsolidadosTab,
   ProcessoErrorState,
@@ -102,10 +101,7 @@ function Page() {
   const { toggleImpresso, togglePublicado } = useContratoFlags(id);
   const deleteContratos = useDeleteContratos(id, clearSelection);
   const { handleDownloadContratoDocs, handleDownloadSelectedDocs } =
-    useDownloadDocumentos(id, contratos);
-  
-  const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
-  const [selectedForDownload, setSelectedForDownload] = useState<any[]>([]);
+    useDownloadDocumentos(id);
 
   const m2a = useEnviarContratosM2A({
     processoId: id,
@@ -133,22 +129,9 @@ function Page() {
     return { count: selected.size, total };
   }, [contratos, selected]);
 
-  const handleDownloadSelected = useCallback((ids: string[]) => {
-    const selectedContracts = contratos.filter(c => ids.includes(c.id));
-    if (selectedContracts.length > 0) {
-      setSelectedForDownload(selectedContracts);
-      setDownloadDialogOpen(true);
-    }
-  }, [contratos]);
-
-  const handleDownloadSingle = useCallback((c: any) => {
-    setSelectedForDownload([c]);
-    setDownloadDialogOpen(true);
-  }, []);
-
-  const handleConfirmDownload = useCallback((docIds: string[]) => {
-    handleDownloadSelectedDocs(docIds);
-  }, [handleDownloadSelectedDocs]);
+  const handleDownloadSelected = useCallback(() => {
+    handleDownloadSelectedDocs(m2a.selectedContracts);
+  }, [handleDownloadSelectedDocs, m2a.selectedContracts]);
 
   const handleConfirmDeleteSelected = useCallback(() => {
     deleteContratos.mutate(Array.from(selected));
@@ -256,18 +239,11 @@ function Page() {
             onOpenSendDialog={() => m2a.setM2aDialogOpen(true)}
             onCancelSend={m2a.cancelBatch}
             onConfirmDeleteSelected={handleConfirmDeleteSelected}
-            onDownloadContrato={handleDownloadSingle}
+            onDownloadContrato={handleDownloadContratoDocs}
             onToggleImpresso={toggleImpresso}
             onTogglePublicado={togglePublicado}
           />
         </TabsContent>
-
-        <DownloadDocumentosDialog
-          open={downloadDialogOpen}
-          onOpenChange={setDownloadDialogOpen}
-          selectedContracts={selectedForDownload}
-          onConfirm={handleConfirmDownload}
-        />
 
         <TabsContent value="itens">
           <ItensConsolidadosTab
@@ -314,13 +290,6 @@ function Page() {
         connected={m2a.connected}
         onDiagnose={m2a.handleDiagnoseM2A}
         onConfirm={m2a.handleSendSelectedToM2A}
-      />
-
-      <DownloadDocumentosDialog
-        open={downloadDialogOpen}
-        onOpenChange={setDownloadDialogOpen}
-        selectedContracts={m2a.selectedContracts}
-        onConfirm={handleConfirmDownload}
       />
     </AppShell>
   );
