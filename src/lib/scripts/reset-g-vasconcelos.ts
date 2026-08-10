@@ -13,5 +13,5 @@ export async function resetContratosGVasconcelos() {
   }
   
   console.log("Contratos resetados com sucesso:", data);
-  return { success: true, count: data?.length };
+  return { success: true };
 }
