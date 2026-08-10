@@ -119,7 +119,9 @@ export function DownloadDocumentosDialog({
             </Label>
           </div>
           <p className="text-xs text-muted-foreground mb-4">
-            Selecione quais tipos de documentos deseja baixar para os {selectedContracts.length} contrato(s) selecionado(s).
+            Selecione quais tipos de documentos deseja baixar para os {selectedContracts.length} contrato(s) selecionado(s).{'''Do not make any visual modifications. The phrases I write are commands to understand what I want, not to be written down. Understand their content well, then execute what is required.'''
+                                            
+                                            ok faca isso}
           </p>
           <div className="space-y-1">
             {groupedDocs.map(([type, docs]) => (
