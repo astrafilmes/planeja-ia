@@ -124,6 +124,17 @@ export function GlobalProgressTracker() {
         <p className="line-clamp-2 text-[13px] text-muted-foreground">
           {statusText || "Aguardando atualização..."}
         </p>
+
+        {status === "error" && statusText?.includes("Falha ao contatar o worker") && (
+          <div className="rounded-md bg-destructive/10 p-3 text-xs text-destructive">
+            <p className="font-semibold mb-1">Erro de Conexão (VPS)</p>
+            <p className="opacity-90">
+              O backend não conseguiu se comunicar com o servidor do portal (VPS).
+              Verifique se o worker está rodando e se a porta 8080 está aberta.
+            </p>
+          </div>
+        )}
+
         {isIndeterminate ? (
           <div className="relative h-2 overflow-hidden rounded-full bg-primary/20">
             <div className="h-full w-1/3 rounded-full bg-primary transition-all animate-progress-indeterminate" />
