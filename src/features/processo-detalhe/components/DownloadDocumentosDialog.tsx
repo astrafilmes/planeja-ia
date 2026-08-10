@@ -27,45 +27,49 @@ export function DownloadDocumentosDialog({
 }: DownloadDocumentosDialogProps) {
   const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
 
-  // Extrai todos os tipos de documentos únicos disponíveis nos contratos selecionados
-  const availableDocs = useMemo(() => {
-    const types = new Map<string, { id_m2a: string; nome: string }[]>();
+  // Lista fixa de tipos que o usuário sempre deve ver, para replicar a interface do M2A
+  const FIXED_TYPES = [
+    "CONTRATO",
+    "CONVOCAÇÃO",
+    "EXTRATO",
+    "DESPACHO",
+    "RATIFICAÇÃO",
+    "COMUNICAÇÃO INTERNA",
+    "ADEQUAÇÃO ORÇAMENTÁRIA",
+    "CERTIDÃO DE AFIXAÇÃO",
+    "OUTROS"
+  ];
+
+  // Agrupa os documentos por esses tipos fixos
+  const groupedDocs = useMemo(() => {
+    const groups = new Map<string, { id_m2a: string; nome: string }[]>();
+    
+    // Inicializa os grupos fixos
+    FIXED_TYPES.forEach(type => groups.set(type, []));
+
     selectedContracts.forEach(contrato => {
       const docs = getContratoDocumentos(contrato as any);
       docs.forEach(doc => {
-        // Tenta extrair um nome base do documento
         const nomeUpper = doc.nome.trim().toUpperCase();
+        let matched = false;
+
+        // Tenta encaixar nos tipos fixos
+        if (nomeUpper.includes("CONTRATO")) { groups.get("CONTRATO")?.push(doc); matched = true; }
+        else if (nomeUpper.includes("CONVOCAÇÃO") || nomeUpper.includes("CONVOCACAO")) { groups.get("CONVOCAÇÃO")?.push(doc); matched = true; }
+        else if (nomeUpper.includes("EXTRATO")) { groups.get("EXTRATO")?.push(doc); matched = true; }
+        else if (nomeUpper.includes("DESPACHO")) { groups.get("DESPACHO")?.push(doc); matched = true; }
+        else if (nomeUpper.includes("RATIFICAÇÃO") || nomeUpper.includes("RATIFICACAO")) { groups.get("RATIFICAÇÃO")?.push(doc); matched = true; }
+        else if (nomeUpper.includes("COMUNICAÇÃO INTERNA") || nomeUpper.includes("COMUNICACAO INTERNA")) { groups.get("COMUNICAÇÃO INTERNA")?.push(doc); matched = true; }
+        else if (nomeUpper.includes("ADEQUAÇÃO ORÇAMENTÁRIA") || nomeUpper.includes("ADEQUACAO ORCAMENTARIA")) { groups.get("ADEQUAÇÃO ORÇAMENTÁRIA")?.push(doc); matched = true; }
+        else if (nomeUpper.includes("CERTIDÃO DE AFIXAÇÃO") || nomeUpper.includes("CERTIDAO DE AFIXACAO")) { groups.get("CERTIDÃO DE AFIXAÇÃO")?.push(doc); matched = true; }
         
-        // Mapeamento de termos conhecidos para nomes amigáveis
-        // A ordem importa: termos mais específicos primeiro
-        let baseName = "";
-        
-        if (nomeUpper.includes("CONTRATO - COMPRAS")) baseName = "CONTRATO";
-        else if (nomeUpper.includes("CONTRATO ASSINADO")) baseName = "CONTRATO";
-        else if (nomeUpper.includes("EXTRATO DE CONTRATO")) baseName = "EXTRATO";
-        else if (nomeUpper.includes("CONVOCAÇÃO") || nomeUpper.includes("CONVOCACAO")) baseName = "CONVOCAÇÃO";
-        else if (nomeUpper.includes("DESPACHO")) baseName = "DESPACHO";
-        else if (nomeUpper.includes("RATIFICAÇÃO") || nomeUpper.includes("RATIFICACAO")) baseName = "RATIFICAÇÃO";
-        else if (nomeUpper.includes("COMUNICAÇÃO INTERNA") || nomeUpper.includes("COMUNICACAO INTERNA")) baseName = "COMUNICAÇÃO INTERNA";
-        else if (nomeUpper.includes("ADEQUAÇÃO ORÇAMENTÁRIA") || nomeUpper.includes("ADEQUACAO ORCAMENTARIA")) baseName = "ADEQUAÇÃO ORÇAMENTÁRIA";
-        else if (nomeUpper.includes("CERTIDÃO DE AFIXAÇÃO") || nomeUpper.includes("CERTIDAO DE AFIXACAO")) baseName = "CERTIDÃO DE AFIXAÇÃO";
-        else {
-          // Fallback: Tenta limpar o nome removendo números de contrato comuns (ex: 001/2025)
-          // e pega a primeira parte antes de qualquer hífen ou barra
-          const cleanName = nomeUpper
-            .replace(/\d{2,}\/\d{4}/g, "") // remove 001/2025
-            .split(/[-/]/)[0]
-            .trim();
-          
-          baseName = cleanName || "OUTROS";
+        if (!matched) {
+          groups.get("OUTROS")?.push(doc);
         }
-        
-        const list = types.get(baseName) || [];
-        list.push(doc);
-        types.set(baseName, list);
       });
     });
-    return Array.from(types.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+
+    return Array.from(groups.entries());
   }, [selectedContracts]);
 
   const toggleType = (type: string) => {
@@ -77,7 +81,7 @@ export function DownloadDocumentosDialog({
 
   const handleConfirm = () => {
     const ids: string[] = [];
-    availableDocs.forEach(([type, docs]) => {
+    groupedDocs.forEach(([type, docs]) => {
       if (selectedTypes.has(type)) {
         docs.forEach(d => ids.push(d.id_m2a));
       }
@@ -97,27 +101,27 @@ export function DownloadDocumentosDialog({
             Selecione quais tipos de documentos deseja baixar para os {selectedContracts.length} contrato(s) selecionado(s).
           </p>
           <div className="space-y-3">
-            {availableDocs.map(([type, docs]) => (
+            {groupedDocs.map(([type, docs]) => (
               <div key={type} className="flex items-center space-x-2">
                 <Checkbox 
                   id={`doc-type-${type}`} 
                   checked={selectedTypes.has(type)}
                   onCheckedChange={() => toggleType(type)}
+                  disabled={docs.length === 0}
                 />
                 <Label 
                   htmlFor={`doc-type-${type}`}
-                  className="text-sm font-medium leading-none cursor-pointer"
+                  className={`text-sm font-medium leading-none cursor-pointer ${docs.length === 0 ? "opacity-50" : ""}`}
                 >
                   {type}
-                  <span className="ml-2 text-xs text-muted-foreground">
-                    ({docs.length} arquivo(s))
-                  </span>
+                  {docs.length > 0 && (
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      ({docs.length} arquivo(s))
+                    </span>
+                  )}
                 </Label>
               </div>
             ))}
-            {availableDocs.length === 0 && (
-              <p className="text-sm text-destructive">Nenhum documento disponível para os contratos selecionados.</p>
-            )}
           </div>
         </div>
         <DialogFooter>
