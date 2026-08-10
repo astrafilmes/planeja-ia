@@ -101,7 +101,7 @@ function Page() {
 
   const { toggleImpresso, togglePublicado } = useContratoFlags(id);
   const deleteContratos = useDeleteContratos(id, clearSelection);
-  const { handleDownloadContratoDocs, handleDownloadSelectedDocs } =
+  const { handleDownloadContratoDocs, handleDownloadSelectedDocs, selectorProps } =
     useDownloadDocumentos(id);
 
   const m2a = useEnviarContratosM2A({
@@ -292,6 +292,8 @@ function Page() {
         onDiagnose={m2a.handleDiagnoseM2A}
         onConfirm={m2a.handleSendSelectedToM2A}
       />
+
+      <DocumentSelectorDialog {...selectorProps} />
     </AppShell>
   );
 }
