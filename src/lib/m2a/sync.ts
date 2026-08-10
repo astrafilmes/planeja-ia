@@ -50,3 +50,8 @@ export interface M2aSyncCompleteEvent {
   payload?: M2aSyncPayload;
   erro?: string;
 }
+
+export interface M2aSyncDocumento {
+  id_m2a: string;
+  nome: string;
+}
