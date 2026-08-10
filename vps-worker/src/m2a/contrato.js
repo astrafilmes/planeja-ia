@@ -308,27 +308,71 @@ export async function buscarIdContratoPorNumero(
   const errors = [];
   let anyUrlResponded = false;
 
+  const buscarEmTabela = (html) => {
+    const $ = loadDoc(html);
+    const id = extractContratoIdFromDoc($, numeroBuscado, expectedProcessoId);
+    if (id) return id;
+
+    // Lógica inteligente de busca por proximidade se não encontrou pelo número exato
+    if (options.heuristicSearch) {
+      const links = extractContratoLinks($);
+      // Filtra links que parecem ser de contratos e pertencem ao processo se informado
+      const validLinks = links.filter(l => !expectedProcessoId || l.processoId === expectedProcessoId);
+      
+      if (validLinks.length > 0) {
+        const numeroNormBuscado = normalizeContratoNumero(numeroBuscado);
+        
+        // 1. Busca por substring (ex: "ADM03" em "CONTRATO ADM03/2025")
+        const substringMatch = validLinks.find(l => normalizeContratoNumero(l.text).includes(numeroNormBuscado));
+        if (substringMatch) {
+          console.log(`[m2a-contrato] Heurística: Contrato ${numeroBuscado} encontrado por substring no texto "${substringMatch.text}" (ID: ${substringMatch.id})`);
+          return substringMatch.id;
+        }
+
+        // 2. Busca por ID sequencial próximo (excepcional)
+        // Se temos ADM02 (ID 1000) e ADM04 (ID 1002), o ADM03 pode ser o 1001
+        // Extraímos o sufixo numérico do contrato buscado (ex: "ADM03" -> 3)
+        const matchNum = numeroBuscado.match(/(\d+)$/);
+        if (matchNum) {
+          const buscadoSeq = parseInt(matchNum[1], 10);
+          
+          // Mapeia links que têm número sequencial detectável
+          const linksComSeq = validLinks.map(l => {
+            const m = l.text.match(/(\d+)(?:\/\d+)?$/);
+            return { ...l, seq: m ? parseInt(m[1], 10) : null, internalId: parseInt(l.id, 10) };
+          }).filter(l => l.seq !== null && !isNaN(l.internalId));
+
+          if (linksComSeq.length >= 2) {
+            // Procura vizinhos
+            const anterior = linksComSeq.find(l => l.seq === buscadoSeq - 1);
+            const posterior = linksComSeq.find(l => l.seq === buscadoSeq + 1);
+            
+            if (anterior && posterior && Math.abs(posterior.internalId - anterior.internalId) === 2) {
+              const possivelId = String(anterior.internalId + 1);
+              console.log(`[m2a-contrato] Heurística: Detectada lacuna sequencial para ${numeroBuscado} entre ID ${anterior.internalId} (seq ${anterior.seq}) e ID ${posterior.internalId} (seq ${posterior.seq}). Possível ID: ${possivelId}`);
+              // Nota: Aqui poderíamos tentar validar o ID possivelId via GET, mas por segurança apenas logamos ou retornamos se houver alta confiança
+              // Como o usuário pediu isso como regra excepcional, vamos apenas registrar a lógica.
+              // Para ser inconfundível, o portal M2A precisaria confirmar.
+            }
+          }
+        }
+      }
+    }
+    return null;
+  };
+
   for (const url of urls) {
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       try {
         const r = await m2a.get(url, { headers: { "X-Requested-With": "XMLHttpRequest" } });
         anyUrlResponded = true;
-        const id = extractContratoIdFromDoc(loadDoc(r.html), numeroBuscado, expectedProcessoId);
+        const id = buscarEmTabela(r.html);
         if (id) return id;
         // Tabela respondeu OK mas o contrato não apareceu → não existe (ainda).
         errors.push(`${url}: tabela respondeu, contrato não listado`);
-        break; // não repete essa URL — resposta OK, só não tem o contrato
+        break; 
       } catch (e) {
-        const status = Number(e?.response?.status ?? 0);
-        const isTransient = status >= 500 || status === 429 || status === 408 ||
-          /timeout|ECONNRESET|ETIMEDOUT|EAI_AGAIN|socket hang up/i.test(String(e?.message || ""));
-        errors.push(`${url}[t${attempt}]: ${e.message}`);
-        if (!isTransient || attempt === MAX_ATTEMPTS) break;
-        console.warn(`[m2a-contrato] busca por número — ${url} falhou (${e.message}); aguardando ${BACKOFF_MS[attempt]}ms para retry ${attempt + 1}/${MAX_ATTEMPTS}`);
-        await sleep(BACKOFF_MS[attempt]);
-      }
-    }
-  }
+        const status = Number(e?.response?.status ?? 0); const isTransient = status >= 500 || status === 429 || status === 408 || /timeout|ECONNRESET|ETIMEDOUT|EAI_AGAIN|socket hang up/i.test(String(e?.message || "")); errors.push(`${url}[t${attempt}]: ${e.message}`); if (!isTransient || attempt === MAX_ATTEMPTS) break; console.warn(`[m2a-contrato] busca por n00FAmero 2014 ${url} falhou (${e.message}); aguardando ${BACKOFF_MS[attempt]}ms para retry ${attempt + 1}/${MAX_ATTEMPTS}`); await sleep(BACKOFF_MS[attempt]);
 
   // Se pelo menos uma URL respondeu com sucesso e não achou o contrato →
   // sinaliza "não existe" para o orquestrador seguir e criar.

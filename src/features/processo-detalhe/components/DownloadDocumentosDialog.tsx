@@ -34,13 +34,21 @@ export function DownloadDocumentosDialog({
       const docs = getContratoDocumentos(contrato as any);
       docs.forEach(doc => {
         // Pega o nome base do documento (ex: "DESPACHO - 001/2025" -> "DESPACHO")
-        let baseName = doc.nome.split(" - ")[0].trim().toUpperCase();
+        // Refinamos o split para evitar capturar fragmentos de números de contrato
+        const parts = doc.nome.split(" - ");
+        let baseName = parts[0].trim().toUpperCase();
+
+        // Se o primeiro termo for muito curto ou parecer apenas um número, tenta o segundo
+        if ((baseName.length < 3 || /^\d+$/.test(baseName)) && parts.length > 1) {
+          baseName = parts[1].trim().toUpperCase();
+        }
         
-        // Normalizações comuns
-        if (baseName.includes("CONTRATO")) baseName = "CONTRATO";
-        if (baseName.includes("CONVOCAÇÃO") || baseName.includes("CONVOCACAO")) baseName = "CONVOCAÇÃO";
-        if (baseName.includes("DESPACHO")) baseName = "DESPACHO";
-        if (baseName.includes("RATIFICAÇÃO") || baseName.includes("RATIFICACAO")) baseName = "RATIFICAÇÃO";
+        // Normalizações restritas para evitar colisões
+        if (baseName === "CONTRATO" || baseName.startsWith("CONTRATO ")) baseName = "CONTRATO";
+        else if (baseName.includes("CONVOCAÇÃO") || baseName.includes("CONVOCACAO")) baseName = "CONVOCAÇÃO";
+        else if (baseName.includes("DESPACHO")) baseName = "DESPACHO";
+        else if (baseName.includes("RATIFICAÇÃO") || baseName.includes("RATIFICACAO")) baseName = "RATIFICAÇÃO";
+        else if (baseName.includes("EXTRATO")) baseName = "EXTRATO DE CONTRATO";
         
         const list = types.get(baseName) || [];
         list.push(doc);
