@@ -1,8 +1,7 @@
 /**
  * Tipos compartilhados e helpers para a camada M2A.
  */
-import { type M2ADocumentoGerado } from "@/lib/m2a";
-import { type ContratoRow } from "../hooks/useProcessoDetalhe";
+import { type M2ADocumentoGerado, type ContratoRow } from "../lib";
 
 /**
  * Retorna os documentos gerados para o contrato, formatados para download.
