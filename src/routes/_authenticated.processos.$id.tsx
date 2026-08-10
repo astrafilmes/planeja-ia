@@ -104,6 +104,9 @@ function Page() {
   const deleteContratos = useDeleteContratos(id, clearSelection);
   const { handleDownloadContratoDocs, handleDownloadSelectedDocs } =
     useDownloadDocumentos(id, contratos);
+  
+  const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
+  const [selectedForDownload, setSelectedForDownload] = useState<ContratoRow[]>([]);
 
   const m2a = useEnviarContratosM2A({
     processoId: id,
@@ -132,9 +135,16 @@ function Page() {
   }, [contratos, selected]);
 
   const handleDownloadSelected = useCallback((ids: string[]) => {
-    if (ids.length > 0) {
+    const selectedContracts = contratos.filter(c => ids.includes(c.id));
+    if (selectedContracts.length > 0) {
+      setSelectedForDownload(selectedContracts);
       setDownloadDialogOpen(true);
     }
+  }, [contratos]);
+
+  const handleDownloadSingle = useCallback((c: ContratoRow) => {
+    setSelectedForDownload([c]);
+    setDownloadDialogOpen(true);
   }, []);
 
   const handleConfirmDownload = useCallback((docIds: string[]) => {

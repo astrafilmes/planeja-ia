@@ -476,6 +476,17 @@ export function ContratosVinculadosTab({
                       </TableCell>
                       <TableCell className="py-2 text-right pr-4">
                         <div className="flex justify-end gap-1">
+                          {c.m2a_contrato_id && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="size-7 text-muted-foreground hover:text-foreground"
+                              title="Baixar documentos"
+                              onClick={() => onDownloadContrato(c)}
+                            >
+                              <Download className="size-4" />
+                            </Button>
+                          )}
                           <Button
                             size="icon"
                             variant="ghost"
