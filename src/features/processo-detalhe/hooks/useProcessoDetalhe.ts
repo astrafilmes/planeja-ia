@@ -4,7 +4,7 @@ import { formatM2AQuantity } from "@/lib/m2a";
 import {
   compareStrictItemOrder,
   type ContratoItemM2A,
-  export type ContratoRow,
+  type ContratoRow,
   type Processo,
   type ProcessoAtaItem,
 } from "../lib";
