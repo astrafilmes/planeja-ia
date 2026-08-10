@@ -18,10 +18,14 @@ export type DocumentTypeOption = {
   position: number;
 };
 
-// Posições 4 e 5 são os tipos de documentos comuns no M2A (Contrato e Convocação)
+// Posições 1 a 6 são os tipos de documentos comuns no M2A
 export const M2A_DOC_TYPES: DocumentTypeOption[] = [
-  { id: "contrato", label: "CONTRATO", position: 5 },
+  { id: "despacho_autorizacao", label: "DESPACHO DE AUTORIZAÇÃO", position: 1 },
+  { id: "termo_referencia", label: "TERMO DE REFERÊNCIA", position: 2 },
+  { id: "minuta_contrato", label: "MINUTA DO CONTRATO", position: 3 },
   { id: "convocacao", label: "CONVOCAÇÃO", position: 4 },
+  { id: "contrato", label: "CONTRATO", position: 5 },
+  { id: "publicacao", label: "PUBLICAÇÃO", position: 6 },
 ];
 
 interface DocumentSelectorDialogProps {

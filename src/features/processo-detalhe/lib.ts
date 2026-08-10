@@ -158,11 +158,19 @@ export function compareStrictItemOrder<T>(
 
 export function getContratoDocumentos(
   contrato: ContratoRow,
+  selectedPositions?: Set<number>,
 ): M2ADocumentoGerado[] {
   if (!Array.isArray(contrato.m2a_documentos_gerados)) return [];
   return (contrato.m2a_documentos_gerados as any[])
     .map((item, index) => {
-      if (!DOCUMENTOS_DOWNLOAD_POSICOES.has(index + 1)) return null;
+      const position = index + 1;
+      // Se selectedPositions for passado, filtra por ele. Caso contrário, usa o padrão (4, 5).
+      if (selectedPositions) {
+        if (!selectedPositions.has(position)) return null;
+      } else {
+        if (!DOCUMENTOS_DOWNLOAD_POSICOES.has(position)) return null;
+      }
+
       if (!item || typeof item !== "object") return null;
       const doc = item as { id_m2a?: unknown; id?: unknown; nome?: unknown };
       const id_m2a = String(doc.id_m2a ?? doc.id ?? "").trim();

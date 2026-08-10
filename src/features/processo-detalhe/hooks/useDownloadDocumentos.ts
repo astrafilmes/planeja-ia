@@ -48,26 +48,11 @@ export function useDownloadDocumentos(processoId: string) {
 
     const positions = new Set(selectedTypes.map(t => t.position));
     
-    const docs = targetContracts.flatMap(contrato => {
-      if (!Array.isArray(contrato.m2a_documentos_gerados)) return [];
-      return (contrato.m2a_documentos_gerados as any[])
-        .map((item, index) => {
-          const pos = index + 1;
-          if (!positions.has(pos)) return null;
-          if (!item || typeof item !== "object") return null;
-          const doc = item as { id_m2a?: unknown; id?: unknown; nome?: unknown };
-          const id_m2a = String(doc.id_m2a ?? doc.id ?? "").trim();
-          if (!/^\d+$/.test(id_m2a)) return null;
-          return {
-            id_m2a,
-            nome: `${String(doc.nome ?? `Documento ${id_m2a}`).trim()} - ${contrato.numero_contrato}`,
-            contratoId: contrato.id,
-            contratoNumero: contrato.numero_contrato,
-            m2aContratoId: contrato.m2a_contrato_id ?? undefined,
-          };
-        })
-        .filter(Boolean) as M2ADocumentoGerado[];
-    });
+    // O "robô" percorre cada contrato e usa a mesma lógica de extração (getContratoDocumentos)
+    // agora parametrizada com as posições escolhidas no seletor.
+    const docs = targetContracts.flatMap(contrato => 
+      getContratoDocumentos(contrato, positions)
+    );
 
     if (!docs.length) {
       notify.error("Nenhum documento do tipo selecionado foi encontrado nos contratos.");
