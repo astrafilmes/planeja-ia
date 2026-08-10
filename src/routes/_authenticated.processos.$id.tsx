@@ -38,6 +38,7 @@ import {
   ProcessoLoadingState,
   ProcessoVisaoGeralTab,
 } from "@/features/processo-detalhe/components";
+import { DocumentSelectorDialog } from "@/components/contratos/DocumentSelectorDialog";
 
 export const Route = createFileRoute("/_authenticated/processos/$id")({
   component: Page,
