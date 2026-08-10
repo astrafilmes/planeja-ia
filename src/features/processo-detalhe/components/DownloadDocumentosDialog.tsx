@@ -27,7 +27,7 @@ export function DownloadDocumentosDialog({
 }: DownloadDocumentosDialogProps) {
   const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
 
-  // Lista fixa de tipos que o usuário sempre deve ver, para replicar a interface do M2A
+  // Lista fixa de tipos que o usuário sempre deve ver, replicando a interface individual
   const FIXED_TYPES = [
     "CONTRATO",
     "CONVOCAÇÃO",
@@ -53,15 +53,15 @@ export function DownloadDocumentosDialog({
         const nomeUpper = doc.nome.trim().toUpperCase();
         let matched = false;
 
-        // Tenta encaixar nos tipos fixos
+        // Tenta encaixar nos tipos fixos (usando includes para maior abrangência)
         if (nomeUpper.includes("CONTRATO")) { groups.get("CONTRATO")?.push(doc); matched = true; }
-        else if (nomeUpper.includes("CONVOCAÇÃO") || nomeUpper.includes("CONVOCACAO")) { groups.get("CONVOCAÇÃO")?.push(doc); matched = true; }
+        else if (nomeUpper.includes("CONVOCAÇÃO") || nomeUpper.includes("CONVOCACAO") || nomeUpper.includes("CONVOCA")) { groups.get("CONVOCAÇÃO")?.push(doc); matched = true; }
         else if (nomeUpper.includes("EXTRATO")) { groups.get("EXTRATO")?.push(doc); matched = true; }
         else if (nomeUpper.includes("DESPACHO")) { groups.get("DESPACHO")?.push(doc); matched = true; }
         else if (nomeUpper.includes("RATIFICAÇÃO") || nomeUpper.includes("RATIFICACAO")) { groups.get("RATIFICAÇÃO")?.push(doc); matched = true; }
-        else if (nomeUpper.includes("COMUNICAÇÃO INTERNA") || nomeUpper.includes("COMUNICACAO INTERNA")) { groups.get("COMUNICAÇÃO INTERNA")?.push(doc); matched = true; }
-        else if (nomeUpper.includes("ADEQUAÇÃO ORÇAMENTÁRIA") || nomeUpper.includes("ADEQUACAO ORCAMENTARIA")) { groups.get("ADEQUAÇÃO ORÇAMENTÁRIA")?.push(doc); matched = true; }
-        else if (nomeUpper.includes("CERTIDÃO DE AFIXAÇÃO") || nomeUpper.includes("CERTIDAO DE AFIXACAO")) { groups.get("CERTIDÃO DE AFIXAÇÃO")?.push(doc); matched = true; }
+        else if (nomeUpper.includes("COMUNICAÇÃO INTERNA") || nomeUpper.includes("COMUNICACAO INTERNA") || nomeUpper.includes("CI ")) { groups.get("COMUNICAÇÃO INTERNA")?.push(doc); matched = true; }
+        else if (nomeUpper.includes("ADEQUAÇÃO") || nomeUpper.includes("ADEQUACAO") || nomeUpper.includes("ORÇAMENTÁRIA")) { groups.get("ADEQUAÇÃO ORÇAMENTÁRIA")?.push(doc); matched = true; }
+        else if (nomeUpper.includes("CERTIDÃO") || nomeUpper.includes("AFIXAÇÃO") || nomeUpper.includes("AFIXACAO")) { groups.get("CERTIDÃO DE AFIXAÇÃO")?.push(doc); matched = true; }
         
         if (!matched) {
           groups.get("OUTROS")?.push(doc);
@@ -78,6 +78,17 @@ export function DownloadDocumentosDialog({
     else next.add(type);
     setSelectedTypes(next);
   };
+
+  const toggleAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedTypes(new Set(FIXED_TYPES));
+    } else {
+      setSelectedTypes(new Set());
+    }
+  };
+
+  const allSelected = selectedTypes.size === FIXED_TYPES.length;
+  const someSelected = selectedTypes.size > 0 && !allSelected;
 
   const handleConfirm = () => {
     const ids: string[] = [];
@@ -97,28 +108,38 @@ export function DownloadDocumentosDialog({
           <DialogTitle>Baixar documentos</DialogTitle>
         </DialogHeader>
         <div className="py-4">
-          <p className="text-sm text-muted-foreground mb-4">
+          <div className="flex items-center gap-2 mb-4 p-2 bg-muted/30 rounded-md border border-border/40">
+            <Checkbox 
+              id="select-all-types" 
+              checked={allSelected ? true : someSelected ? "indeterminate" : false}
+              onCheckedChange={(checked) => toggleAll(checked === true)}
+            />
+            <Label htmlFor="select-all-types" className="text-sm font-semibold cursor-pointer">
+              Selecionar todos os tipos
+            </Label>
+          </div>
+          <p className="text-xs text-muted-foreground mb-4">
             Selecione quais tipos de documentos deseja baixar para os {selectedContracts.length} contrato(s) selecionado(s).
           </p>
-          <div className="space-y-3">
+          <div className="space-y-1">
             {groupedDocs.map(([type, docs]) => (
-              <div key={type} className="flex items-center space-x-2">
+              <div 
+                key={type} 
+                className="flex items-center space-x-2 py-1.5 px-2 rounded-sm hover:bg-muted/50 transition-colors"
+              >
                 <Checkbox 
                   id={`doc-type-${type}`} 
                   checked={selectedTypes.has(type)}
                   onCheckedChange={() => toggleType(type)}
-                  disabled={docs.length === 0}
                 />
                 <Label 
                   htmlFor={`doc-type-${type}`}
-                  className={`text-sm font-medium leading-none cursor-pointer ${docs.length === 0 ? "opacity-50" : ""}`}
+                  className="text-sm font-medium leading-none cursor-pointer flex-1 flex items-center justify-between"
                 >
-                  {type}
-                  {docs.length > 0 && (
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      ({docs.length} arquivo(s))
-                    </span>
-                  )}
+                  <span>{type}</span>
+                  <span className="text-[11px] text-muted-foreground ml-2">
+                    {docs.length > 0 ? `${docs.length} arquivo(s)` : "Nenhum arquivo encontrado"}
+                  </span>
                 </Label>
               </div>
             ))}
