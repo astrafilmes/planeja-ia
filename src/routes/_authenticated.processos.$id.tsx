@@ -76,7 +76,6 @@ function Page() {
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [itemSearch, setItemSearch] = useState("");
-  const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
 
   const clearSelection = useCallback(() => setSelected(new Set()), []);
   const toggleAll = useCallback(
@@ -106,7 +105,7 @@ function Page() {
     useDownloadDocumentos(id, contratos);
   
   const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
-  const [selectedForDownload, setSelectedForDownload] = useState<ContratoRow[]>([]);
+  const [selectedForDownload, setSelectedForDownload] = useState<any[]>([]);
 
   const m2a = useEnviarContratosM2A({
     processoId: id,
@@ -142,7 +141,7 @@ function Page() {
     }
   }, [contratos]);
 
-  const handleDownloadSingle = useCallback((c: ContratoRow) => {
+  const handleDownloadSingle = useCallback((c: any) => {
     setSelectedForDownload([c]);
     setDownloadDialogOpen(true);
   }, []);
@@ -257,11 +256,18 @@ function Page() {
             onOpenSendDialog={() => m2a.setM2aDialogOpen(true)}
             onCancelSend={m2a.cancelBatch}
             onConfirmDeleteSelected={handleConfirmDeleteSelected}
-            onDownloadContrato={handleDownloadContratoDocs}
+            onDownloadContrato={handleDownloadSingle}
             onToggleImpresso={toggleImpresso}
             onTogglePublicado={togglePublicado}
           />
         </TabsContent>
+
+        <DownloadDocumentosDialog
+          open={downloadDialogOpen}
+          onOpenChange={setDownloadDialogOpen}
+          selectedContracts={selectedForDownload}
+          onConfirm={handleConfirmDownload}
+        />
 
         <TabsContent value="itens">
           <ItensConsolidadosTab
