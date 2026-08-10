@@ -81,9 +81,9 @@ import {
  Pencil,
  CheckCircle2,
  Circle,
- Printer,
- Megaphone,
-
+  Printer,
+  Megaphone,
+  FileArchive,
 } from"lucide-react";
 import { notify } from"@/lib/notify";
 import { logAudit } from"@/lib/audit";
@@ -598,7 +598,7 @@ function Page() {
                 onClick={() => setSelectorOpen(true)}
                 disabled={downloadingDocs}
               >
-                <Download className="size-4" /> Baixar documentos
+                <FileArchive className="size-4" /> Baixar arquivos ({selected.size})
               </Button>
             )}
             {selected.size > 0 ? (
