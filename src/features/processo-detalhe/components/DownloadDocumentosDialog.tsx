@@ -33,22 +33,32 @@ export function DownloadDocumentosDialog({
     selectedContracts.forEach(contrato => {
       const docs = getContratoDocumentos(contrato as any);
       docs.forEach(doc => {
-        // Pega o nome base do documento (ex: "DESPACHO - 001/2025" -> "DESPACHO")
-        // Refinamos o split para evitar capturar fragmentos de números de contrato
-        const parts = doc.nome.split(" - ");
-        let baseName = parts[0].trim().toUpperCase();
-
-        // Se o primeiro termo for muito curto ou parecer apenas um número, tenta o segundo
-        if ((baseName.length < 3 || /^\d+$/.test(baseName)) && parts.length > 1) {
-          baseName = parts[1].trim().toUpperCase();
-        }
+        // Tenta extrair um nome base do documento
+        const nomeUpper = doc.nome.trim().toUpperCase();
         
-        // Normalizações restritas para evitar colisões
-        if (baseName === "CONTRATO" || baseName.startsWith("CONTRATO ")) baseName = "CONTRATO";
-        else if (baseName.includes("CONVOCAÇÃO") || baseName.includes("CONVOCACAO")) baseName = "CONVOCAÇÃO";
-        else if (baseName.includes("DESPACHO")) baseName = "DESPACHO";
-        else if (baseName.includes("RATIFICAÇÃO") || baseName.includes("RATIFICACAO")) baseName = "RATIFICAÇÃO";
-        else if (baseName.includes("EXTRATO")) baseName = "EXTRATO DE CONTRATO";
+        // Mapeamento de termos conhecidos para nomes amigáveis
+        // A ordem importa: termos mais específicos primeiro
+        let baseName = "";
+        
+        if (nomeUpper.includes("CONTRATO - COMPRAS")) baseName = "CONTRATO";
+        else if (nomeUpper.includes("CONTRATO ASSINADO")) baseName = "CONTRATO";
+        else if (nomeUpper.includes("EXTRATO DE CONTRATO")) baseName = "EXTRATO";
+        else if (nomeUpper.includes("CONVOCAÇÃO") || nomeUpper.includes("CONVOCACAO")) baseName = "CONVOCAÇÃO";
+        else if (nomeUpper.includes("DESPACHO")) baseName = "DESPACHO";
+        else if (nomeUpper.includes("RATIFICAÇÃO") || nomeUpper.includes("RATIFICACAO")) baseName = "RATIFICAÇÃO";
+        else if (nomeUpper.includes("COMUNICAÇÃO INTERNA") || nomeUpper.includes("COMUNICACAO INTERNA")) baseName = "COMUNICAÇÃO INTERNA";
+        else if (nomeUpper.includes("ADEQUAÇÃO ORÇAMENTÁRIA") || nomeUpper.includes("ADEQUACAO ORCAMENTARIA")) baseName = "ADEQUAÇÃO ORÇAMENTÁRIA";
+        else if (nomeUpper.includes("CERTIDÃO DE AFIXAÇÃO") || nomeUpper.includes("CERTIDAO DE AFIXACAO")) baseName = "CERTIDÃO DE AFIXAÇÃO";
+        else {
+          // Fallback: Tenta limpar o nome removendo números de contrato comuns (ex: 001/2025)
+          // e pega a primeira parte antes de qualquer hífen ou barra
+          const cleanName = nomeUpper
+            .replace(/\d{2,}\/\d{4}/g, "") // remove 001/2025
+            .split(/[-/]/)[0]
+            .trim();
+          
+          baseName = cleanName || "OUTROS";
+        }
         
         const list = types.get(baseName) || [];
         list.push(doc);
