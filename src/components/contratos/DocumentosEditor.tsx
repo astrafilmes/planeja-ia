@@ -90,7 +90,16 @@ export function DocumentosEditor({
  const doc = item as { id_m2a?: unknown; id?: unknown; nome?: unknown };
  const id_m2a = String(doc.id_m2a ?? doc.id ??"").trim();
  if (!/^\d+$/.test(id_m2a)) return null;
- const nomeDoc = String(doc.nome ?? `Documento ${index + 1}`).trim();
+      const nomesPortal = [
+        "DESPACHO",
+        "COMUNICAÇÃO INTERNA",
+        "DECLARAÇÃO DE ADEQUAÇÃO ORÇAMENTÁRIA E FINANCEIRA",
+        "CONVOCAÇÃO ASSINATURA DO CONTRATO",
+        "CONTRATO - 14.133",
+        "EXTRATO DE CONTRATO",
+        "CERTIDÃO DE AFIXAÇÃO DO EXTRATO DO CONTRATO",
+      ];
+      const nomeDoc = String(doc.nome ?? nomesPortal[index] ?? `Documento ${index + 1}`).trim();
           return {
             key: `m2a:${id_m2a}`,
             origem:"m2a" as const,

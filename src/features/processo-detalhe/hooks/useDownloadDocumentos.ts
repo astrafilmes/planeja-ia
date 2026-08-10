@@ -15,7 +15,7 @@ export function useDownloadDocumentos(processoId: string) {
     async (contrato: ContratoRow) => {
       const docs = getContratoDocumentos(contrato);
       if (!docs.length) {
-        notify.error("Este contrato ainda não possui convocação ou contrato.");
+        notify.error("Nenhum documento encontrado no portal para este contrato.");
         return;
       }
       startTask(
