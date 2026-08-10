@@ -479,7 +479,7 @@ export function ContratosVinculadosTab({
                           <Button
                             size="icon"
                             variant="ghost"
-                            title="Baixar convocação e contrato"
+                            title="Baixar arquivos"
                             onClick={() => onDownloadContrato(c)}
                           >
                             <Download className="size-3.5" />
