@@ -43,7 +43,7 @@ export function ContratosBulkActionsBar({
   if (selectedCount === 0) return null;
   return (
     <>
-      <Button size="sm" variant="outline" onClick={onDownload}>
+      <Button size="sm" variant="outline" onClick={() => onDownload()}>
         <Download className="size-4" /> Baixar convocação e contrato (
         {selectedCount})
       </Button>

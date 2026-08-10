@@ -46,14 +46,17 @@ export function useDownloadDocumentos(processoId: string, contratos: ContratoRow
   );
 
   const handleDownloadSelectedDocs = useCallback(
-    async (contractIds: string[]) => {
-      const selectedContracts = (contratosRef.current || []).filter(c => contractIds.includes(c.id));
-      const docs = selectedContracts.flatMap(getContratoDocumentos);
-      if (!selectedContracts.length) return;
+    async (docIds: string[]) => {
+      if (!docIds.length) {
+        notify.error("Nenhum documento selecionado.");
+        return;
+      }
+      
+      const allDocs = (contratosRef.current || []).flatMap(getContratoDocumentos);
+      const docs = allDocs.filter(d => docIds.includes(d.id_m2a));
+      
       if (!docs.length) {
-        notify.error(
-          "Nenhuma convocação ou contrato encontrado nos contratos selecionados.",
-        );
+        notify.error("Nenhum documento válido encontrado.");
         return;
       }
       startTask(

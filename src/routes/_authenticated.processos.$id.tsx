@@ -31,6 +31,7 @@ import {
 } from "@/features/processo-detalhe/hooks";
 import {
   ContratosVinculadosTab,
+  DownloadDocumentosDialog,
   EnviarM2ADialog,
   ItensConsolidadosTab,
   ProcessoErrorState,
@@ -75,6 +76,7 @@ function Page() {
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [itemSearch, setItemSearch] = useState("");
+  const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
 
   const clearSelection = useCallback(() => setSelected(new Set()), []);
   const toggleAll = useCallback(
@@ -130,7 +132,13 @@ function Page() {
   }, [contratos, selected]);
 
   const handleDownloadSelected = useCallback((ids: string[]) => {
-    handleDownloadSelectedDocs(ids);
+    if (ids.length > 0) {
+      setDownloadDialogOpen(true);
+    }
+  }, []);
+
+  const handleConfirmDownload = useCallback((docIds: string[]) => {
+    handleDownloadSelectedDocs(docIds);
   }, [handleDownloadSelectedDocs]);
 
   const handleConfirmDeleteSelected = useCallback(() => {
@@ -290,6 +298,13 @@ function Page() {
         connected={m2a.connected}
         onDiagnose={m2a.handleDiagnoseM2A}
         onConfirm={m2a.handleSendSelectedToM2A}
+      />
+
+      <DownloadDocumentosDialog
+        open={downloadDialogOpen}
+        onOpenChange={setDownloadDialogOpen}
+        selectedContracts={m2a.selectedContracts}
+        onConfirm={handleConfirmDownload}
       />
     </AppShell>
   );
