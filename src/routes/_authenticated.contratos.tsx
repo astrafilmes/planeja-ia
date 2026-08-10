@@ -1095,9 +1095,18 @@ function Page() {
  }
  >
  <Pencil className="size-4" />
- Abrir
- </DropdownMenuItem>
- <DropdownMenuItem
+  Abrir
+  </DropdownMenuItem>
+  <DropdownMenuItem
+  onClick={() => {
+    setSelected(new Set([c.id]));
+    setSelectorOpen(true);
+  }}
+  >
+  <Download className="size-4" />
+  Baixar arquivos
+  </DropdownMenuItem>
+  <DropdownMenuItem
  className="text-destructive focus:text-destructive"
  onClick={() => setDeleting(c)}
  >
