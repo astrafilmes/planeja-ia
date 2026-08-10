@@ -31,9 +31,17 @@ export function DownloadDocumentosDialog({
   const availableDocs = useMemo(() => {
     const types = new Map<string, { id_m2a: string; nome: string }[]>();
     selectedContracts.forEach(contrato => {
-      const docs = getContratoDocumentos(contrato);
+      const docs = getContratoDocumentos(contrato as any);
       docs.forEach(doc => {
-        const baseName = doc.nome.split(" - ")[0].trim().toUpperCase();
+        // Pega o nome base do documento (ex: "DESPACHO - 001/2025" -> "DESPACHO")
+        let baseName = doc.nome.split(" - ")[0].trim().toUpperCase();
+        
+        // Normalizações comuns
+        if (baseName.includes("CONTRATO")) baseName = "CONTRATO";
+        if (baseName.includes("CONVOCAÇÃO") || baseName.includes("CONVOCACAO")) baseName = "CONVOCAÇÃO";
+        if (baseName.includes("DESPACHO")) baseName = "DESPACHO";
+        if (baseName.includes("RATIFICAÇÃO") || baseName.includes("RATIFICACAO")) baseName = "RATIFICAÇÃO";
+        
         const list = types.get(baseName) || [];
         list.push(doc);
         types.set(baseName, list);
