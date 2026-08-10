@@ -47,7 +47,7 @@ export interface ContratosVinculadosTabProps {
   statsTotal: number;
   onToggleAll: (checked: boolean, ids?: string[]) => void;
   onToggleOne: (id: string, checked: boolean) => void;
-  onDownloadSelected: () => void;
+  onDownloadSelected: (ids: string[]) => void;
   onOpenSendDialog: () => void;
   onCancelSend?: () => void;
   onConfirmDeleteSelected: () => void;
@@ -241,7 +241,7 @@ export function ContratosVinculadosTab({
             sending={sending}
             connected={connected}
             deletePending={deletePending}
-            onDownload={onDownloadSelected}
+            onDownload={() => onDownloadSelected(Array.from(selected))}
             onOpenSend={onOpenSendDialog}
             onConfirmDelete={onConfirmDeleteSelected}
             onCancelSend={onCancelSend}

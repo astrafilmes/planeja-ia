@@ -101,7 +101,7 @@ function Page() {
   const { toggleImpresso, togglePublicado } = useContratoFlags(id);
   const deleteContratos = useDeleteContratos(id, clearSelection);
   const { handleDownloadContratoDocs, handleDownloadSelectedDocs } =
-    useDownloadDocumentos(id);
+    useDownloadDocumentos(id, contratos);
 
   const m2a = useEnviarContratosM2A({
     processoId: id,
@@ -129,9 +129,9 @@ function Page() {
     return { count: selected.size, total };
   }, [contratos, selected]);
 
-  const handleDownloadSelected = useCallback(() => {
-    handleDownloadSelectedDocs(m2a.selectedContracts);
-  }, [handleDownloadSelectedDocs, m2a.selectedContracts]);
+  const handleDownloadSelected = useCallback((ids: string[]) => {
+    handleDownloadSelectedDocs(ids);
+  }, [handleDownloadSelectedDocs]);
 
   const handleConfirmDeleteSelected = useCallback(() => {
     deleteContratos.mutate(Array.from(selected));
