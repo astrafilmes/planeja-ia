@@ -1532,9 +1532,25 @@ export async function processosRoutes(app) {
       }
       return { processo_id: id, documentos: resultados };
     } catch (err) {
+      console.error(`[m2a-vps] erro fatal em /sincronizar-documentos/${id}:`, err);
       const status = err.status && err.status >= 400 ? err.status : 500;
       return reply.code(status).send({ error: String(err?.message ?? err) });
     }
+  });
+
+  // Exportar função interna para uso pelo orquestrador se necessário
+  app.decorate("sincronizarDocumentosProcesso", async (m2aProcessoId) => {
+    const trace = [];
+    const atas = await fetchAtasValidasDoProcesso(m2aProcessoId, trace);
+    const resultados = {};
+    for (const ata of atas) {
+      const contratos = await fetchContratosDaAta(ata, trace, m2aProcessoId);
+      for (const contrato of contratos) {
+        const { metadados } = await obterDocumentosContrato(contrato.id_contrato_m2a);
+        resultados[contrato.numero_contrato] = metadados;
+      }
+    }
+    return resultados;
   });
 
   // DEBUG: endpoint de inspeção de HTML cru removido — permitia SSRF
