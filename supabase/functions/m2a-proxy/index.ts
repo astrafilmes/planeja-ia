@@ -151,12 +151,6 @@ Deno.serve(async (req) => {
     const text = await workerRes.text();
     return new Response(text, { status: workerRes.status, headers });
   }
-
-  if (isEventStream) {
-    // Para SSE, passamos o body como stream sem ler tudo em memória
-    return new Response(workerRes.body, { status: workerRes.status, headers });
-  }
-
   // Binário (pdf, zip, etc.): repassa o body como stream para evitar
   // estourar memória e o erro "error reading a body from connection"
   // quando o worker envia chunked transfer-encoding (zip streaming).

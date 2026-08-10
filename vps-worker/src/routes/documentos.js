@@ -390,16 +390,8 @@ function sseInit(reply) {
   });
 }
 function sseSend(reply, event, data) {
-  if (reply.raw.writableEnded) return;
   reply.raw.write(`event: ${event}\n`);
   reply.raw.write(`data: ${JSON.stringify(data)}\n\n`);
-  if (typeof reply.raw.flush === "function") reply.raw.flush();
-}
-
-function sseHeartbeat(reply) {
-  if (reply.raw.writableEnded) return;
-  reply.raw.write(": heartbeat\n\n");
-  if (typeof reply.raw.flush === "function") reply.raw.flush();
 }
 
 
@@ -502,11 +494,6 @@ export async function documentosRoutes(app) {
     const total = documentos.length;
 
     sseInit(reply);
-    const heartbeatTimer = setInterval(() => sseHeartbeat(reply), 15_000);
-    
-    reply.raw.on("close", () => clearInterval(heartbeatTimer));
-    reply.raw.on("error", () => clearInterval(heartbeatTimer));
-
     sseSend(reply, "progress", { tipo: "inicio", total, filename });
 
     const zip = archiver("zip", { zlib: { level: 6 } });
@@ -587,12 +574,9 @@ export async function documentosRoutes(app) {
       await zipDone;
     } catch (err) {
       sseSend(reply, "error", { error: err.message });
-      clearInterval(heartbeatTimer);
       reply.raw.end();
       return;
     }
-
-    clearInterval(heartbeatTimer);
 
     const buffer = Buffer.concat(chunks);
     const jobId = randomJobId();

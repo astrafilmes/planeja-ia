@@ -27,49 +27,27 @@ export function DownloadDocumentosDialog({
 }: DownloadDocumentosDialogProps) {
   const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
 
-  // Lista fixa de tipos que o usuário sempre deve ver, replicando a interface individual
-  const FIXED_TYPES = [
-    "CONTRATO",
-    "CONVOCAÇÃO",
-    "EXTRATO",
-    "DESPACHO",
-    "RATIFICAÇÃO",
-    "COMUNICAÇÃO INTERNA",
-    "ADEQUAÇÃO ORÇAMENTÁRIA",
-    "CERTIDÃO DE AFIXAÇÃO",
-    "OUTROS"
-  ];
-
-  // Agrupa os documentos por esses tipos fixos
-  const groupedDocs = useMemo(() => {
-    const groups = new Map<string, { id_m2a: string; nome: string }[]>();
-    
-    // Inicializa os grupos fixos
-    FIXED_TYPES.forEach(type => groups.set(type, []));
-
+  // Extrai todos os tipos de documentos únicos disponíveis nos contratos selecionados
+  const availableDocs = useMemo(() => {
+    const types = new Map<string, { id_m2a: string; nome: string }[]>();
     selectedContracts.forEach(contrato => {
       const docs = getContratoDocumentos(contrato as any);
       docs.forEach(doc => {
-        const nomeUpper = doc.nome.trim().toUpperCase();
-        let matched = false;
-
-        // Tenta encaixar nos tipos fixos (usando includes para maior abrangência)
-        if (nomeUpper.includes("CONTRATO")) { groups.get("CONTRATO")?.push(doc); matched = true; }
-        else if (nomeUpper.includes("CONVOCAÇÃO") || nomeUpper.includes("CONVOCACAO") || nomeUpper.includes("CONVOCA")) { groups.get("CONVOCAÇÃO")?.push(doc); matched = true; }
-        else if (nomeUpper.includes("EXTRATO")) { groups.get("EXTRATO")?.push(doc); matched = true; }
-        else if (nomeUpper.includes("DESPACHO")) { groups.get("DESPACHO")?.push(doc); matched = true; }
-        else if (nomeUpper.includes("RATIFICAÇÃO") || nomeUpper.includes("RATIFICACAO")) { groups.get("RATIFICAÇÃO")?.push(doc); matched = true; }
-        else if (nomeUpper.includes("COMUNICAÇÃO INTERNA") || nomeUpper.includes("COMUNICACAO INTERNA") || nomeUpper.includes("CI ")) { groups.get("COMUNICAÇÃO INTERNA")?.push(doc); matched = true; }
-        else if (nomeUpper.includes("ADEQUAÇÃO") || nomeUpper.includes("ADEQUACAO") || nomeUpper.includes("ORÇAMENTÁRIA")) { groups.get("ADEQUAÇÃO ORÇAMENTÁRIA")?.push(doc); matched = true; }
-        else if (nomeUpper.includes("CERTIDÃO") || nomeUpper.includes("AFIXAÇÃO") || nomeUpper.includes("AFIXACAO")) { groups.get("CERTIDÃO DE AFIXAÇÃO")?.push(doc); matched = true; }
+        // Pega o nome base do documento (ex: "DESPACHO - 001/2025" -> "DESPACHO")
+        let baseName = doc.nome.split(" - ")[0].trim().toUpperCase();
         
-        if (!matched) {
-          groups.get("OUTROS")?.push(doc);
-        }
+        // Normalizações comuns
+        if (baseName.includes("CONTRATO")) baseName = "CONTRATO";
+        if (baseName.includes("CONVOCAÇÃO") || baseName.includes("CONVOCACAO")) baseName = "CONVOCAÇÃO";
+        if (baseName.includes("DESPACHO")) baseName = "DESPACHO";
+        if (baseName.includes("RATIFICAÇÃO") || baseName.includes("RATIFICACAO")) baseName = "RATIFICAÇÃO";
+        
+        const list = types.get(baseName) || [];
+        list.push(doc);
+        types.set(baseName, list);
       });
     });
-
-    return Array.from(groups.entries());
+    return Array.from(types.entries()).sort((a, b) => a[0].localeCompare(b[0]));
   }, [selectedContracts]);
 
   const toggleType = (type: string) => {
@@ -79,20 +57,9 @@ export function DownloadDocumentosDialog({
     setSelectedTypes(next);
   };
 
-  const toggleAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedTypes(new Set(FIXED_TYPES));
-    } else {
-      setSelectedTypes(new Set());
-    }
-  };
-
-  const allSelected = selectedTypes.size === FIXED_TYPES.length;
-  const someSelected = selectedTypes.size > 0 && !allSelected;
-
   const handleConfirm = () => {
     const ids: string[] = [];
-    groupedDocs.forEach(([type, docs]) => {
+    availableDocs.forEach(([type, docs]) => {
       if (selectedTypes.has(type)) {
         docs.forEach(d => ids.push(d.id_m2a));
       }
@@ -108,26 +75,12 @@ export function DownloadDocumentosDialog({
           <DialogTitle>Baixar documentos</DialogTitle>
         </DialogHeader>
         <div className="py-4">
-          <div className="flex items-center gap-2 mb-4 p-2 bg-muted/30 rounded-md border border-border/40">
-            <Checkbox 
-              id="select-all-types" 
-              checked={allSelected ? true : someSelected ? "indeterminate" : false}
-              onCheckedChange={(checked) => toggleAll(checked === true)}
-            />
-            <Label htmlFor="select-all-types" className="text-sm font-semibold cursor-pointer">
-              Selecionar todos os tipos
-            </Label>
-          </div>
-          <p className="text-xs text-muted-foreground mb-4">
+          <p className="text-sm text-muted-foreground mb-4">
             Selecione quais tipos de documentos deseja baixar para os {selectedContracts.length} contrato(s) selecionado(s).
-            {"'''Do not make any visual modifications. The phrases I write are commands to understand what I want, not to be written down. Understand their content well, then execute what is required.'''\n                                            \n                                            200.js:1  POST https://wouagqqfuaaaeqfeilzg.supabase.co/functions/v1/m2a-proxy net::ERR_CONNECTION_CLOSED\n\n(anonymous)@200.js:1(anonymous)@requests.js:1x@documents-BsddkXyC.js:1await in xO@documents-BsddkXyC.js:5ia@_authenticated.contratos-DrelHLqX.js:1D@DownloadDocumentosDialog-DC11EEZr.js:1Zg@index-LIc-M2So.js:9(anonymous)@index-LIc-M2So.js:9ep@index-LIc-M2So.js:9Zd@index-LIc-M2So.js:9lh@index-LIc-M2So.js:10NS@index-LIc-M2So.js:10"}
           </p>
-          <div className="space-y-1">
-            {groupedDocs.map(([type, docs]) => (
-              <div 
-                key={type} 
-                className="flex items-center space-x-2 py-1.5 px-2 rounded-sm hover:bg-muted/50 transition-colors"
-              >
+          <div className="space-y-3">
+            {availableDocs.map(([type, docs]) => (
+              <div key={type} className="flex items-center space-x-2">
                 <Checkbox 
                   id={`doc-type-${type}`} 
                   checked={selectedTypes.has(type)}
@@ -135,15 +88,18 @@ export function DownloadDocumentosDialog({
                 />
                 <Label 
                   htmlFor={`doc-type-${type}`}
-                  className="text-sm font-medium leading-none cursor-pointer flex-1 flex items-center justify-between"
+                  className="text-sm font-medium leading-none cursor-pointer"
                 >
-                  <span>{type}</span>
-                  <span className="text-[11px] text-muted-foreground ml-2">
-                    {docs.length > 0 ? `${docs.length} arquivo(s)` : "Nenhum arquivo encontrado"}
+                  {type}
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    ({docs.length} arquivo(s))
                   </span>
                 </Label>
               </div>
             ))}
+            {availableDocs.length === 0 && (
+              <p className="text-sm text-destructive">Nenhum documento disponível para os contratos selecionados.</p>
+            )}
           </div>
         </div>
         <DialogFooter>
