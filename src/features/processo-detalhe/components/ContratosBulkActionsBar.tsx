@@ -44,7 +44,7 @@ export function ContratosBulkActionsBar({
   return (
     <>
       <Button size="sm" variant="outline" onClick={() => onDownload()}>
-        <Download className="size-4" /> Baixar convocação e contrato (
+        <Download className="size-4" /> Baixar documentos (
         {selectedCount})
       </Button>
       <AlertDialog>
