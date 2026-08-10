@@ -372,7 +372,7 @@ export async function buscarIdContratoPorNumero(
         errors.push(`${url}: tabela respondeu, contrato não listado`);
         break; 
       } catch (e) {
-        // ... (resto do loop de retry transiente)
+        const status = Number(e?.response?.status ?? 0); const isTransient = status >= 500 || status === 429 || status === 408 || /timeout|ECONNRESET|ETIMEDOUT|EAI_AGAIN|socket hang up/i.test(String(e?.message || "")); errors.push(`${url}[t${attempt}]: ${e.message}`); if (!isTransient || attempt === MAX_ATTEMPTS) break; console.warn(`[m2a-contrato] busca por n00FAmero 2014 ${url} falhou (${e.message}); aguardando ${BACKOFF_MS[attempt]}ms para retry ${attempt + 1}/${MAX_ATTEMPTS}`); await sleep(BACKOFF_MS[attempt]);
 
   // Se pelo menos uma URL respondeu com sucesso e não achou o contrato →
   // sinaliza "não existe" para o orquestrador seguir e criar.
