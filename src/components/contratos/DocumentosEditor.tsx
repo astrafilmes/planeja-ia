@@ -124,7 +124,7 @@ export function DocumentosEditor({
  documentos.map(
  (d) =>
  ({
- key: `local:${d.id}`,
+            key: `local:${d.id}`,
             origem: d.tipo === 'gerado_portal' ? "m2a" : "local",
             nome: d.nome,
             tipo: d.tipo === 'gerado_portal' ? "Portal" : d.tipo,
@@ -136,8 +136,7 @@ export function DocumentosEditor({
               contratoNumero,
               m2aContratoId: m2aContratoId ?? undefined,
             } : undefined,
-            local: d.tipo !== 'gerado_portal' ? d : undefined,
- local: d,
+            local: d,
  }) as DocumentoLista,
  ),
  [documentos],
