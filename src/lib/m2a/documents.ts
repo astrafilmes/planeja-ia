@@ -279,6 +279,10 @@ export async function downloadM2ADocuments(
           percent: 96,
           mensagem: "ZIP pronto, baixando...",
         });
+      } else if (event === "ping") {
+        // Heartbeat do servidor para manter a conexão ativa.
+        // Opcional: registrar em log ou resetar timeout local.
+        console.debug("[m2a-proxy] ping recebido:", data?.ts);
       } else if (event === "error") {
         throw new Error(String(data?.error || "Falha no servidor"));
       }
