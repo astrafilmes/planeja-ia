@@ -28,6 +28,7 @@ import {
   useProcessoDetalhe,
   useProcessoForm,
   useProcessoSectionsNav,
+  useSincronizarProcessoM2A,
 } from "@/features/processo-detalhe/hooks";
 import {
   ContratosVinculadosTab,
@@ -113,6 +114,7 @@ function Page() {
   });
 
   const itensConsolidados = useItensConsolidados(contratos, ataItens, itemSearch);
+  const { sincronizar: syncBatch, sincronizando: isSyncingBatch } = useSincronizarProcessoM2A(id, contratos);
 
   const stats = useMemo(() => {
     let total = 0;
@@ -155,10 +157,15 @@ function Page() {
       <ProcessoHeader
         processo={processo}
         processoId={id}
-        isSyncing={isSyncing}
+        isSyncing={isSyncing || isSyncingBatch}
         canSync={Boolean(form.m2a_url)}
         dirty={dirty}
-        onSync={() => syncM2A()}
+        onSync={() => {
+          if (form.m2a_url) {
+            syncM2A();
+          }
+          syncBatch();
+        }}
         onSave={handleSave}
         onDelete={handleDelete}
       />

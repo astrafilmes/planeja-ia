@@ -6,3 +6,4 @@ export { useDeleteContratos } from "./useDeleteContratos";
 export { useItensConsolidados } from "./useItensConsolidados";
 export { useDownloadDocumentos } from "./useDownloadDocumentos";
 export { useEnviarContratosM2A } from "./useEnviarContratosM2A";
+export { useSincronizarProcessoM2A } from "./useSincronizarProcessoM2A";
