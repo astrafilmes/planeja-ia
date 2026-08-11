@@ -13,6 +13,12 @@ import { config } from "./config.js";
  * - Mantém cache de CSRF por URL (espelha rememberCsrfFromDoc do engine).
  */
 
+export function absoluteUrl(path) {
+  const p = String(path ?? "");
+  if (p.startsWith("http")) return p;
+  return `${config.m2a.baseUrl}${p.startsWith("/") ? p : "/" + p}`;
+}
+
 const CSRF_TTL_MS = 10 * 60 * 1000;
 const TRANSIENT_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
 const TRANSIENT_CODES = new Set([
@@ -66,12 +72,12 @@ function assertSafePath(path) {
   return p;
 }
 
-function absoluteUrl(path) {
-  return `${config.m2a.baseUrl}${assertSafePath(path)}`;
+function absoluteUrlInternal(path) {
+  return absoluteUrl(path);
 }
 
 function normalizeCacheUrl(url) {
-  return absoluteUrl(url).replace(/#.*$/, "");
+  return absoluteUrlInternal(url).replace(/#.*$/, "");
 }
 
 class M2aClient {
@@ -141,7 +147,7 @@ class M2aClient {
     if (this.loginPromise) return this.loginPromise;
     this.loginPromise = (async () => {
       this.resetSession();
-      const loginUrl = `${config.m2a.baseUrl}${config.m2a.loginPath}`;
+      const loginUrl = absoluteUrlInternal(config.m2a.loginPath);
       console.log(`[m2a-login] start ENTIDADE user=${config.m2a.username} url=${loginUrl} perfil=${config.m2a.loginProfile}`);
       let getRes;
       try {
@@ -318,14 +324,21 @@ class M2aClient {
       const isPost = method.toUpperCase() === "POST";
       const sessionExpired =
         M2aClient.isLoginPage(r.html, r.finalUrl) || r.status === 401;
-      // Para POST, NÃO refazemos o request automaticamente em 403:
-      // o body já carrega um csrfmiddlewaretoken que ficaria velho após
-      // o re-login e o Django rejeitaria de novo com 403. O caller deve
-      // tratar 403 explicitamente (re-buscar CSRF e refazer o POST).
-      if (sessionExpired || (!isPost && r.status === 403)) {
-        console.warn(`[m2a] sessão expirada em ${method} ${path} — re-login e retry`);
+      // Em caso de 403 (CSRF Inválido) ou página de login, forçamos re-login
+      if (sessionExpired || r.status === 403) {
+        console.warn(`[m2a] sessão expirada ou CSRF inválido (403) em ${method} ${path} — re-login e retry`);
         this.loggedIn = false;
         await this.login();
+        
+        // Se for POST, precisamos atualizar o token CSRF no body antes do retry
+        if (isPost && typeof opts.body === "string" && opts.body.includes("csrfmiddlewaretoken=")) {
+          const newToken = await this.getCsrf(path, { force: true });
+          opts.body = opts.body.replace(/csrfmiddlewaretoken=[^&]*/, `csrfmiddlewaretoken=${newToken}`);
+          if (opts.headers) {
+             opts.headers["Referer"] = absoluteUrlInternal(path);
+          }
+        }
+
         r = await this._raw(method, path, opts);
         console.log(`[m2a] retry ${method} ${path} → ${r.status} (finalUrl=${r.finalUrl || "-"})`);
         if (M2aClient.isLoginPage(r.html, r.finalUrl)) {
