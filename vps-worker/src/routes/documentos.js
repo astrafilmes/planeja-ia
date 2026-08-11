@@ -328,8 +328,8 @@ async function fetchFromM2A(id, _hrefHint, log, contratoId = null) {
   const csrfSource = contratoId ? `/contratos/${contratoId}/` : docPath;
 
   for (const format of ["pdf", "docx"]) {
-    // Tenta até 2 vezes por formato se o arquivo vier inválido
-    for (let attempt = 1; attempt <= 2; attempt++) {
+    // Tenta até 4 vezes por formato se o arquivo vier inválido (Backoff progressivo)
+    for (let attempt = 1; attempt <= 4; attempt++) {
       try {
         const csrf = await m2a.getCsrf(csrfSource);
         const form = new URLSearchParams();
@@ -347,13 +347,15 @@ async function fetchFromM2A(id, _hrefHint, log, contratoId = null) {
         });
         
         tried.push(`POST ${docPath} format=${format} try=${attempt} → ${gen.status}`);
-        if (gen.status >= 400) break; // Se o portal rejeitou o POST, tenta o próximo formato
+        
+        // Se o portal rejeitou o POST com 404/500, tenta o próximo formato imediatamente
+        if (gen.status >= 400 && attempt === 1) break; 
 
-        // Se for a segunda tentativa, espera um pouco mais para o servidor processar
-        if (attempt > 1) {
-          log?.info?.({ id, attempt }, "aguardando processamento do servidor M2A (backoff)...");
-          await new Promise(resolve => setTimeout(resolve, 3000));
-        }
+        // Aguarda processamento do servidor M2A (Backoff)
+        // Aumentamos o tempo a cada tentativa para dar fôlego ao servidor
+        const waitMs = attempt === 1 ? 1500 : attempt === 2 ? 4000 : 7000;
+        log?.info?.({ id, attempt, waitMs }, "aguardando processamento do servidor M2A (backoff)...");
+        await new Promise(resolve => setTimeout(resolve, waitMs));
 
         const dl = await m2a.request("GET", `${docPath}?filename=temp&format=${format}`, {
           responseType: "arraybuffer",
@@ -370,11 +372,17 @@ async function fetchFromM2A(id, _hrefHint, log, contratoId = null) {
           if (!isInvalidPortalDocument(dl)) {
             return dl;
           } else {
-            log?.warn?.({ id, bytes: dl.bytes?.length }, "documento detectado como inválido/vazio; tentando novamente");
+            log?.warn?.({ id, bytes: dl.bytes?.length, attempt }, "documento detectado como inválido/vazio; tentando novamente");
+            // Se falhou na validação, forçamos um relogin para a próxima tentativa garantir nova sessão
+            if (attempt >= 2) {
+               m2a.loggedIn = false;
+            }
           }
         }
       } catch (err) {
         tried.push(`format=${format} try=${attempt} → ERR ${err.message}`);
+        // Em caso de erro de rede, espera um pouco antes de tentar de novo
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
     }
   }
@@ -618,22 +626,32 @@ export async function documentosRoutes(app) {
     }
 
     sseSend(reply, "progress", { tipo: "compactando", total });
-    zip.finalize();
+    
+    // Tenta finalizar o ZIP com retry em caso de falha de concorrência no buffer
     try {
+      zip.finalize();
       await zipDone;
     } catch (err) {
-      sseSend(reply, "error", { error: err.message });
+      app.log.error({ err }, "falha fatal ao compactar ZIP");
+      sseSend(reply, "error", { error: `Erro na compactação: ${err.message}` });
       reply.raw.end();
       return;
     }
 
     const buffer = Buffer.concat(chunks);
+    if (!buffer || buffer.length === 0) {
+      sseSend(reply, "error", { error: "ZIP gerado está vazio" });
+      reply.raw.end();
+      return;
+    }
+
     const jobId = randomJobId();
     preparedZips.set(jobId, {
       buffer,
       filename,
       expiresAt: Date.now() + ZIP_TTL_MS,
     });
+
     sseSend(reply, "done", {
       jobId,
       filename,
