@@ -53,17 +53,21 @@ export function useSincronizarProcessoM2A(
       return;
     }
 
-    // Filtrar apenas contratos que NÃO têm todos os documentos vinculados
-    // (Pelo menos um documento sem m2a_documento_id)
+    // Otimização: Só sincroniza contratos que não têm todos os documentos mapeados localmente
+    // ou se o usuário estiver forçando uma atualização completa (por padrão, apenas pendentes)
     const contratosParaSinc = [];
     for (const c of dbContratos) {
-      const { count } = await supabase
+      // Verifica se existe pelo menos um documento vinculado ao contrato que não tenha m2a_documento_id
+      const { data: docs } = await supabase
         .from("contrato_documentos")
-        .select("*", { count: "exact", head: true })
-        .eq("contrato_id", c.id)
-        .is("m2a_documento_id", null);
+        .select("id, m2a_documento_id")
+        .eq("contrato_id", c.id);
       
-      if (count && count > 0) {
+      const docsPendentes = docs?.filter(d => !d.m2a_documento_id) || [];
+      
+      // Se não houver documentos cadastrados localmente, ainda assim sincronizamos
+      // pois o portal pode ter gerado documentos novos que precisamos descobrir.
+      if (!docs || docs.length === 0 || docsPendentes.length > 0) {
         contratosParaSinc.push(c);
       }
     }
