@@ -1,4 +1,4 @@
-import { ChevronRight, Loader2, RefreshCw, Save, Trash2, FileSync } from "lucide-react";
+import { ChevronRight, Loader2, RefreshCw, Save, Trash2, FileClock } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { PautaConsolidadaExporter } from "@/components/contratos/PautaConsolidadaExporter";
 import { Button } from "@/components/ui/button";
@@ -71,7 +71,7 @@ export function ProcessoHeader({
             {isSyncing ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (
-              <FileSync className="size-4" />
+              <FileClock className="size-4" />
             )}
             Sincronizar M2A
           </Button>
