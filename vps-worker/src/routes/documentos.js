@@ -627,18 +627,24 @@ export async function documentosRoutes(app) {
 
     sseSend(reply, "progress", { tipo: "compactando", total });
     
-    // Tenta finalizar o ZIP com retry em caso de falha de concorrência no buffer
+    // Tenta finalizar o ZIP com timeout de segurança
     try {
-      zip.finalize();
-      await zipDone;
+      const finalizePromise = zip.finalize();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Timeout de 60s ao compactar arquivos")), 60000)
+      );
+
+      await Promise.race([Promise.all([finalizePromise, zipDone]), timeoutPromise]);
+      app.log.info({ total, ok, erro }, "ZIP compactado com sucesso em memória");
     } catch (err) {
-      app.log.error({ err }, "falha fatal ao compactar ZIP");
+      app.log.error({ err: err.message }, "falha fatal ao compactar ZIP");
       sseSend(reply, "error", { error: `Erro na compactação: ${err.message}` });
-      reply.raw.end();
+      try { reply.raw.end(); } catch {}
       return;
     }
 
     const buffer = Buffer.concat(chunks);
+
     if (!buffer || buffer.length === 0) {
       sseSend(reply, "error", { error: "ZIP gerado está vazio" });
       reply.raw.end();
