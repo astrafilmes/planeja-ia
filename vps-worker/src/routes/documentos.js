@@ -6,7 +6,7 @@
 
 import archiver from "archiver";
 import * as cheerio from "cheerio";
-import { m2a, absoluteUrl } from "../m2a-client.js";
+import { m2a } from "../m2a-client.js";
 
 // Padrões conhecidos / palpites — usados como fallback quando o anchor real
 // não puder ser extraído da tabela de documentos do contrato. A rota
@@ -310,18 +310,11 @@ async function fetchFromM2A(id, _hrefHint, log, contratoId = null) {
         headers: {
           "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
           "X-Requested-With": "XMLHttpRequest",
-          "Referer": absoluteUrl(docPath),
+          ...(referer ? { Referer: referer } : {}),
         },
       });
       tried.push(`POST ${docPath} format=${format} → ${gen.status}`);
-      if (gen.status >= 400) {
-        // Se falhou com 403, pode ser CSRF velho
-        if (gen.status === 403) {
-          log?.warn?.({ id, status: gen.status }, "403 no POST gerar_documento; tentando forçar novo CSRF");
-          // Continua para tentar o próximo formato ou re-login automático do m2a-client já terá ocorrido
-        }
-        continue;
-      }
+      if (gen.status >= 400) continue;
 
       const dl = await m2a.request("GET", `${docPath}?filename=temp&format=${format}`, {
         responseType: "arraybuffer",
@@ -332,11 +325,6 @@ async function fetchFromM2A(id, _hrefHint, log, contratoId = null) {
       });
       tried.push(`GET ${docPath}?filename=temp&format=${format} → ${dl.status} ${dl.contentType || ""}`);
       if (dl.status >= 200 && dl.status < 300 && looksLikeBinary(dl)) return dl;
-      
-      // Se retornou sucesso mas não é binário (provavelmente redirecionou ou deu erro HTML suave)
-      if (dl.status < 400 && !looksLikeBinary(dl)) {
-        log?.warn?.({ id, status: dl.status, bytes: dl.bytes?.length }, "GET sucesso mas não é binário; tentando próximo formato");
-      }
     } catch (err) {
       tried.push(`format=${format} → ERR ${err.message}`);
     }
