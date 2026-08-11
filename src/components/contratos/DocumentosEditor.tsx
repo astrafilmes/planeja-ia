@@ -124,10 +124,18 @@ export function DocumentosEditor({
  (d) =>
  ({
  key: `local:${d.id}`,
-            origem:"local",
+            origem: d.tipo === 'gerado_portal' ? "m2a" : "local",
             nome: d.nome,
-            tipo: d.tipo === 'gerado_portal' ? 'gerado_portal' : 'Arquivo',
-            detalhe: d.tipo === 'gerado_portal' ? 'Arquivo' : `${d.mime_type ??"Arquivo"}${d.size_bytes ? ` · ${formatBytes(d.size_bytes)}` :""}`,
+            tipo: d.tipo === 'gerado_portal' ? "Portal" : d.tipo,
+            detalhe: d.tipo === 'gerado_portal' ? "Documento do portal" : `${d.mime_type ??"Arquivo"}${d.size_bytes ? ` · ${formatBytes(d.size_bytes)}` :""}`,
+            m2a: d.tipo === 'gerado_portal' ? {
+              id_m2a: d.m2a_documento_id || '',
+              nome: `${d.nome} - ${contratoNumero ?? contratoId}`,
+              contratoId,
+              contratoNumero,
+              m2aContratoId: m2aContratoId ?? undefined,
+            } : undefined,
+            local: d.tipo !== 'gerado_portal' ? d : undefined,
  local: d,
  }) as DocumentoLista,
  ),
