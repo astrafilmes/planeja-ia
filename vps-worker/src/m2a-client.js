@@ -324,7 +324,7 @@ class M2aClient {
       const isPost = method.toUpperCase() === "POST";
       const sessionExpired =
         M2aClient.isLoginPage(r.html, r.finalUrl) || r.status === 401;
-      // Em caso de 403 (CSRF Inválido), forçamos re-login para obter um CSRF novo e fresco
+      // Em caso de 403 (CSRF Inválido) ou página de login, forçamos re-login
       if (sessionExpired || r.status === 403) {
         console.warn(`[m2a] sessão expirada ou CSRF inválido (403) em ${method} ${path} — re-login e retry`);
         this.loggedIn = false;
@@ -335,7 +335,7 @@ class M2aClient {
           const newToken = await this.getCsrf(path, { force: true });
           opts.body = opts.body.replace(/csrfmiddlewaretoken=[^&]*/, `csrfmiddlewaretoken=${newToken}`);
           if (opts.headers) {
-             opts.headers["Referer"] = absoluteUrl(path);
+             opts.headers["Referer"] = absoluteUrlInternal(path);
           }
         }
 
