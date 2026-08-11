@@ -67,8 +67,8 @@ export function useDownloadDocumentos(processoId: string) {
 
     try {
       // Estratégia de consistência: separar em lotes se o total de arquivos for muito grande.
-      // 50 arquivos por lote (solicitado pelo usuário).
-      const BATCH_SIZE = 50;
+      // 100 arquivos por lote (solicitado pelo usuário).
+      const BATCH_SIZE = 100;
       const batches: M2ADocumentoGerado[][] = [];
       for (let i = 0; i < allDocs.length; i += BATCH_SIZE) {
         batches.push(allDocs.slice(i, i + BATCH_SIZE));
