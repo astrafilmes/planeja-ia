@@ -257,32 +257,47 @@ export async function listarDocumentosContrato(contratoId) {
     const $ = cheerio.load(parsed);
     const out = [];
 
-    // O HTML fornecido pelo usuário tem uma estrutura com <button id_item="2791016"> e <span>DESPACHO</span>
-    // Iremos varrer as linhas da tabela (ou os botões de seleção se não houver <tr> claros)
-    // No exemplo: clickSelecionarDocumentocontrato_documento('2791016')
-    
-    // Vamos procurar por todos os spans que parecem ser nomes de documentos e pegar o ID associado
-    // Geralmente cada documento está em uma linha (tr)
+    // Estrutura M2A: botões com id_item e spans com o nome
+    // Procuramos por linhas da tabela de documentos
     $("tr").each((_, el) => {
       const $tr = $(el);
-      // Procura o ID no atributo id_item do botão ou no onclick
-      const id = $tr.find('button[id_item]').attr('id_item') || 
-                 $tr.find('label[onclick*="clickSelecionarDocumento"]').attr('onclick')?.match(/'(\d+)'/)?.[1];
       
-      const nome = $tr.find('td.text-left span').first().text().trim();
+      // O ID do documento no portal M2A geralmente está em um atributo id_item 
+      // ou no parâmetro da função JS no onclick do checkbox/label.
+      let id = $tr.find('button[id_item]').attr('id_item') || 
+               $tr.find('input[id_item]').attr('id_item');
+
+      if (!id) {
+        const onClick = $tr.find('label[onclick], input[onclick]').attr('onclick') || "";
+        const m = onClick.match(/'(\d+)'/) || onClick.match(/\((\d+)\)/);
+        if (m) id = m[1];
+      }
+      
+      // O nome do documento costuma estar em um span dentro de uma célula com classe text-left
+      let nome = $tr.find('td.text-left span, td:nth-child(2) span').first().text().trim();
+      
+      // Fallback para nome: texto direto da TD
+      if (!nome) {
+        nome = $tr.find('td:nth-child(2)').text().trim();
+      }
       
       if (id && nome) {
         out.push({ id, nome });
       }
     });
 
-    // Fallback: se não achou linhas, tenta pegar por seletores soltos do exemplo
+    // Fallback: se não achou linhas formatadas, tenta seletores globais baseados no HTML do usuário
     if (out.length === 0) {
-      $('label[onclick*="clickSelecionarDocumento"]').each((_, el) => {
-        const id = $(el).attr('onclick')?.match(/'(\d+)'/)?.[1];
+      $('[onclick*="SelecionarDocumento"]').each((_, el) => {
+        const onClick = $(el).attr('onclick');
+        const id = onClick.match(/'(\d+)'/)?.[1];
+        if (!id) return;
+
         const $row = $(el).closest('tr');
-        const nome = $row.find('td.text-left span').first().text().trim();
-        if (id && nome) {
+        const nome = $row.find('span').first().text().trim() || 
+                     $row.find('td').eq(1).text().trim();
+
+        if (id && nome && !out.some(doc => doc.id === id)) {
           out.push({ id, nome });
         }
       });
