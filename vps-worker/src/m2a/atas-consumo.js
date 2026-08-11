@@ -258,57 +258,91 @@ export async function listarDocumentosContrato(contratoId) {
     const $ = cheerio.load(parsed);
     const out = [];
 
-    // Estrutura M2A: botões com id_item e spans com o nome
-    // Procuramos por linhas da tabela de documentos
+    // O HTML fornecido pelo usuário mostra que os documentos podem estar em:
+    // 1. <input class="checkbox-documento" value="ID" onclick="clickSelecionarDocumento...('ID')">
+    // 2. <button id_item="ID" documento="NOME" onclick="visualizadorPdfClick...('ID', 'NOME', ...)">
+    // 3. <button id_item="ID" action_button="Autorizar" url="/contratos/documentos/autorizar/ID/">
+    // 4. <td class="text-left"><span>NOME</span></td>
+
+    // Estratégia: iterar sobre as linhas e tentar extrair ID e Nome de forma robusta
     const rows = $("tr");
     console.log(`[m2a-documentos] contrato ${contratoId}: ${rows.length} linhas encontradas na tabela`);
     
     rows.each((i, el) => {
       const $tr = $(el);
       
-      // O ID do documento no portal M2A geralmente está em um atributo id_item 
-      // ou no parâmetro da função JS no onclick do checkbox/label.
-      let id = $tr.find('button[id_item]').attr('id_item') || 
-               $tr.find('input[id_item]').attr('id_item') ||
-               $tr.find('a[id_item]').attr('id_item');
+      // 1. Tentar capturar o ID
+      let id = "";
+      
+      // Prioridade 1: botões com id_item ou id_documento
+      id = $tr.find('button[id_item], button[id_documento], a[id_item], input[id_item]').first().attr('id_item') || 
+           $tr.find('button[id_item], button[id_documento]').first().attr('id_documento');
 
+      // Prioridade 2: checkbox value
       if (!id) {
-        const onClick = $tr.find('label[onclick], input[onclick], button[onclick], a[onclick]').attr('onclick') || "";
-        const m = onClick.match(/'(\d+)'/) || onClick.match(/\((\d+)\)/);
+        id = $tr.find('input.checkbox-documento, input.checkBoxcontrato_documento').val();
+      }
+
+      // Prioridade 3: Regex em atributos onclick
+      if (!id) {
+        const onClick = $tr.find('[onclick]').attr('onclick') || "";
+        // Padrão '2790468' ou (2790468, 1) ou autorizar/2790468/
+        const m = onClick.match(/'(\d+)'/) || 
+                  onClick.match(/\((\d+)/) || 
+                  $tr.find('[url*="/autorizar/"]').attr('url')?.match(/\/autorizar\/(\d+)\//);
         if (m) id = m[1];
       }
       
-      // O nome do documento costuma estar em um span dentro de uma célula com classe text-left
-      // OU na segunda coluna da tabela
-      let nome = $tr.find('td.text-left span, td:nth-child(2) span').first().text().trim();
+      // 2. Tentar capturar o Nome
+      let nome = "";
       
-      // Fallback para nome: texto direto da TD
+      // Prioridade 1: span dentro de text-left (onde costuma estar o nome principal)
+      nome = $tr.find('td.text-left span').first().text().trim();
+      
+      // Prioridade 2: atributo 'documento' em botões
       if (!nome) {
-        nome = $tr.find('td:nth-child(2)').text().trim();
+        nome = $tr.find('button[documento]').attr('documento');
+      }
+
+      // Prioridade 3: Fallback para qualquer span na linha que não seja apenas número
+      if (!nome) {
+        $tr.find('span').each((_, span) => {
+          const t = $(span).text().trim();
+          if (t && !/^\d+$/.test(t) && t.length > 2) {
+            nome = t;
+            return false;
+          }
+        });
       }
       
-      if (id && nome) {
+      if (id && nome && /^\d+$/.test(id)) {
         console.log(`[m2a-documentos] contrato ${contratoId}: doc encontrado -> id=${id} nome="${nome}"`);
-        out.push({ id, nome });
+        // Evita duplicados por ID
+        if (!out.some(d => d.id === id)) {
+          out.push({ id, nome });
+        }
       }
     });
 
-    // Fallback: se não achou linhas formatadas, tenta seletores globais
+    // Se ainda assim for zero, tenta um seletor global agressivo para qualquer coisa que pareça ID de documento
     if (out.length === 0) {
-      console.log(`[m2a-documentos] contrato ${contratoId}: tentando busca global por SelecionarDocumento...`);
-      $('[onclick*="SelecionarDocumento"]').each((_, el) => {
-        const onClick = $(el).attr('onclick');
-        const id = onClick.match(/'(\d+)'/)?.[1];
-        if (!id) return;
-
-        const $row = $(el).closest('tr');
-        const nome = $row.find('span').first().text().trim() || 
-                     $row.find('td').eq(1).text().trim() ||
-                     $(el).text().trim();
-
-        if (id && nome && !out.some(doc => doc.id === id)) {
-          console.log(`[m2a-documentos] contrato ${contratoId}: doc fallback encontrado -> id=${id} nome="${nome}"`);
-          out.push({ id, nome });
+      console.log(`[m2a-documentos] contrato ${contratoId}: tentando busca agressiva global...`);
+      $('[onclick*="Documento"], [onclick*="visualizadorPdf"], [url*="/autorizar/"]').each((_, el) => {
+        const $el = $(el);
+        const onClick = $el.attr('onclick') || "";
+        const url = $el.attr('url') || "";
+        const m = onClick.match(/'(\d+)'/) || onClick.match(/\((\d+)/) || url.match(/\/autorizar\/(\d+)\//);
+        
+        if (m && m[1]) {
+          const id = m[1];
+          const $row = $el.closest('tr');
+          const nome = $row.find('td.text-left span').first().text().trim() || 
+                       $el.attr('documento') ||
+                       $row.find('span').filter((_, s) => $(s).text().trim().length > 2).first().text().trim();
+          
+          if (id && nome && !out.some(d => d.id === id)) {
+            out.push({ id, nome });
+          }
         }
       });
     }
@@ -317,7 +351,7 @@ export async function listarDocumentosContrato(contratoId) {
     return out;
   } catch (err) {
     console.error(`[m2a-documentos] contrato ${contratoId} falhou ao listar documentos: ${err.message}`);
-    return []; // Retorna vazio se falhar, para não quebrar o sync principal
+    return [];
   }
 }
 
