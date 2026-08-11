@@ -152,29 +152,35 @@ export function useSincronizarContratoM2A(
       if (documentosRemotos.length > 0) {
         const { data: docsLocais } = await supabase
           .from("contrato_documentos")
-          .select("id, m2a_posicao, m2a_documento_id")
+          .select("id, m2a_documento_id, nome")
           .eq("contrato_id", c.id);
 
         if (docsLocais) {
+          const updates = [];
           for (const docRemote of documentosRemotos) {
-            // Tenta mapear o nome do documento para uma posição/tipo conhecido
-            // Se já tivermos a lógica de posições fixas, podemos tentar o match pelo nome
-            const nomeNorm = docRemote.nome.toUpperCase().trim();
+            const nomeNormRemoto = docRemote.nome.toUpperCase().trim();
             
-            // Procura um documento local que tenha o mesmo nome (ou mapeado)
-            // Aqui vamos apenas atualizar o m2a_documento_id se encontrarmos um match por nome
-            // Isso assume que o usuário quer vincular o ID do portal ao registro local correspondente
-            
+            // Busca um documento local que tenha nome similar e ainda não tenha o ID vinculado
             const matchLocal = docsLocais.find(d => {
-              // Se o m2a_documento_id já for o mesmo, pula
               if (d.m2a_documento_id === docRemote.id) return false;
+              const nomeNormLocal = String(d.nome || "").toUpperCase().trim();
               
-              // Aqui precisaríamos de um mapping de nomes para posições, 
-              // mas como o usuário quer "salvar os links", vamos tentar atualizar 
-              // onde o nome bater com o que temos configurado ou criar se for novo?
-              // O pedido foi "salvar os links dos arquivos, como ja funciona hj"
-              return false; // Implementação detalhada abaixo
+              // Match exato ou por prefixo (ex: "CONTRATO" bate com "CONTRATO - 14.133")
+              return nomeNormLocal.includes(nomeNormRemoto) || nomeNormRemoto.includes(nomeNormLocal);
             });
+
+            if (matchLocal) {
+              updates.push(
+                supabase
+                  .from("contrato_documentos")
+                  .update({ m2a_documento_id: docRemote.id })
+                  .eq("id", matchLocal.id)
+              );
+            }
+          }
+          if (updates.length > 0) {
+            await Promise.all(updates);
+            partes.push(`${updates.length} link(s) de documento vinculados`);
           }
         }
       }
