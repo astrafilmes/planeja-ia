@@ -6,6 +6,7 @@ import { getContratoDocumentos, type ContratoRow } from "../lib";
 import type { DocumentTypeOption } from "@/components/contratos/DocumentSelectorDialog";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
+import { supabase } from "@/integrations/supabase/client";
 
 export function useDownloadDocumentos(processoId: string) {
   const { startTask, updateProgress, finishTask, failTask } = useProgress();
@@ -61,14 +62,14 @@ export function useDownloadDocumentos(processoId: string) {
 
     setIsDownloading(true);
     
-    // Configura o cancelamento via AbortSignal se o worker suportar ou apenas para parar o loop local.
+    // Configura o cancelamento via AbortSignal
     const abortController = new AbortController();
 
     try {
       // Estratégia de consistência: separar em lotes se o total de arquivos for muito grande.
-      // 20 arquivos por ZIP é um bom equilíbrio entre performance e risco de timeout/corrupção.
-      const BATCH_SIZE = 20;
-      const batches = [];
+      // 50 arquivos por lote (solicitado pelo usuário).
+      const BATCH_SIZE = 50;
+      const batches: M2ADocumentoGerado[][] = [];
       for (let i = 0; i < allDocs.length; i += BATCH_SIZE) {
         batches.push(allDocs.slice(i, i + BATCH_SIZE));
       }
@@ -79,45 +80,90 @@ export function useDownloadDocumentos(processoId: string) {
         { onCancel: () => abortController.abort() }
       );
 
+      const finalZip = new JSZip();
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
+
       for (let i = 0; i < batches.length; i++) {
         if (abortController.signal.aborted) break;
 
         const batch = batches[i];
-        const isLast = i === batches.length - 1;
-        const batchName = batches.length > 1 
-          ? `contratos-lote-${i + 1}-de-${batches.length}-${new Date().toISOString().slice(0, 10)}.zip`
-          : `contratos-lote-${new Date().toISOString().slice(0, 10)}.zip`;
-
+        
         updateProgress(
           (i / batches.length) * 100,
-          `Gerando lote ${i + 1} de ${batches.length} (${batch.length} arquivos)...`
+          `Baixando lote ${i + 1} de ${batches.length} (${batch.length} arquivos)...`
         );
 
-        await downloadM2ADocuments(
-          batch,
-          {
-            archive: true,
-            filename: batchName,
+        // Chamada direta ao proxy para obter o Blob do lote sem disparar download automático do browser
+        const { data: sessionData } = await supabase.auth.getSession();
+        const res = await fetch(`${supabaseUrl}/functions/v1/m2a-proxy`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${sessionData.session?.access_token}`,
+            apikey: anonKey,
           },
-          (e) => {
-            if (e.status === "documento") {
-              updateProgress(
-                (i / batches.length) * 100 + ((e.percent ?? 0) / 100) * (100 / batches.length),
-                `Lote ${i + 1}: ${e.mensagem}`
-              );
-            }
-          },
+          body: JSON.stringify({ 
+            path: "/documentos/baixar", 
+            method: "POST", 
+            body: { 
+              documentos: batch.map(d => ({ 
+                source: "m2a", 
+                id_m2a: d.id_m2a, 
+                nome: d.nome, 
+                contrato_id: d.m2aContratoId 
+              })), 
+              archive: true 
+            } 
+          }),
+          signal: abortController.signal
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || `Falha no lote ${i + 1}`);
+        }
+
+        const zipBlob = await res.blob();
+        
+        // Extrai o conteúdo do ZIP do lote e adiciona ao ZIP final
+        const batchZip = await JSZip.loadAsync(zipBlob);
+        
+        // Usamos Set para evitar duplicatas de nomes dentro do zip final se houver colisão entre lotes
+        for (const [filename, fileData] of Object.entries(batchZip.files)) {
+          if (!fileData.dir) {
+            const content = await fileData.async("blob");
+            // Se já existir, jszip gerencia ou podemos prefixar
+            finalZip.file(filename, content);
+          }
+        }
+
+        updateProgress(
+          ((i + 1) / batches.length) * 100,
+          `Lote ${i + 1} concluído e consolidado.`
         );
       }
 
       if (abortController.signal.aborted) {
         failTask("Operação cancelada pelo usuário.");
       } else {
-        finishTask(`${allDocs.length} documento(s) baixado(s) em ${batches.length} arquivo(s).`);
+        updateProgress(98, "Gerando arquivo ZIP final único...");
+        const finalBlob = await finalZip.generateAsync({ 
+          type: "blob",
+          compression: "DEFLATE",
+          compressionOptions: { level: 6 }
+        });
+        const finalName = `contratos-consolidado-${new Date().toISOString().slice(0, 10)}.zip`;
+        saveAs(finalBlob, finalName);
+        finishTask(`${allDocs.length} documento(s) consolidados em um único arquivo.`);
       }
     } catch (err: any) {
-      notify.error(err?.message ?? "Falha ao gerar ZIP");
-      failTask(err?.message ?? "Falha no download");
+      if (err.name === 'AbortError') {
+        failTask("Operação cancelada pelo usuário.");
+      } else {
+        notify.error(err?.message ?? "Falha ao gerar ZIP consolidado");
+        failTask(err?.message ?? "Falha no download");
+      }
     } finally {
       setIsDownloading(false);
       setSelectorOpen(false);
