@@ -250,6 +250,7 @@ export async function listarItensContrato(contratoId) {
 export async function listarDocumentosContrato(contratoId) {
   const path = `/contratos/documentos/tabela/${contratoId}/?page_size=1000`;
   try {
+    console.log(`[m2a-documentos] listando docs do contrato ${contratoId}...`);
     const res = await m2a.get(path, {
       headers: { "X-Requested-With": "XMLHttpRequest", Accept: "application/json,text/html,*/*" },
     });
@@ -259,21 +260,26 @@ export async function listarDocumentosContrato(contratoId) {
 
     // Estrutura M2A: botões com id_item e spans com o nome
     // Procuramos por linhas da tabela de documentos
-    $("tr").each((_, el) => {
+    const rows = $("tr");
+    console.log(`[m2a-documentos] contrato ${contratoId}: ${rows.length} linhas encontradas na tabela`);
+    
+    rows.each((i, el) => {
       const $tr = $(el);
       
       // O ID do documento no portal M2A geralmente está em um atributo id_item 
       // ou no parâmetro da função JS no onclick do checkbox/label.
       let id = $tr.find('button[id_item]').attr('id_item') || 
-               $tr.find('input[id_item]').attr('id_item');
+               $tr.find('input[id_item]').attr('id_item') ||
+               $tr.find('a[id_item]').attr('id_item');
 
       if (!id) {
-        const onClick = $tr.find('label[onclick], input[onclick]').attr('onclick') || "";
+        const onClick = $tr.find('label[onclick], input[onclick], button[onclick], a[onclick]').attr('onclick') || "";
         const m = onClick.match(/'(\d+)'/) || onClick.match(/\((\d+)\)/);
         if (m) id = m[1];
       }
       
       // O nome do documento costuma estar em um span dentro de uma célula com classe text-left
+      // OU na segunda coluna da tabela
       let nome = $tr.find('td.text-left span, td:nth-child(2) span').first().text().trim();
       
       // Fallback para nome: texto direto da TD
@@ -282,12 +288,14 @@ export async function listarDocumentosContrato(contratoId) {
       }
       
       if (id && nome) {
+        console.log(`[m2a-documentos] contrato ${contratoId}: doc encontrado -> id=${id} nome="${nome}"`);
         out.push({ id, nome });
       }
     });
 
-    // Fallback: se não achou linhas formatadas, tenta seletores globais baseados no HTML do usuário
+    // Fallback: se não achou linhas formatadas, tenta seletores globais
     if (out.length === 0) {
+      console.log(`[m2a-documentos] contrato ${contratoId}: tentando busca global por SelecionarDocumento...`);
       $('[onclick*="SelecionarDocumento"]').each((_, el) => {
         const onClick = $(el).attr('onclick');
         const id = onClick.match(/'(\d+)'/)?.[1];
@@ -295,14 +303,17 @@ export async function listarDocumentosContrato(contratoId) {
 
         const $row = $(el).closest('tr');
         const nome = $row.find('span').first().text().trim() || 
-                     $row.find('td').eq(1).text().trim();
+                     $row.find('td').eq(1).text().trim() ||
+                     $(el).text().trim();
 
         if (id && nome && !out.some(doc => doc.id === id)) {
+          console.log(`[m2a-documentos] contrato ${contratoId}: doc fallback encontrado -> id=${id} nome="${nome}"`);
           out.push({ id, nome });
         }
       });
     }
 
+    console.log(`[m2a-documentos] contrato ${contratoId}: total docs detectados = ${out.length}`);
     return out;
   } catch (err) {
     console.error(`[m2a-documentos] contrato ${contratoId} falhou ao listar documentos: ${err.message}`);
