@@ -172,35 +172,60 @@ export function useSincronizarProcessoM2A(
               .select("id, m2a_documento_id, nome")
               .eq("contrato_id", c.id);
 
-            if (docsLocais) {
-              const docUpdates = [];
-              for (const docRemote of documentosRemotos) {
-                const nomeNormRemoto = docRemote.nome.toUpperCase().trim();
-                const matchLocal = docsLocais.find(d => {
-                  if (d.m2a_documento_id === docRemote.id) return false;
-                  const nomeNormLocal = String(d.nome || "").toUpperCase().trim();
-                  return nomeNormLocal.includes(nomeNormRemoto) || nomeNormRemoto.includes(nomeNormLocal);
+            const docUpdates = [];
+            
+            // Criamos um mapa dos documentos remotos por nome para facilitar o vínculo
+            const remotosRestantes = [...documentosRemotos];
+
+            // 2.1 Tentar vincular docs que já existem localmente (mesmo nome)
+            if (docsLocais && docsLocais.length > 0) {
+              for (const docLocal of docsLocais) {
+                if (docLocal.m2a_documento_id) continue;
+                
+                const nomeNormLocal = String(docLocal.nome || "").toUpperCase().trim();
+                const idx = remotosRestantes.findIndex(dr => {
+                  const nomeNormRemoto = dr.nome.toUpperCase().trim();
+                  return nomeNormRemoto.includes(nomeNormLocal) || nomeNormLocal.includes(nomeNormRemoto);
                 });
 
-                if (matchLocal) {
+                if (idx !== -1) {
+                  const matched = remotosRestantes[idx];
                   docUpdates.push(
                     supabase
                       .from("contrato_documentos")
-                      .update({ m2a_documento_id: docRemote.id })
-                      .eq("id", matchLocal.id)
+                      .update({ m2a_documento_id: matched.id })
+                      .eq("id", docLocal.id)
                   );
+                  remotosRestantes.splice(idx, 1);
                   totalDocsVinculados++;
                 }
               }
-              if (docUpdates.length > 0) await Promise.all(docUpdates);
             }
+
+            // 2.2 Para os documentos remotos que NÃO foram vinculados a um local,
+            // criamos novos registros locais (para que apareçam na lista de docs)
+            for (const dr of remotosRestantes) {
+              docUpdates.push(
+                supabase
+                  .from("contrato_documentos")
+                  .insert({
+                    contrato_id: c.id,
+                    nome: dr.nome,
+                    m2a_documento_id: dr.id,
+                    tipo: 'gerado_portal'
+                  })
+              );
+              totalDocsVinculados++;
+            }
+
+            if (docUpdates.length > 0) await Promise.all(docUpdates);
           }
 
           // 3. Atualizar a coluna m2a_documentos_gerados no contrato
           await supabase
             .from("contratos")
             .update({ 
-              m2a_documentos_gerados: documentosRemotos.map(d => ({ nome: d.nome, id_m2a: d.id })) as any 
+              m2a_documentos_gerados: (data.documentos || []).map(d => ({ nome: d.nome, id_m2a: d.id })) as any 
             })
             .eq("id", c.id);
 
