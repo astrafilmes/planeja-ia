@@ -244,6 +244,58 @@ export async function listarItensContrato(contratoId) {
 }
 
 /**
+ * Lista os documentos de UM contrato.
+ * @returns {Promise<Array<{ id:string, nome:string }>>}
+ */
+export async function listarDocumentosContrato(contratoId) {
+  const path = `/contratos/documentos/tabela/${contratoId}/?page_size=1000`;
+  try {
+    const res = await m2a.get(path, {
+      headers: { "X-Requested-With": "XMLHttpRequest", Accept: "application/json,text/html,*/*" },
+    });
+    const parsed = coerceHtmlPayload(res.html);
+    const $ = cheerio.load(parsed);
+    const out = [];
+
+    // O HTML fornecido pelo usuário tem uma estrutura com <button id_item="2791016"> e <span>DESPACHO</span>
+    // Iremos varrer as linhas da tabela (ou os botões de seleção se não houver <tr> claros)
+    // No exemplo: clickSelecionarDocumentocontrato_documento('2791016')
+    
+    // Vamos procurar por todos os spans que parecem ser nomes de documentos e pegar o ID associado
+    // Geralmente cada documento está em uma linha (tr)
+    $("tr").each((_, el) => {
+      const $tr = $(el);
+      // Procura o ID no atributo id_item do botão ou no onclick
+      const id = $tr.find('button[id_item]').attr('id_item') || 
+                 $tr.find('label[onclick*="clickSelecionarDocumento"]').attr('onclick')?.match(/'(\d+)'/)?.[1];
+      
+      const nome = $tr.find('td.text-left span').first().text().trim();
+      
+      if (id && nome) {
+        out.push({ id, nome });
+      }
+    });
+
+    // Fallback: se não achou linhas, tenta pegar por seletores soltos do exemplo
+    if (out.length === 0) {
+      $('label[onclick*="clickSelecionarDocumento"]').each((_, el) => {
+        const id = $(el).attr('onclick')?.match(/'(\d+)'/)?.[1];
+        const $row = $(el).closest('tr');
+        const nome = $row.find('td.text-left span').first().text().trim();
+        if (id && nome) {
+          out.push({ id, nome });
+        }
+      });
+    }
+
+    return out;
+  } catch (err) {
+    console.error(`[m2a-documentos] contrato ${contratoId} falhou ao listar documentos: ${err.message}`);
+    return []; // Retorna vazio se falhar, para não quebrar o sync principal
+  }
+}
+
+/**
  * Consumo agregado por (secretariaKey, numeroItem):
  *   { [normSec(secretariaNome)]: { [numeroItem]: quantidadeTotalConsumida } }
  * Também retorna a lista bruta para debug.

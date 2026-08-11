@@ -1,7 +1,7 @@
 // Rotas de automação de contrato. Streaming via Server-Sent Events.
 import { processarContratoCompleto } from "../m2a/orquestrador-contrato.js";
 import { diagnosticarContrato } from "../m2a/contrato.js";
-import { listarItensContrato } from "../m2a/atas-consumo.js";
+import { listarItensContrato, listarDocumentosContrato } from "../m2a/atas-consumo.js";
 
 function sseInit(reply) {
   reply.raw.writeHead(200, {
@@ -78,8 +78,11 @@ export async function contratosRoutes(app) {
       return reply.code(400).send({ error: "m2a_contrato_id inválido" });
     }
     try {
-      const itens = await listarItensContrato(m2aContratoId);
-      return { ok: true, m2a_contrato_id: m2aContratoId, itens };
+      const [itens, documentos] = await Promise.all([
+        listarItensContrato(m2aContratoId),
+        listarDocumentosContrato(m2aContratoId),
+      ]);
+      return { ok: true, m2a_contrato_id: m2aContratoId, itens, documentos };
     } catch (err) {
       return reply.code(502).send({ ok: false, error: err.message });
     }

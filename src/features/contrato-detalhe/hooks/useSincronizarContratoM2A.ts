@@ -14,6 +14,7 @@ interface SincronizarResponse {
   ok: boolean;
   m2a_contrato_id: string;
   itens: M2aItem[];
+  documentos: Array<{ id: string; nome: string }>;
   error?: string;
 }
 
@@ -146,6 +147,44 @@ export function useSincronizarContratoM2A(
         `${semMudanca} sem mudança`,
       ];
       if (semMatch > 0) partes.push(`${semMatch} sem correspondência na M2A`);
+      // Sincronização de documentos (Portal links)
+      const documentosRemotos = data.documentos ?? [];
+      if (documentosRemotos.length > 0) {
+        const { data: docsLocais } = await supabase
+          .from("contrato_documentos")
+          .select("id, m2a_documento_id, nome")
+          .eq("contrato_id", c.id);
+
+        if (docsLocais) {
+          const updates = [];
+          for (const docRemote of documentosRemotos) {
+            const nomeNormRemoto = docRemote.nome.toUpperCase().trim();
+            
+            // Busca um documento local que tenha nome similar e ainda não tenha o ID vinculado
+            const matchLocal = docsLocais.find(d => {
+              if (d.m2a_documento_id === docRemote.id) return false;
+              const nomeNormLocal = String(d.nome || "").toUpperCase().trim();
+              
+              // Match exato ou por prefixo (ex: "CONTRATO" bate com "CONTRATO - 14.133")
+              return nomeNormLocal.includes(nomeNormRemoto) || nomeNormRemoto.includes(nomeNormLocal);
+            });
+
+            if (matchLocal) {
+              updates.push(
+                supabase
+                  .from("contrato_documentos")
+                  .update({ m2a_documento_id: docRemote.id })
+                  .eq("id", matchLocal.id)
+              );
+            }
+          }
+          if (updates.length > 0) {
+            await Promise.all(updates);
+            partes.push(`${updates.length} link(s) de documento vinculados`);
+          }
+        }
+      }
+
       notify.success(`Sincronização concluída: ${partes.join(" · ")}.`, {
         id: toastId,
       });
