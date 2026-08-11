@@ -40,6 +40,7 @@ type Doc = {
  storage_path: string;
  mime_type: string | null;
  size_bytes: number | null;
+ m2a_documento_id?: string | null;
 };
 
 type DocumentoLista =
