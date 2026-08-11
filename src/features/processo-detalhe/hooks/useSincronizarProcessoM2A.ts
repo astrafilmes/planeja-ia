@@ -53,14 +53,16 @@ export function useSincronizarProcessoM2A(
       return;
     }
 
+    // Filtra contratos que não têm a lista de documentos preenchida ou está vazia
     const contratosParaSinc = dbContratos.filter(c => {
       const docs = c.m2a_documentos_gerados as any[];
       return !docs || docs.length === 0;
     });
 
     if (contratosParaSinc.length === 0) {
-      notify.success("Todos os contratos já possuem documentos vinculados.");
-      return;
+      const resetConfirm = window.confirm("Todos os contratos já parecem ter documentos sincronizados. Deseja forçar uma nova sincronização geral?");
+      if (!resetConfirm) return;
+      contratosParaSinc.push(...dbContratos);
     }
 
     setSincronizando(true);
