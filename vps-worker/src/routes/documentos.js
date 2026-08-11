@@ -328,34 +328,54 @@ async function fetchFromM2A(id, _hrefHint, log, contratoId = null) {
   const csrfSource = contratoId ? `/contratos/${contratoId}/` : docPath;
 
   for (const format of ["pdf", "docx"]) {
-    try {
-      const csrf = await m2a.getCsrf(csrfSource);
-      const form = new URLSearchParams();
-      form.set("csrfmiddlewaretoken", csrf);
-      form.set("format", format);
-      form.set("gerar_documento", "true");
-      const gen = await m2a.request("POST", docPath, {
-        body: form.toString(),
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-          "X-Requested-With": "XMLHttpRequest",
-          ...(referer ? { Referer: referer } : {}),
-        },
-      });
-      tried.push(`POST ${docPath} format=${format} → ${gen.status}`);
-      if (gen.status >= 400) continue;
+    // Tenta até 2 vezes por formato se o arquivo vier inválido
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const csrf = await m2a.getCsrf(csrfSource);
+        const form = new URLSearchParams();
+        form.set("csrfmiddlewaretoken", csrf);
+        form.set("format", format);
+        form.set("gerar_documento", "true");
+        
+        const gen = await m2a.request("POST", docPath, {
+          body: form.toString(),
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            "X-Requested-With": "XMLHttpRequest",
+            ...(referer ? { Referer: referer } : {}),
+          },
+        });
+        
+        tried.push(`POST ${docPath} format=${format} try=${attempt} → ${gen.status}`);
+        if (gen.status >= 400) break; // Se o portal rejeitou o POST, tenta o próximo formato
 
-      const dl = await m2a.request("GET", `${docPath}?filename=temp&format=${format}`, {
-        responseType: "arraybuffer",
-        headers: {
-          Accept: "application/pdf,application/octet-stream,*/*",
-          ...(referer ? { Referer: referer } : {}),
-        },
-      });
-      tried.push(`GET ${docPath}?filename=temp&format=${format} → ${dl.status} ${dl.contentType || ""}`);
-      if (dl.status >= 200 && dl.status < 300 && looksLikeBinary(dl)) return dl;
-    } catch (err) {
-      tried.push(`format=${format} → ERR ${err.message}`);
+        // Se for a segunda tentativa, espera um pouco mais para o servidor processar
+        if (attempt > 1) {
+          log?.info?.({ id, attempt }, "aguardando processamento do servidor M2A (backoff)...");
+          await new Promise(resolve => setTimeout(resolve, 3000));
+        }
+
+        const dl = await m2a.request("GET", `${docPath}?filename=temp&format=${format}`, {
+          responseType: "arraybuffer",
+          headers: {
+            Accept: "application/pdf,application/octet-stream,*/*",
+            ...(referer ? { Referer: referer } : {}),
+          },
+        });
+        
+        tried.push(`GET ${docPath}?format=${format} try=${attempt} → ${dl.status} bytes=${dl.bytes?.length || 0}`);
+        
+        if (dl.status >= 200 && dl.status < 300 && looksLikeBinary(dl)) {
+          // Validação final de integridade
+          if (!isInvalidPortalDocument(dl)) {
+            return dl;
+          } else {
+            log?.warn?.({ id, bytes: dl.bytes?.length }, "documento detectado como inválido/vazio; tentando novamente");
+          }
+        }
+      } catch (err) {
+        tried.push(`format=${format} try=${attempt} → ERR ${err.message}`);
+      }
     }
   }
 
