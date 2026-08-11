@@ -13,6 +13,12 @@ import { config } from "./config.js";
  * - Mantém cache de CSRF por URL (espelha rememberCsrfFromDoc do engine).
  */
 
+export function absoluteUrl(path) {
+  const p = String(path ?? "");
+  if (p.startsWith("http")) return p;
+  return `${config.m2a.baseUrl}${p.startsWith("/") ? p : "/" + p}`;
+}
+
 const CSRF_TTL_MS = 10 * 60 * 1000;
 const TRANSIENT_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
 const TRANSIENT_CODES = new Set([
@@ -66,12 +72,12 @@ function assertSafePath(path) {
   return p;
 }
 
-function absoluteUrl(path) {
-  return `${config.m2a.baseUrl}${assertSafePath(path)}`;
+function absoluteUrlInternal(path) {
+  return absoluteUrl(path);
 }
 
 function normalizeCacheUrl(url) {
-  return absoluteUrl(url).replace(/#.*$/, "");
+  return absoluteUrlInternal(url).replace(/#.*$/, "");
 }
 
 class M2aClient {
@@ -141,7 +147,7 @@ class M2aClient {
     if (this.loginPromise) return this.loginPromise;
     this.loginPromise = (async () => {
       this.resetSession();
-      const loginUrl = `${config.m2a.baseUrl}${config.m2a.loginPath}`;
+      const loginUrl = absoluteUrlInternal(config.m2a.loginPath);
       console.log(`[m2a-login] start ENTIDADE user=${config.m2a.username} url=${loginUrl} perfil=${config.m2a.loginProfile}`);
       let getRes;
       try {

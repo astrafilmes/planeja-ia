@@ -6,7 +6,7 @@
 
 import archiver from "archiver";
 import * as cheerio from "cheerio";
-import { m2a } from "../m2a-client.js";
+import { m2a, absoluteUrl } from "../m2a-client.js";
 
 // Padrões conhecidos / palpites — usados como fallback quando o anchor real
 // não puder ser extraído da tabela de documentos do contrato. A rota
