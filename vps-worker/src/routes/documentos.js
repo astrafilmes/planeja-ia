@@ -310,7 +310,7 @@ async function fetchFromM2A(id, _hrefHint, log, contratoId = null) {
         headers: {
           "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
           "X-Requested-With": "XMLHttpRequest",
-          ...(referer ? { Referer: referer } : {}),
+          "Referer": absoluteUrl(docPath),
         },
       });
       tried.push(`POST ${docPath} format=${format} → ${gen.status}`);
