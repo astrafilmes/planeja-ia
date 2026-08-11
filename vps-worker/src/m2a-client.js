@@ -4,9 +4,13 @@ import { wrapper } from "axios-cookiejar-support";
 import PQueue from "p-queue";
 import * as cheerio from "cheerio";
 import { config } from "./config.js";
+import pino from "pino";
+
+const log = pino({ name: "m2a-client" });
 
 /**
  * Cliente HTTP único contra o M2A.
+
  * - 1 sessão (conta de serviço) compartilhada por todo o worker.
  * - Faz login sob demanda e revalida automaticamente se a sessão expirar.
  * - Serializa requests via p-queue para não derrubar o portal.
