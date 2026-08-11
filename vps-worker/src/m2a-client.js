@@ -318,12 +318,9 @@ class M2aClient {
       const isPost = method.toUpperCase() === "POST";
       const sessionExpired =
         M2aClient.isLoginPage(r.html, r.finalUrl) || r.status === 401;
-      // Para POST, NÃO refazemos o request automaticamente em 403:
-      // o body já carrega um csrfmiddlewaretoken que ficaria velho após
-      // o re-login e o Django rejeitaria de novo com 403. O caller deve
-      // tratar 403 explicitamente (re-buscar CSRF e refazer o POST).
-      if (sessionExpired || (!isPost && r.status === 403)) {
-        console.warn(`[m2a] sessão expirada em ${method} ${path} — re-login e retry`);
+      // Em caso de 403 (CSRF Inválido), forçamos re-login para obter um CSRF novo e fresco
+      if (sessionExpired || r.status === 403) {
+        console.warn(`[m2a] sessão expirada ou CSRF inválido (403) em ${method} ${path} — re-login e retry`);
         this.loggedIn = false;
         await this.login();
         r = await this._raw(method, path, opts);

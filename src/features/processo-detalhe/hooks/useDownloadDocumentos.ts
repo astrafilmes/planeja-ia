@@ -120,8 +120,15 @@ export function useDownloadDocumentos(processoId: string) {
         });
 
         if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.error || `Falha no lote ${i + 1}`);
+          const errText = await res.text().catch(() => "Erro desconhecido");
+          let errMsg = errText;
+          try {
+            const errJson = JSON.parse(errText);
+            errMsg = errJson.error || errText;
+          } catch {
+            // Não é JSON, usa texto puro
+          }
+          throw new Error(errMsg);
         }
 
         const zipBlob = await res.blob();
