@@ -2,8 +2,10 @@ import { useCallback, useState } from "react";
 import { notify } from "@/lib/notify";
 import { downloadM2ADocuments, type M2ADocumentoGerado } from "@/lib/m2a";
 import { useProgress } from "@/contexts/ProgressContext";
-import { getContratoDocumentos, type ContratoRow, DOCUMENTOS_DOWNLOAD_POSICOES } from "../lib";
+import { getContratoDocumentos, type ContratoRow } from "../lib";
 import type { DocumentTypeOption } from "@/components/contratos/DocumentSelectorDialog";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
 
 export function useDownloadDocumentos(processoId: string) {
   const { startTask, updateProgress, finishTask, failTask } = useProgress();
