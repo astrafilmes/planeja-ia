@@ -212,7 +212,8 @@ export function useSincronizarProcessoM2A(
                     contrato_id: c.id,
                     nome: dr.nome,
                     m2a_documento_id: dr.id,
-                    storage_path: `m2a/${c.id}/${dr.id}`
+                    storage_path: `m2a/${c.id}/${dr.id}`,
+                    tipo: 'gerado_portal'
                   })
               );
               totalDocsVinculados++;
