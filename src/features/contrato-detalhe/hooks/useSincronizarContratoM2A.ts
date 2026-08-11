@@ -46,7 +46,22 @@ export function useSincronizarContratoM2A(
     }
 
     setSincronizando(true);
-    const toastId = notify.loading("Consultando itens do contrato na M2A…");
+    
+    // Verificar se precisa sincronizar itens/documentos
+    const { count: docsPendentes } = await supabase
+      .from("contrato_documentos")
+      .select("*", { count: "exact", head: true })
+      .eq("contrato_id", c.id)
+      .is("m2a_documento_id", null);
+
+    if (docsPendentes === 0) {
+      // Opcional: poderíamos verificar itens também, mas o usuário pediu especificamente sobre documentos
+      // notify.success("Este contrato já possui todos os documentos vinculados.");
+      // setSincronizando(false);
+      // return;
+    }
+
+    const toastId = notify.loading("Consultando dados na M2A…");
     try {
       const { data, error } = await supabase.functions.invoke<SincronizarResponse>(
         "m2a-proxy",
