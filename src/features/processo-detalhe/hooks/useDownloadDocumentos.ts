@@ -64,8 +64,8 @@ export function useDownloadDocumentos(processoId: string) {
 
     try {
       // Estratégia de consistência: separar em lotes se o total de arquivos for muito grande.
-      // 20 arquivos por ZIP é um bom equilíbrio entre performance e risco de timeout/corrupção.
-      const BATCH_SIZE = 20;
+      // 100 arquivos por ZIP é o limite definido pelo usuário para equilíbrio entre performance e estabilidade.
+      const BATCH_SIZE = 100;
       const batches = [];
       for (let i = 0; i < allDocs.length; i += BATCH_SIZE) {
         batches.push(allDocs.slice(i, i + BATCH_SIZE));
