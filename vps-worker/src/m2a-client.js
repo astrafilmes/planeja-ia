@@ -323,6 +323,16 @@ class M2aClient {
         console.warn(`[m2a] sessão expirada ou CSRF inválido (403) em ${method} ${path} — re-login e retry`);
         this.loggedIn = false;
         await this.login();
+        
+        // Se for POST, precisamos atualizar o token CSRF no body antes do retry
+        if (isPost && typeof opts.body === "string" && opts.body.includes("csrfmiddlewaretoken=")) {
+          const newToken = await this.getCsrf(path, { force: true });
+          opts.body = opts.body.replace(/csrfmiddlewaretoken=[^&]*/, `csrfmiddlewaretoken=${newToken}`);
+          if (opts.headers) {
+             opts.headers["Referer"] = absoluteUrl(path);
+          }
+        }
+
         r = await this._raw(method, path, opts);
         console.log(`[m2a] retry ${method} ${path} → ${r.status} (finalUrl=${r.finalUrl || "-"})`);
         if (M2aClient.isLoginPage(r.html, r.finalUrl)) {
