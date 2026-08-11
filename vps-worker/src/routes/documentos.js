@@ -429,12 +429,16 @@ export async function documentosRoutes(app) {
       }
     }
 
-    // ZIP streaming.
+    // ZIP streaming real (direto para o navegador via Proxy).
     const zip = archiver("zip", { zlib: { level: 6 } });
+    
+    // Configura headers para streaming progressivo
     reply.raw.writeHead(200, {
       "Content-Type": "application/zip",
       "Content-Disposition": `attachment; filename="${filename}"`,
-      "Cache-Control": "no-store",
+      "Cache-Control": "no-cache, no-transform",
+      "Connection": "keep-alive",
+      "X-Accel-Buffering": "no",
     });
     zip.pipe(reply.raw);
     zip.on("warning", (err) => app.log.warn({ err }, "archiver warning"));
@@ -540,6 +544,12 @@ export async function documentosRoutes(app) {
       });
       try {
         const r = await fetchOne(doc, null, app.log);
+        
+        // Verificação de resiliência: se o portal retornar HTML em vez de PDF/Binário, é um erro.
+        if (!looksLikeBinary(r)) {
+          throw new Error("O portal não retornou um arquivo válido (provável erro de sessão ou PDF vazio).");
+        }
+
         const ext = extFromContentType(r.contentType);
         let nome = doc.nome || filenameFromHeader(r.contentDisposition) || "documento";
         if (ext && !hasKnownExtension(nome)) nome += ext;
