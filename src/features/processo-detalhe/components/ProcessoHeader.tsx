@@ -1,4 +1,4 @@
-import { ChevronRight, Loader2, RefreshCw, Save, Trash2 } from "lucide-react";
+import { ChevronRight, Loader2, RefreshCw, Save, Trash2, FileSync } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { PautaConsolidadaExporter } from "@/components/contratos/PautaConsolidadaExporter";
 import { Button } from "@/components/ui/button";
@@ -64,14 +64,14 @@ export function ProcessoHeader({
             type="button"
             size="sm"
             variant="outline"
-            disabled={isSyncing || !canSync}
+            disabled={isSyncing}
             onClick={onSync}
-            title="Sincronizar dados do processo com o M2A"
+            title="Sincronizar todos os contratos deste processo com o M2A"
           >
             {isSyncing ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (
-              <RefreshCw className="size-4" />
+              <FileSync className="size-4" />
             )}
             Sincronizar M2A
           </Button>

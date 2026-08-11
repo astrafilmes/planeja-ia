@@ -1,0 +1,196 @@
+import { useCallback, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { notify } from "@/lib/notify";
+import { useProgress } from "@/contexts/ProgressContext";
+import type { ContratoRow } from "../lib";
+
+interface M2aItem {
+  contratoItemId: number | string | null;
+  numero: string | null;
+  descricao: string | null;
+  quantidadeContratada: number | null;
+}
+
+interface SincronizarResponse {
+  ok: boolean;
+  m2a_contrato_id: string;
+  itens: M2aItem[];
+  documentos: Array<{ id: string; nome: string }>;
+  error?: string;
+}
+
+function normalizeNumero(v: string | null | undefined): string {
+  return String(v ?? "").trim().replace(/^0+/, "").toLowerCase();
+}
+
+function toNumber(v: unknown): number {
+  if (v === null || v === undefined || v === "") return 0;
+  const n = typeof v === "number" ? v : Number(String(v).replace(",", "."));
+  return Number.isFinite(n) ? n : 0;
+}
+
+export function useSincronizarProcessoM2A(
+  processoId: string,
+  contratos: ContratoRow[],
+) {
+  const qc = useQueryClient();
+  const [sincronizando, setSincronizando] = useState(false);
+  const { startTask, updateProgress, finishTask, failTask } = useProgress();
+
+  const sincronizar = useCallback(async () => {
+    const contratosComId = contratos.filter((c) => !!c.m2a_contrato_id);
+    if (contratosComId.length === 0) {
+      notify.error(
+        "Nenhum contrato deste processo foi enviado à M2A ainda.",
+      );
+      return;
+    }
+
+    setSincronizando(true);
+    startTask(
+      "Sincronizando Processo",
+      `Sincronizando ${contratosComId.length} contrato(s) com a M2A...`,
+    );
+
+    let sucessos = 0;
+    let falhas = 0;
+
+    try {
+      for (let i = 0; i < contratosComId.length; i++) {
+        const c = contratosComId[i];
+        const progresso = (i / contratosComId.length) * 100;
+        updateProgress(
+          progresso,
+          `Sincronizando contrato ${c.numero_contrato} (${i + 1}/${contratosComId.length})...`,
+        );
+
+        try {
+          const { data, error } = await supabase.functions.invoke<SincronizarResponse>(
+            "m2a-proxy",
+            {
+              body: {
+                path: "/contratos/sincronizar",
+                method: "POST",
+                body: { m2a_contrato_id: String(c.m2a_contrato_id) },
+              },
+            },
+          );
+
+          if (error) throw new Error(error.message);
+          if (!data?.ok) throw new Error(data?.error || "Falha ao consultar M2A.");
+
+          const remoteItens = data.itens ?? [];
+          const usados = new Set<string>();
+          
+          const findRemote = (item: any): M2aItem | null => {
+            if (item.m2a_item_id) {
+              const byId = remoteItens.find(
+                (r) =>
+                  String(r.contratoItemId ?? "") === String(item.m2a_item_id) &&
+                  !usados.has(String(r.contratoItemId)),
+              );
+              if (byId) return byId;
+            }
+            const numLocal = normalizeNumero(item.numero_item);
+            if (numLocal) {
+              const byNum = remoteItens.find(
+                (r) =>
+                  normalizeNumero(r.numero) === numLocal &&
+                  !usados.has(String(r.contratoItemId)),
+              );
+              if (byNum) return byNum;
+            }
+            return null;
+          };
+
+          const updatesItens = [];
+          for (const item of c.itens) {
+            const remote = findRemote(item);
+            if (!remote) continue;
+            
+            usados.add(String(remote.contratoItemId));
+            const novaQtd = remote.quantidadeContratada ?? 0;
+            const qtdAtual = toNumber(item.quantidade_numero ?? item.quantidade);
+            const valorUnit = toNumber(item.valor_unitario);
+            const novoTotal = novaQtd * valorUnit;
+            const totalAtual = toNumber(item.valor_total);
+            const m2aIdRemoto = remote.contratoItemId ? String(remote.contratoItemId) : null;
+            
+            const precisaAtualizar = 
+              Math.abs(novaQtd - qtdAtual) > 0.0000001 || 
+              Math.abs(novoTotal - totalAtual) > 0.005 ||
+              (m2aIdRemoto && m2aIdRemoto !== (item.m2a_item_id ?? null));
+
+            if (precisaAtualizar) {
+              // Precisamos do ID do item no banco. Se não tiver no ContratoRow.itens, teremos que buscar.
+              // ContratoRow.itens no useProcessoDetalhe não inclui o ID da tabela contrato_itens, 
+              // mas podemos inferir se tivermos o m2a_item_id ou numero_item.
+              // Para ser seguro, faremos um update baseado no contrato_id e identificadores do item.
+              const query = supabase.from("contrato_itens").update({
+                quantidade: novaQtd,
+                valor_total: novoTotal,
+                m2a_item_id: m2aIdRemoto ?? item.m2a_item_id ?? null,
+              }).eq("contrato_id", c.id);
+
+              if (item.m2a_item_id) {
+                query.eq("m2a_item_id", item.m2a_item_id);
+              } else {
+                query.eq("numero_item", item.numero);
+              }
+              
+              const { error: upErr } = await query;
+              if (upErr) console.error("Erro ao atualizar item:", upErr);
+            }
+          }
+
+          // Documentos
+          const documentosRemotos = data.documentos ?? [];
+          if (documentosRemotos.length > 0) {
+            const { data: docsLocais } = await supabase
+              .from("contrato_documentos")
+              .select("id, m2a_documento_id, nome")
+              .eq("contrato_id", c.id);
+
+            if (docsLocais) {
+              const docUpdates = [];
+              for (const docRemote of documentosRemotos) {
+                const nomeNormRemoto = docRemote.nome.toUpperCase().trim();
+                const matchLocal = docsLocais.find(d => {
+                  if (d.m2a_documento_id === docRemote.id) return false;
+                  const nomeNormLocal = String(d.nome || "").toUpperCase().trim();
+                  return nomeNormLocal.includes(nomeNormRemoto) || nomeNormRemoto.includes(nomeNormLocal);
+                });
+
+                if (matchLocal) {
+                  docUpdates.push(
+                    supabase
+                      .from("contrato_documentos")
+                      .update({ m2a_documento_id: docRemote.id })
+                      .eq("id", matchLocal.id)
+                  );
+                }
+              }
+              if (docUpdates.length > 0) await Promise.all(docUpdates);
+            }
+          }
+
+          sucessos++;
+        } catch (err) {
+          console.error(`Erro ao sincronizar contrato ${c.numero_contrato}:`, err);
+          falhas++;
+        }
+      }
+
+      finishTask(`Sincronização concluída: ${sucessos} sucesso(s), ${falhas} falha(s).`);
+      qc.invalidateQueries({ queryKey: ["processo-detail", processoId] });
+      notify.success("Sincronização do processo concluída.");
+    } catch (e) {
+      failTask(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSincronizando(false);
+    }
+  }, [processoId, contratos, qc, startTask, updateProgress, finishTask, failTask]);
+
+  return { sincronizar, sincronizando };
+}
