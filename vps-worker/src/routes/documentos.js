@@ -92,6 +92,35 @@ function decodeEntities(value) {
     .replace(/&#x27;|&#39;/g, "'");
 }
 
+function isInvalidPortalDocument(r) {
+  if (!r || !r.bytes || r.bytes.length === 0) return true;
+  
+  // 1. Validação de tamanho (Threshold de 5KB)
+  if (r.bytes.length < 5120) {
+    const content = r.bytes.toString("utf8");
+    
+    // 2. Busca por frases de erro conhecidas no portal
+    const errorPhrases = [
+      "Documento se encontra indisponivel",
+      "tente novamente mais tarde",
+      "erro ao gerar documento",
+      "visualizar_documento_individual"
+    ];
+    
+    if (errorPhrases.some(phrase => content.includes(phrase))) {
+      return true;
+    }
+    
+    // 3. Se for muito pequeno e não tiver Magic Number de PDF ou ZIP/DOCX
+    const head = content.slice(0, 10);
+    if (!head.startsWith("%PDF") && !head.startsWith("PK")) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
 function cleanPortalPath(raw) {
   let href = decodeEntities(raw)
     .replace(/\\n/g, "")
