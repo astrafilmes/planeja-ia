@@ -124,10 +124,10 @@ export function DocumentosEditor({
  (d) =>
  ({
  key: `local:${d.id}`,
- origem:"local",
- nome: d.nome,
- tipo: d.tipo,
- detalhe: `${d.mime_type ??"Arquivo"}${d.size_bytes ? ` · ${formatBytes(d.size_bytes)}` :""}`,
+            origem:"local",
+            nome: d.nome,
+            tipo: d.tipo === 'gerado_portal' ? 'gerado_portal' : 'Arquivo',
+            detalhe: d.tipo === 'gerado_portal' ? 'Arquivo' : `${d.mime_type ??"Arquivo"}${d.size_bytes ? ` · ${formatBytes(d.size_bytes)}` :""}`,
  local: d,
  }) as DocumentoLista,
  ),
