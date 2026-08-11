@@ -55,6 +55,8 @@ export function useSincronizarProcessoM2A(
 
     let sucessos = 0;
     let falhas = 0;
+    let totalItensAtualizados = 0;
+    let totalDocsVinculados = 0;
 
     try {
       for (let i = 0; i < contratosComId.length; i++) {
@@ -92,7 +94,7 @@ export function useSincronizarProcessoM2A(
               );
               if (byId) return byId;
             }
-            const numLocal = normalizeNumero(item.numero_item);
+            const numLocal = normalizeNumero(item.numero_item || item.numero);
             if (numLocal) {
               const byNum = remoteItens.find(
                 (r) =>
@@ -104,47 +106,47 @@ export function useSincronizarProcessoM2A(
             return null;
           };
 
-          const updatesItens = [];
-          for (const item of c.itens) {
-            const remote = findRemote(item);
-            if (!remote) continue;
-            
-            usados.add(String(remote.contratoItemId));
-            const novaQtd = remote.quantidadeContratada ?? 0;
-            const qtdAtual = toNumber(item.quantidade_numero ?? item.quantidade);
-            const valorUnit = toNumber(item.valor_unitario);
-            const novoTotal = novaQtd * valorUnit;
-            const totalAtual = toNumber(item.valor_total);
-            const m2aIdRemoto = remote.contratoItemId ? String(remote.contratoItemId) : null;
-            
-            const precisaAtualizar = 
-              Math.abs(novaQtd - qtdAtual) > 0.0000001 || 
-              Math.abs(novoTotal - totalAtual) > 0.005 ||
-              (m2aIdRemoto && m2aIdRemoto !== (item.m2a_item_id ?? null));
+          // 1. Sincronizar Itens
+          const { data: dbItens } = await supabase
+            .from("contrato_itens")
+            .select("id, m2a_item_id, numero_item, quantidade, valor_unitario, valor_total")
+            .eq("contrato_id", c.id);
 
-            if (precisaAtualizar) {
-              // Precisamos do ID do item no banco. Se não tiver no ContratoRow.itens, teremos que buscar.
-              // ContratoRow.itens no useProcessoDetalhe não inclui o ID da tabela contrato_itens, 
-              // mas podemos inferir se tivermos o m2a_item_id ou numero_item.
-              // Para ser seguro, faremos um update baseado no contrato_id e identificadores do item.
-              const query = supabase.from("contrato_itens").update({
-                quantidade: novaQtd,
-                valor_total: novoTotal,
-                m2a_item_id: m2aIdRemoto ?? item.m2a_item_id ?? null,
-              }).eq("contrato_id", c.id);
-
-              if (item.m2a_item_id) {
-                query.eq("m2a_item_id", item.m2a_item_id);
-              } else {
-                query.eq("numero_item", item.numero);
-              }
+          if (dbItens) {
+            for (const item of dbItens) {
+              const remote = findRemote(item);
+              if (!remote) continue;
               
-              const { error: upErr } = await query;
-              if (upErr) console.error("Erro ao atualizar item:", upErr);
+              usados.add(String(remote.contratoItemId));
+              const novaQtd = remote.quantidadeContratada ?? 0;
+              const qtdAtual = toNumber(item.quantidade);
+              const valorUnit = toNumber(item.valor_unitario);
+              const novoTotal = novaQtd * valorUnit;
+              const totalAtual = toNumber(item.valor_total);
+              const m2aIdRemoto = remote.contratoItemId ? String(remote.contratoItemId) : null;
+              
+              const precisaAtualizar = 
+                Math.abs(novaQtd - qtdAtual) > 0.0000001 || 
+                Math.abs(novoTotal - totalAtual) > 0.005 ||
+                (m2aIdRemoto && m2aIdRemoto !== (item.m2a_item_id ?? null));
+
+              if (precisaAtualizar) {
+                const { error: upErr } = await supabase
+                  .from("contrato_itens")
+                  .update({
+                    quantidade: novaQtd,
+                    valor_total: novoTotal,
+                    m2a_item_id: m2aIdRemoto ?? item.m2a_item_id ?? null,
+                  })
+                  .eq("id", item.id);
+                
+                if (!upErr) totalItensAtualizados++;
+                else console.error("Erro ao atualizar item:", upErr);
+              }
             }
           }
 
-          // Documentos
+          // 2. Sincronizar Documentos
           const documentosRemotos = data.documentos ?? [];
           if (documentosRemotos.length > 0) {
             const { data: docsLocais } = await supabase
@@ -169,6 +171,7 @@ export function useSincronizarProcessoM2A(
                       .update({ m2a_documento_id: docRemote.id })
                       .eq("id", matchLocal.id)
                   );
+                  totalDocsVinculados++;
                 }
               }
               if (docUpdates.length > 0) await Promise.all(docUpdates);
@@ -182,7 +185,10 @@ export function useSincronizarProcessoM2A(
         }
       }
 
-      finishTask(`Sincronização concluída: ${sucessos} sucesso(s), ${falhas} falha(s).`);
+      const msgFinal = `Sincronização concluída: ${sucessos} sucesso(s), ${falhas} falha(s). ` +
+                       `${totalItensAtualizados} itens e ${totalDocsVinculados} docs atualizados.`;
+      
+      finishTask(msgFinal);
       qc.invalidateQueries({ queryKey: ["processo-detail", processoId] });
       notify.success("Sincronização do processo concluída.");
     } catch (e) {
