@@ -39,18 +39,44 @@ export function useSincronizarProcessoM2A(
   const { startTask, updateProgress, finishTask, failTask } = useProgress();
 
   const sincronizar = useCallback(async () => {
-    const contratosComId = contratos.filter((c) => !!c.m2a_contrato_id);
-    if (contratosComId.length === 0) {
+    // Busca os contratos novamente para garantir que temos os dados de documentos
+    const { data: dbContratos } = await supabase
+      .from("contratos")
+      .select("id, numero_contrato, m2a_contrato_id")
+      .eq("processo_id", processoId)
+      .not("m2a_contrato_id", "is", null);
+
+    if (!dbContratos || dbContratos.length === 0) {
       notify.error(
         "Nenhum contrato deste processo foi enviado à M2A ainda.",
       );
       return;
     }
 
+    // Filtrar apenas contratos que NÃO têm todos os documentos vinculados
+    // (Pelo menos um documento sem m2a_documento_id)
+    const contratosParaSinc = [];
+    for (const c of dbContratos) {
+      const { count } = await supabase
+        .from("contrato_documentos")
+        .select("*", { count: "exact", head: true })
+        .eq("contrato_id", c.id)
+        .is("m2a_documento_id", null);
+      
+      if (count && count > 0) {
+        contratosParaSinc.push(c);
+      }
+    }
+
+    if (contratosParaSinc.length === 0) {
+      notify.success("Todos os contratos já possuem documentos vinculados.");
+      return;
+    }
+
     setSincronizando(true);
     startTask(
       "Sincronizando Processo",
-      `Sincronizando ${contratosComId.length} contrato(s) com a M2A...`,
+      `Sincronizando ${contratosParaSinc.length} contrato(s) que possuem documentos pendentes...`,
     );
 
     let sucessos = 0;
@@ -59,12 +85,12 @@ export function useSincronizarProcessoM2A(
     let totalDocsVinculados = 0;
 
     try {
-      for (let i = 0; i < contratosComId.length; i++) {
-        const c = contratosComId[i];
-        const progresso = (i / contratosComId.length) * 100;
+      for (let i = 0; i < contratosParaSinc.length; i++) {
+        const c = contratosParaSinc[i];
+        const progresso = (i / contratosParaSinc.length) * 100;
         updateProgress(
           progresso,
-          `Sincronizando contrato ${c.numero_contrato} (${i + 1}/${contratosComId.length})...`,
+          `Sincronizando contrato ${c.numero_contrato} (${i + 1}/${contratosParaSinc.length})...`,
         );
 
         try {
