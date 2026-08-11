@@ -6,7 +6,7 @@ import { getContratoDocumentos, type ContratoRow, DOCUMENTOS_DOWNLOAD_POSICOES }
 import type { DocumentTypeOption } from "@/components/contratos/DocumentSelectorDialog";
 
 export function useDownloadDocumentos(processoId: string) {
-  const { startTask, finishTask, failTask } = useProgress();
+  const { startTask, updateProgress, finishTask, failTask } = useProgress();
   const [isDownloading, setIsDownloading] = useState(false);
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [targetContracts, setTargetContracts] = useState<ContratoRow[]>([]);
@@ -47,49 +47,80 @@ export function useDownloadDocumentos(processoId: string) {
     if (!targetContracts.length || !selectedTypes.length) return;
 
     const positions = new Set(selectedTypes.map(t => t.position));
-    
-    // O "robô" percorre cada contrato e usa a mesma lógica de extração (getContratoDocumentos)
-    // agora parametrizada com as posições escolhidas no seletor.
-    const docs = targetContracts.flatMap(contrato => 
+    const allDocs = targetContracts.flatMap(contrato => 
       getContratoDocumentos(contrato, positions)
     );
 
-    if (!docs.length) {
+    if (!allDocs.length) {
       notify.error("Nenhum documento do tipo selecionado foi encontrado nos contratos.");
       setSelectorOpen(false);
       return;
     }
 
     setIsDownloading(true);
-    startTask(
-      "Compactando documentos",
-      `Compactando ${docs.length} documento(s) no servidor...`,
-    );
+    
+    // Configura o cancelamento via AbortSignal se o worker suportar ou apenas para parar o loop local.
+    const abortController = new AbortController();
 
     try {
-      await downloadM2ADocuments(
-        docs,
-        {
-          archive: true,
-          filename: `contratos-lote-${new Date().toISOString().slice(0, 10)}.zip`,
-        },
-        (e) => {
-          if (e.status === "concluido") {
-            finishTask(`${e.total} documento(s) compactado(s).`);
-            setIsDownloading(false);
-            setSelectorOpen(false);
-          }
-          if (e.status === "erro") {
-            failTask(e.mensagem ?? "Falha ao gerar ZIP");
-            setIsDownloading(false);
-          }
-        },
+      // Estratégia de consistência: separar em lotes se o total de arquivos for muito grande.
+      // 20 arquivos por ZIP é um bom equilíbrio entre performance e risco de timeout/corrupção.
+      const BATCH_SIZE = 20;
+      const batches = [];
+      for (let i = 0; i < allDocs.length; i += BATCH_SIZE) {
+        batches.push(allDocs.slice(i, i + BATCH_SIZE));
+      }
+
+      startTask(
+        "Preparando download",
+        `Processando ${allDocs.length} documento(s) em ${batches.length} lote(s)...`,
+        { onCancel: () => abortController.abort() }
       );
+
+      for (let i = 0; i < batches.length; i++) {
+        if (abortController.signal.aborted) break;
+
+        const batch = batches[i];
+        const isLast = i === batches.length - 1;
+        const batchName = batches.length > 1 
+          ? `contratos-lote-${i + 1}-de-${batches.length}-${new Date().toISOString().slice(0, 10)}.zip`
+          : `contratos-lote-${new Date().toISOString().slice(0, 10)}.zip`;
+
+        updateProgress(
+          (i / batches.length) * 100,
+          `Gerando lote ${i + 1} de ${batches.length} (${batch.length} arquivos)...`
+        );
+
+        await downloadM2ADocuments(
+          batch,
+          {
+            archive: true,
+            filename: batchName,
+          },
+          (e) => {
+            if (e.status === "documento") {
+              updateProgress(
+                (i / batches.length) * 100 + ((e.percent ?? 0) / 100) * (100 / batches.length),
+                `Lote ${i + 1}: ${e.mensagem}`
+              );
+            }
+          },
+        );
+      }
+
+      if (abortController.signal.aborted) {
+        failTask("Operação cancelada pelo usuário.");
+      } else {
+        finishTask(`${allDocs.length} documento(s) baixado(s) em ${batches.length} arquivo(s).`);
+      }
     } catch (err: any) {
       notify.error(err?.message ?? "Falha ao gerar ZIP");
+      failTask(err?.message ?? "Falha no download");
+    } finally {
       setIsDownloading(false);
+      setSelectorOpen(false);
     }
-  }, [targetContracts, startTask, finishTask, failTask]);
+  }, [targetContracts, startTask, updateProgress, finishTask, failTask]);
 
   const handleDownloadSelectedDocs = useCallback(
     (selectedContracts: ContratoRow[]) => {
