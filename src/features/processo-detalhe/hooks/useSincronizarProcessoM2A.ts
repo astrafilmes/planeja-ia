@@ -42,7 +42,7 @@ export function useSincronizarProcessoM2A(
     // Busca os contratos novamente para garantir que temos os dados de documentos
     const { data: dbContratos } = await supabase
       .from("contratos")
-      .select("id, numero_contrato, m2a_contrato_id")
+      .select("id, numero_contrato, m2a_contrato_id, m2a_documentos_gerados")
       .eq("processo_id", processoId)
       .not("m2a_contrato_id", "is", null);
 
@@ -53,24 +53,10 @@ export function useSincronizarProcessoM2A(
       return;
     }
 
-    // Otimização: Só sincroniza contratos que não têm todos os documentos mapeados localmente
-    // ou se o usuário estiver forçando uma atualização completa (por padrão, apenas pendentes)
-    const contratosParaSinc = [];
-    for (const c of dbContratos) {
-      // Verifica se existe pelo menos um documento vinculado ao contrato que não tenha m2a_documento_id
-      const { data: docs } = await supabase
-        .from("contrato_documentos")
-        .select("id, m2a_documento_id")
-        .eq("contrato_id", c.id);
-      
-      const docsPendentes = docs?.filter(d => !d.m2a_documento_id) || [];
-      
-      // Se não houver documentos cadastrados localmente, ainda assim sincronizamos
-      // pois o portal pode ter gerado documentos novos que precisamos descobrir.
-      if (!docs || docs.length === 0 || docsPendentes.length > 0) {
-        contratosParaSinc.push(c);
-      }
-    }
+    const contratosParaSinc = dbContratos.filter(c => {
+      const docs = c.m2a_documentos_gerados as any[];
+      return !docs || docs.length === 0;
+    });
 
     if (contratosParaSinc.length === 0) {
       notify.success("Todos os contratos já possuem documentos vinculados.");
@@ -207,6 +193,14 @@ export function useSincronizarProcessoM2A(
               if (docUpdates.length > 0) await Promise.all(docUpdates);
             }
           }
+
+          // 3. Atualizar a coluna m2a_documentos_gerados no contrato
+          await supabase
+            .from("contratos")
+            .update({ 
+              m2a_documentos_gerados: documentosRemotos.map(d => ({ nome: d.nome, id_m2a: d.id })) as any 
+            })
+            .eq("id", c.id);
 
           sucessos++;
         } catch (err) {
