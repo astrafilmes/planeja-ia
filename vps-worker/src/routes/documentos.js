@@ -496,6 +496,11 @@ export async function documentosRoutes(app) {
     sseInit(reply);
     sseSend(reply, "progress", { tipo: "inicio", total, filename });
 
+    // Heartbeat para manter a conexão viva (a cada 15 segundos)
+    const heartbeat = setInterval(() => {
+      sseSend(reply, "ping", { ts: Date.now() });
+    }, 15000);
+
     const zip = archiver("zip", { zlib: { level: 6 } });
     const chunks = [];
     zip.on("data", (c) => chunks.push(c));
@@ -570,6 +575,7 @@ export async function documentosRoutes(app) {
 
     sseSend(reply, "progress", { tipo: "compactando", total });
     zip.finalize();
+    clearInterval(heartbeat);
     try {
       await zipDone;
     } catch (err) {
