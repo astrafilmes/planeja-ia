@@ -40,6 +40,7 @@ type Doc = {
  storage_path: string;
  mime_type: string | null;
  size_bytes: number | null;
+ m2a_documento_id?: string | null;
 };
 
 type DocumentoLista =
@@ -123,12 +124,19 @@ export function DocumentosEditor({
  documentos.map(
  (d) =>
  ({
- key: `local:${d.id}`,
-            origem:"local",
+            key: `local:${d.id}`,
+            origem: d.tipo === 'gerado_portal' ? "m2a" : "local",
             nome: d.nome,
-            tipo: d.tipo === 'gerado_portal' ? 'gerado_portal' : 'Arquivo',
-            detalhe: d.tipo === 'gerado_portal' ? 'Arquivo' : `${d.mime_type ??"Arquivo"}${d.size_bytes ? ` · ${formatBytes(d.size_bytes)}` :""}`,
- local: d,
+            tipo: d.tipo === 'gerado_portal' ? "Portal" : d.tipo,
+            detalhe: d.tipo === 'gerado_portal' ? "Documento do portal" : `${d.mime_type ??"Arquivo"}${d.size_bytes ? ` · ${formatBytes(d.size_bytes)}` :""}`,
+            m2a: d.tipo === 'gerado_portal' ? {
+              id_m2a: d.m2a_documento_id || '',
+              nome: `${d.nome} - ${contratoNumero ?? contratoId}`,
+              contratoId,
+              contratoNumero,
+              m2aContratoId: m2aContratoId ?? undefined,
+            } : undefined,
+            local: d,
  }) as DocumentoLista,
  ),
  [documentos],
