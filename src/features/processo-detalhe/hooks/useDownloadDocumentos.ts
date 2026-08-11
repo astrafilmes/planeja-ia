@@ -6,7 +6,7 @@ import { getContratoDocumentos, type ContratoRow, DOCUMENTOS_DOWNLOAD_POSICOES }
 import type { DocumentTypeOption } from "@/components/contratos/DocumentSelectorDialog";
 
 export function useDownloadDocumentos(processoId: string) {
-  const { startTask, finishTask, failTask } = useProgress();
+  const { startTask, updateProgress, finishTask, failTask } = useProgress();
   const [isDownloading, setIsDownloading] = useState(false);
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [targetContracts, setTargetContracts] = useState<ContratoRow[]>([]);
