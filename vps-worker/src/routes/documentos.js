@@ -92,6 +92,35 @@ function decodeEntities(value) {
     .replace(/&#x27;|&#39;/g, "'");
 }
 
+function isInvalidPortalDocument(r) {
+  if (!r || !r.bytes || r.bytes.length === 0) return true;
+  
+  // 1. Validação de tamanho (Threshold de 5KB)
+  if (r.bytes.length < 5120) {
+    const content = r.bytes.toString("utf8");
+    
+    // 2. Busca por frases de erro conhecidas no portal
+    const errorPhrases = [
+      "Documento se encontra indisponivel",
+      "tente novamente mais tarde",
+      "erro ao gerar documento",
+      "visualizar_documento_individual"
+    ];
+    
+    if (errorPhrases.some(phrase => content.includes(phrase))) {
+      return true;
+    }
+    
+    // 3. Se for muito pequeno e não tiver Magic Number de PDF ou ZIP/DOCX
+    const head = content.slice(0, 10);
+    if (!head.startsWith("%PDF") && !head.startsWith("PK")) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
 function cleanPortalPath(raw) {
   let href = decodeEntities(raw)
     .replace(/\\n/g, "")
@@ -299,34 +328,54 @@ async function fetchFromM2A(id, _hrefHint, log, contratoId = null) {
   const csrfSource = contratoId ? `/contratos/${contratoId}/` : docPath;
 
   for (const format of ["pdf", "docx"]) {
-    try {
-      const csrf = await m2a.getCsrf(csrfSource);
-      const form = new URLSearchParams();
-      form.set("csrfmiddlewaretoken", csrf);
-      form.set("format", format);
-      form.set("gerar_documento", "true");
-      const gen = await m2a.request("POST", docPath, {
-        body: form.toString(),
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-          "X-Requested-With": "XMLHttpRequest",
-          ...(referer ? { Referer: referer } : {}),
-        },
-      });
-      tried.push(`POST ${docPath} format=${format} → ${gen.status}`);
-      if (gen.status >= 400) continue;
+    // Tenta até 2 vezes por formato se o arquivo vier inválido
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const csrf = await m2a.getCsrf(csrfSource);
+        const form = new URLSearchParams();
+        form.set("csrfmiddlewaretoken", csrf);
+        form.set("format", format);
+        form.set("gerar_documento", "true");
+        
+        const gen = await m2a.request("POST", docPath, {
+          body: form.toString(),
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            "X-Requested-With": "XMLHttpRequest",
+            ...(referer ? { Referer: referer } : {}),
+          },
+        });
+        
+        tried.push(`POST ${docPath} format=${format} try=${attempt} → ${gen.status}`);
+        if (gen.status >= 400) break; // Se o portal rejeitou o POST, tenta o próximo formato
 
-      const dl = await m2a.request("GET", `${docPath}?filename=temp&format=${format}`, {
-        responseType: "arraybuffer",
-        headers: {
-          Accept: "application/pdf,application/octet-stream,*/*",
-          ...(referer ? { Referer: referer } : {}),
-        },
-      });
-      tried.push(`GET ${docPath}?filename=temp&format=${format} → ${dl.status} ${dl.contentType || ""}`);
-      if (dl.status >= 200 && dl.status < 300 && looksLikeBinary(dl)) return dl;
-    } catch (err) {
-      tried.push(`format=${format} → ERR ${err.message}`);
+        // Se for a segunda tentativa, espera um pouco mais para o servidor processar
+        if (attempt > 1) {
+          log?.info?.({ id, attempt }, "aguardando processamento do servidor M2A (backoff)...");
+          await new Promise(resolve => setTimeout(resolve, 3000));
+        }
+
+        const dl = await m2a.request("GET", `${docPath}?filename=temp&format=${format}`, {
+          responseType: "arraybuffer",
+          headers: {
+            Accept: "application/pdf,application/octet-stream,*/*",
+            ...(referer ? { Referer: referer } : {}),
+          },
+        });
+        
+        tried.push(`GET ${docPath}?format=${format} try=${attempt} → ${dl.status} bytes=${dl.bytes?.length || 0}`);
+        
+        if (dl.status >= 200 && dl.status < 300 && looksLikeBinary(dl)) {
+          // Validação final de integridade
+          if (!isInvalidPortalDocument(dl)) {
+            return dl;
+          } else {
+            log?.warn?.({ id, bytes: dl.bytes?.length }, "documento detectado como inválido/vazio; tentando novamente");
+          }
+        }
+      } catch (err) {
+        tried.push(`format=${format} try=${attempt} → ERR ${err.message}`);
+      }
     }
   }
 
